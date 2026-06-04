@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import sys
+import shutil
+import subprocess
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+from chiyo_cli.config import init_module_config, load_module_config
+
+
+CONFIG_MODULE = "app"
+DEFAULT_CONFIG = {
+    "fzf_prompt": "app> ",
+    "alias": {},
+}
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(
+        description="Search installed macOS applications with fzf and launch one.",
+    )
+    parser.add_argument(
+        "query",
+        nargs="*",
+        help="Optional text used to pre-filter application names or resolve aliases.",
+    )
+    parser.add_argument(
+        "--config-init",
+        action="store_true",
+        help="Write the default [app] config to the shared Chiyo CLI config file.",
+    )
+    parser.add_argument(
+        "--print-name",
+        action="store_true",
+        help="Print the selected application name instead of opening it.",
+    )
+    return parser.parse_args(argv)
+
+
+def fail(message, exit_code=1):
+    print(f"app: {message}", file=sys.stderr)
+    sys.exit(exit_code)
+
+
+def load_config():
+    try:
+        config = load_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
+    except ValueError as error:
+        fail(str(error))
+
+    alias = config.get("alias", {})
+
+    if not isinstance(alias, dict):
+        fail("Invalid config: [app.alias] must be a table.")
+
+    config["alias"] = alias
+    return config
+
+
+def init_config():
+    config_path = init_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
+    print(f"Wrote {CONFIG_MODULE} config to {config_path}")
+
+
+def app_name_from_path(path):
+    name = os.path.basename(path)
+
+    if name.endswith(".app"):
+        name = name[:-4]
+
+    return name
+
+
+def discover_apps():
+    if shutil.which("mdfind") is None:
+        fail("macOS 'mdfind' command is not available.")
+
+    result = subprocess.run(
+        ["mdfind", 'kMDItemContentType == "com.apple.application-bundle"'],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        detail = result.stderr.strip() or "unknown error"
+        fail(f"could not discover applications: {detail}")
+
+    seen = set()
+    apps = []
+
+    for path in result.stdout.splitlines():
+        name = app_name_from_path(path)
+
+        if not name or name in seen:
+            continue
+
+        seen.add(name)
+        apps.append(name)
+
+    return sorted(apps, key=str.lower)
+
+
+def resolve_alias(query, aliases):
+    if not query:
+        return None
+
+    return aliases.get(query)
+
+
+def filter_apps(apps, query):
+    if not query:
+        return apps
+
+    query = query.lower()
+    return [name for name in apps if query in name.lower()]
+
+
+def format_choice(index, name):
+    return f"{name}\t#{index}"
+
+
+def choose_app(apps, config):
+    if shutil.which("fzf") is None:
+        fail("fzf is not installed or not in PATH.")
+
+    choices = [format_choice(index, name) for index, name in enumerate(apps)]
+
+    result = subprocess.run(
+        [
+            "fzf",
+            f"--prompt={config['fzf_prompt']}",
+            "--with-nth=1",
+            "--delimiter=\t",
+        ],
+        input="\n".join(choices),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    if result.returncode == 130:
+        return None
+
+    if result.returncode != 0:
+        fail("fzf failed while selecting an application.")
+
+    selected = result.stdout.strip()
+
+    if not selected:
+        return None
+
+    index = int(selected.rsplit("#", 1)[1])
+    return apps[index]
+
+
+def open_app(name):
+    if shutil.which("open") is None:
+        fail("macOS 'open' command is not available.")
+
+    result = subprocess.run(
+        ["open", "-a", name],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        detail = result.stderr.strip() or "unknown error"
+        fail(f"could not open application '{name}': {detail}")
+
+
+def main(argv=None):
+    args = parse_args(argv if argv is not None else sys.argv[1:])
+
+    if args.config_init:
+        init_config()
+        return
+
+    config = load_config()
+    query = " ".join(args.query)
+    selected_name = resolve_alias(query, config["alias"])
+
+    if selected_name is None:
+        apps = discover_apps()
+        apps = filter_apps(apps, query)
+
+        if not apps:
+            fail("no applications found.")
+
+        selected_name = choose_app(apps, config)
+
+    if not selected_name:
+        return
+
+    if args.print_name:
+        print(selected_name)
+        return
+
+    open_app(selected_name)
+
+
+if __name__ == "__main__":
+    main()

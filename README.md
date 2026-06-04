@@ -113,6 +113,41 @@ Advanced bookmark source override can be added to the existing `[bm]` table:
 bookmarks_path = "~/path/to/compatible/Bookmarks.plist"
 ```
 
+### app
+
+`app` launches installed macOS applications from the terminal. It discovers
+application bundles with Spotlight metadata, shows matching application names in
+`fzf`, and opens the selected application.
+
+```sh
+app
+app safari
+app browser
+app --print-name safari
+app --config-init
+```
+
+Useful options:
+
+- `--print-name`: print the selected application name instead of opening it
+- `--config-init`: write the default `[app]` config into the shared config file
+
+Default generated config:
+
+```toml
+[app]
+fzf_prompt = "app> "
+```
+
+Optional aliases can be added manually:
+
+```toml
+[app.alias]
+browser = "Safari"
+editor = "Emacs"
+terminal = "Ghostty"
+```
+
 ## Requirements
 
 - macOS
