@@ -104,6 +104,21 @@ class AppTests(unittest.TestCase):
             "\033[3;4m/Applications/Safari.app\033[0m\t#2",
         )
 
+    def test_format_choice_styles_name_when_alias_is_missing(self):
+        choice = APP.format_choice(
+            4,
+            {"name": "Safari", "path": "/Applications/Safari.app"},
+            "",
+            len("Calendar"),
+            len("browser"),
+        )
+
+        self.assertEqual(
+            choice,
+            "\033[1;32mSafari\033[0m             "
+            "\033[3;4m/Applications/Safari.app\033[0m\t#4",
+        )
+
     @mock.patch("app.shutil.which", return_value="/usr/bin/fzf")
     @mock.patch("app.subprocess.run")
     def test_choose_app_preserves_duplicate_display_names(self, run, _which):

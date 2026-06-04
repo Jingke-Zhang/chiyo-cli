@@ -17,7 +17,7 @@ from chiyo_cli.config import init_module_config, load_module_config
 
 CONFIG_MODULE = "app"
 STYLE_RESET = "\033[0m"
-STYLE_ALIAS = "\033[1;32m"
+STYLE_PRIMARY = "\033[1;32m"
 STYLE_PATH = "\033[3;4m"
 CHOICE_COLUMN_GAP = 2
 DEFAULT_CONFIG = {
@@ -156,8 +156,8 @@ def filter_apps(apps, query, aliases=None):
     ]
 
 
-def style_alias(value):
-    return f"{STYLE_ALIAS}{value}{STYLE_RESET}"
+def style_primary(value):
+    return f"{STYLE_PRIMARY}{value}{STYLE_RESET}"
 
 
 def style_path(value):
@@ -190,9 +190,17 @@ def format_choice(index, app, alias, name_width, alias_width):
     )
 
     if alias:
-        alias = style_alias(alias)
+        visible_name = name
+        visible_alias = style_primary(alias)
+    else:
+        visible_name = style_primary(name)
+        visible_alias = alias
 
-    visible_choice = f"{name}{name_padding}{alias}{alias_padding}{style_path(path)}"
+    visible_choice = (
+        f"{visible_name}{name_padding}"
+        f"{visible_alias}{alias_padding}"
+        f"{style_path(path)}"
+    )
     return f"{visible_choice}\t#{index}"
 
 
