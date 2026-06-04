@@ -89,51 +89,35 @@ class AppTests(unittest.TestCase):
             [{"name": "Safari", "path": "/Applications/Safari.app"}],
         )
 
-    def test_format_choice_shows_name_alias_and_path(self):
-        choice = APP.format_choice(
-            2,
+    def test_app_fields_styles_alias_when_present(self):
+        fields = APP.app_fields(
             {"name": "Safari", "path": "/Applications/Safari.app"},
             "browser",
-            len("Calendar"),
-            len("browser"),
         )
 
-        self.assertEqual(
-            choice,
-            "Safari    \033[1;32mbrowser\033[0m  "
-            "\033[3;4m/Applications/Safari.app\033[0m\t#2",
-        )
+        self.assertEqual(fields[0].style, "")
+        self.assertEqual(fields[1].style, "\033[1;32m")
+        self.assertEqual(fields[2].style, "\033[3;4m")
 
-    def test_format_choice_styles_name_when_alias_is_missing(self):
-        choice = APP.format_choice(
-            4,
+    def test_app_fields_styles_name_when_alias_is_missing(self):
+        fields = APP.app_fields(
             {"name": "Safari", "path": "/Applications/Safari.app"},
             "",
-            len("Calendar"),
-            len("browser"),
         )
 
-        self.assertEqual(
-            choice,
-            "\033[1;32mSafari\033[0m             "
-            "\033[3;4m/Applications/Safari.app\033[0m\t#4",
-        )
+        self.assertEqual(fields[0].style, "\033[1;32m")
+        self.assertEqual(fields[1].style, "")
+        self.assertEqual(fields[2].style, "\033[3;4m")
 
-    @mock.patch("app.shutil.which", return_value="/usr/bin/fzf")
-    @mock.patch("app.subprocess.run")
-    def test_choose_app_preserves_duplicate_display_names(self, run, _which):
-        run.return_value = subprocess.CompletedProcess(
-            args=[],
-            returncode=0,
-            stdout="Safari\t#1\n",
-            stderr="",
-        )
-
+    @mock.patch("app.choose_item")
+    def test_choose_app_preserves_duplicate_display_names(self, choose_item):
+        apps = [
+            {"name": "Safari", "path": "/Applications/Safari.app"},
+            {"name": "Safari", "path": "/Users/me/Applications/Safari.app"},
+        ]
+        choose_item.return_value = apps[1]
         selected = APP.choose_app(
-            [
-                {"name": "Safari", "path": "/Applications/Safari.app"},
-                {"name": "Safari", "path": "/Users/me/Applications/Safari.app"},
-            ],
+            apps,
             {
                 "fzf_prompt": "app> ",
                 "alias": {"browser": "Safari"},
@@ -144,8 +128,7 @@ class AppTests(unittest.TestCase):
             selected,
             {"name": "Safari", "path": "/Users/me/Applications/Safari.app"},
         )
-        self.assertIn("--ansi", run.call_args.args[0])
-        self.assertIn("--with-nth=1", run.call_args.args[0])
+        self.assertEqual(choose_item.call_args.args[0], apps)
 
     @mock.patch("app.choose_app")
     def test_select_app_returns_single_match_directly_when_allowed(self, choose):
@@ -215,6 +198,31 @@ class AppTests(unittest.TestCase):
 
         discover.assert_not_called()
         open_app.assert_called_once_with({"name": "Safari", "path": None})
+
+    @mock.patch("app.open_app")
+    @mock.patch("app.choose_app")
+    @mock.patch("app.discover_apps")
+    @mock.patch("app.load_config")
+    def test_main_confirms_alias_when_requested(
+        self,
+        load_config,
+        discover,
+        choose_app,
+        open_app,
+    ):
+        safari = {"name": "Safari", "path": "/Applications/Safari.app"}
+        load_config.return_value = {
+            "fzf_prompt": "app> ",
+            "alias": {"browser": "Safari"},
+        }
+        discover.return_value = [safari]
+        choose_app.return_value = safari
+
+        APP.main(["--confirm", "browser"])
+
+        discover.assert_called_once()
+        choose_app.assert_called_once()
+        open_app.assert_called_once_with(safari)
 
 
 if __name__ == "__main__":

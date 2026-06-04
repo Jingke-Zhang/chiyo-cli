@@ -6,7 +6,6 @@ import sys
 import plistlib
 import shutil
 import subprocess
-import unicodedata
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -14,13 +13,10 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from chiyo_cli.config import CONFIG_PATH, init_module_config, load_module_config
+from chiyo_cli.fzf import Field, STYLE_PRIMARY, STYLE_SECONDARY, choose_item
 
 
 CONFIG_MODULE = "bm"
-STYLE_RESET = "\033[0m"
-STYLE_TITLE = "\033[1;32m"
-STYLE_URL = "\033[3;4m"
-CHOICE_COLUMN_GAP = 2
 
 # Keep universal defaults in code. User-specific preferences can live in
 # ~/.config/chiyo-cli/config.toml under the [bm] table.
@@ -65,6 +61,11 @@ def parse_args(argv):
     parser.add_argument(
         "--browser",
         help="Override the configured browser for this run.",
+    )
+    parser.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Always confirm the selected bookmark in fzf.",
     )
     return parser.parse_args(argv)
 
@@ -191,72 +192,26 @@ def filter_bookmarks(bookmarks, query):
     ]
 
 
-def style_title(value):
-    return f"{STYLE_TITLE}{value}{STYLE_RESET}"
-
-
-def style_url(value):
-    return f"{STYLE_URL}{value}{STYLE_RESET}"
-
-
-def display_width(value):
-    width = 0
-
-    for char in value:
-        if unicodedata.combining(char):
-            continue
-
-        if unicodedata.east_asian_width(char) in ("F", "W"):
-            width += 2
-        else:
-            width += 1
-
-    return width
-
-
-def format_choice(index, display_name, url, title_width):
-    padding = " " * (title_width - display_width(display_name) + CHOICE_COLUMN_GAP)
-    visible_choice = f"{style_title(display_name)}{padding}{style_url(url)}"
-    return f"{visible_choice}\t#{index}"
-
-
 def choose_bookmark(bookmarks, config):
-    if shutil.which("fzf") is None:
-        fail("fzf is not installed or not in PATH.")
-
-    title_width = max(display_width(display_name) for display_name, _url in bookmarks)
-    choices = [
-        format_choice(index, display_name, url, title_width)
-        for index, (display_name, url) in enumerate(bookmarks)
-    ]
-
-    result = subprocess.run(
+    rows = [
         [
-            "fzf",
-            f"--prompt={config['fzf_prompt']}",
-            "--ansi",
-            "--with-nth=1",
-            "--delimiter=\t",
-        ],
-        input="\n".join(choices),
-        text=True,
-        capture_output=True,
-        check=False,
+            Field(display_name, STYLE_PRIMARY),
+            Field(url, STYLE_SECONDARY),
+        ]
+        for display_name, url in bookmarks
+    ]
+    selected = choose_item(
+        bookmarks,
+        rows,
+        config["fzf_prompt"],
+        "a bookmark",
+        fail,
     )
 
-    if result.returncode == 130:
+    if selected is None:
         return None
 
-    if result.returncode != 0:
-        fail("fzf failed while selecting a bookmark.")
-
-    selected = result.stdout.strip()
-
-    if not selected:
-        return None
-
-    index = int(selected.rsplit("#", 1)[1])
-    return bookmarks[index][1]
+    return selected[1]
 
 
 def select_bookmark(bookmarks, config, allow_direct):
@@ -302,7 +257,7 @@ def main(argv=None):
     if not bookmarks:
         fail("no bookmarks found.")
 
-    url = select_bookmark(bookmarks, config, bool(query))
+    url = select_bookmark(bookmarks, config, bool(query) and not args.confirm)
 
     if not url:
         return

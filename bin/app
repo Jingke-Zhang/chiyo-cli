@@ -5,7 +5,6 @@ import os
 import sys
 import shutil
 import subprocess
-import unicodedata
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -13,13 +12,10 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from chiyo_cli.config import init_module_config, load_module_config
+from chiyo_cli.fzf import Field, STYLE_PRIMARY, STYLE_SECONDARY, choose_item
 
 
 CONFIG_MODULE = "app"
-STYLE_RESET = "\033[0m"
-STYLE_PRIMARY = "\033[1;32m"
-STYLE_PATH = "\033[3;4m"
-CHOICE_COLUMN_GAP = 2
 DEFAULT_CONFIG = {
     "fzf_prompt": "app> ",
     "alias": {},
@@ -44,6 +40,11 @@ def parse_args(argv):
         "--print-name",
         action="store_true",
         help="Print the selected application name instead of opening it.",
+    )
+    parser.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Always confirm the selected application in fzf.",
     )
     return parser.parse_args(argv)
 
@@ -156,94 +157,35 @@ def filter_apps(apps, query, aliases=None):
     ]
 
 
-def style_primary(value):
-    return f"{STYLE_PRIMARY}{value}{STYLE_RESET}"
-
-
-def style_path(value):
-    return f"{STYLE_PATH}{value}{STYLE_RESET}"
-
-
-def display_width(value):
-    width = 0
-
-    for char in value:
-        if unicodedata.combining(char):
-            continue
-
-        if unicodedata.east_asian_width(char) in ("F", "W"):
-            width += 2
-        else:
-            width += 1
-
-    return width
-
-
-def format_choice(index, app, alias, name_width, alias_width):
-    name = app["name"]
-    path = app["path"]
-    name_padding = " " * (
-        name_width - display_width(name) + CHOICE_COLUMN_GAP
-    )
-    alias_padding = " " * (
-        alias_width - display_width(alias) + CHOICE_COLUMN_GAP
-    )
-
+def app_fields(app, alias):
     if alias:
-        visible_name = name
-        visible_alias = style_primary(alias)
+        name_style = ""
+        alias_style = STYLE_PRIMARY
     else:
-        visible_name = style_primary(name)
-        visible_alias = alias
+        name_style = STYLE_PRIMARY
+        alias_style = ""
 
-    visible_choice = (
-        f"{visible_name}{name_padding}"
-        f"{visible_alias}{alias_padding}"
-        f"{style_path(path)}"
-    )
-    return f"{visible_choice}\t#{index}"
+    return [
+        Field(app["name"], name_style),
+        Field(alias, alias_style),
+        Field(app["path"], STYLE_SECONDARY),
+    ]
 
 
 def choose_app(apps, config):
-    if shutil.which("fzf") is None:
-        fail("fzf is not installed or not in PATH.")
-
     aliases = config.get("alias", {})
     app_aliases = [alias_for_app(app["name"], aliases) for app in apps]
-    name_width = max(display_width(app["name"]) for app in apps)
-    alias_width = max([display_width(alias) for alias in app_aliases] or [0])
-    choices = [
-        format_choice(index, app, app_aliases[index], name_width, alias_width)
+    rows = [
+        app_fields(app, app_aliases[index])
         for index, app in enumerate(apps)
     ]
-
-    result = subprocess.run(
-        [
-            "fzf",
-            f"--prompt={config['fzf_prompt']}",
-            "--ansi",
-            "--with-nth=1",
-            "--delimiter=\t",
-        ],
-        input="\n".join(choices),
-        text=True,
-        capture_output=True,
-        check=False,
+    return choose_item(
+        apps,
+        rows,
+        config["fzf_prompt"],
+        "an application",
+        fail,
     )
-
-    if result.returncode == 130:
-        return None
-
-    if result.returncode != 0:
-        fail("fzf failed while selecting an application.")
-
-    selected = result.stdout.strip()
-
-    if not selected:
-        return None
-
-    index = int(selected.rsplit("#", 1)[1])
-    return apps[index]
 
 
 def select_app(apps, config, allow_direct):
@@ -285,7 +227,7 @@ def main(argv=None):
     query = " ".join(args.query)
     alias_target = resolve_alias(query, config["alias"])
 
-    if alias_target:
+    if alias_target and not args.confirm:
         selected_app = {
             "name": alias_target,
             "path": None,
@@ -297,7 +239,7 @@ def main(argv=None):
         if not apps:
             fail("no applications found.")
 
-        selected_app = select_app(apps, config, bool(query))
+        selected_app = select_app(apps, config, bool(query) and not args.confirm)
 
     if not selected_app:
         return

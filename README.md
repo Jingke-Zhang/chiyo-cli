@@ -72,6 +72,7 @@ bm
 bm github
 bm --print-url github
 bm --browser "Google Chrome" github
+bm --confirm github
 bm --config-init
 ```
 
@@ -79,6 +80,7 @@ Useful options:
 
 - `--print-url`: print the selected URL instead of opening it
 - `--browser NAME`: open the selected URL with a browser for this run
+- `--confirm`: always confirm the selected bookmark in `fzf`
 - `--config-init`: write the default `[bm]` config into the shared config file
 
 `bm --config-init` creates or updates this tool's config section in:
@@ -127,12 +129,14 @@ app
 app safari
 app browser
 app --print-name safari
+app --confirm browser
 app --config-init
 ```
 
 Useful options:
 
 - `--print-name`: print the selected application name instead of opening it
+- `--confirm`: always confirm the selected application in `fzf`
 - `--config-init`: write the default `[app]` config into the shared config file
 
 Default generated config:
