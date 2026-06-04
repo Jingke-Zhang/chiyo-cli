@@ -126,6 +126,8 @@ All tools in this repository share one config file:
 Each command owns its own TOML table. For example, `bm` uses `[bm]`. Future tools
 can add their own sections without interfering with existing ones.
 
+Shared config loading and initialization helpers live in `chiyo_cli/config.py`.
+
 ## License
 
 MIT
