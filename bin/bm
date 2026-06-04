@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import sys
 import plistlib
@@ -29,6 +30,32 @@ DEFAULT_CONFIG = {
     "fzf_prompt": "bm> ",
     "browser": "Safari",
 }
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(
+        description="Search Safari bookmarks with fzf and open the selected URL.",
+    )
+    parser.add_argument(
+        "query",
+        nargs="*",
+        help="Optional text used to pre-filter bookmark display names.",
+    )
+    parser.add_argument(
+        "--config-init",
+        action="store_true",
+        help="Write the default [bm] config to the shared Chiyo CLI config file.",
+    )
+    parser.add_argument(
+        "--print-url",
+        action="store_true",
+        help="Print the selected URL instead of opening it.",
+    )
+    parser.add_argument(
+        "--browser",
+        help="Override the configured browser for this run.",
+    )
+    return parser.parse_args(argv)
 
 
 def load_config():
@@ -155,18 +182,24 @@ def choose_bookmark(bookmarks, config):
     return display_to_url[selected]
 
 
-def open_url(url, config):
-    subprocess.run(["open", "-a", config["browser"], url])
+def open_url(url, browser):
+    subprocess.run(["open", "-a", browser, url])
 
 
-def main():
-    if sys.argv[1:] == ["--config-init"]:
+def main(argv=None):
+    args = parse_args(argv if argv is not None else sys.argv[1:])
+
+    if args.config_init:
         init_config()
         return
 
     config = load_config()
+
+    if args.browser:
+        config["browser"] = args.browser
+
     bookmarks = load_bookmarks(config)
-    query = " ".join(sys.argv[1:])
+    query = " ".join(args.query)
 
     bookmarks = filter_bookmarks(bookmarks, query)
 
@@ -179,7 +212,11 @@ def main():
     if not url:
         return
 
-    open_url(url, config)
+    if args.print_url:
+        print(url)
+        return
+
+    open_url(url, config["browser"])
 
 
 if __name__ == "__main__":

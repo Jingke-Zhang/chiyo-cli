@@ -69,8 +69,16 @@ in your configured browser.
 ```sh
 bm
 bm github
+bm --print-url github
+bm --browser "Google Chrome" github
 bm --config-init
 ```
+
+Useful options:
+
+- `--print-url`: print the selected URL instead of opening it
+- `--browser NAME`: open the selected URL with a browser for this run
+- `--config-init`: write the default `[bm]` config into the shared config file
 
 `bm --config-init` creates or updates this tool's config section in:
 
