@@ -246,12 +246,24 @@ def choose_app(apps, config):
     return apps[index]
 
 
+def select_app(apps, config, allow_direct):
+    if allow_direct and len(apps) == 1:
+        return apps[0]
+
+    return choose_app(apps, config)
+
+
 def open_app(app):
     if shutil.which("open") is None:
         fail("macOS 'open' command is not available.")
 
+    if app.get("path"):
+        command = ["open", app["path"]]
+    else:
+        command = ["open", "-a", app["name"]]
+
     result = subprocess.run(
-        ["open", app["path"]],
+        command,
         capture_output=True,
         text=True,
         check=False,
@@ -272,15 +284,20 @@ def main(argv=None):
     config = load_config()
     query = " ".join(args.query)
     alias_target = resolve_alias(query, config["alias"])
-    app_query = alias_target or query
 
-    apps = discover_apps()
-    apps = filter_apps(apps, app_query, config["alias"])
+    if alias_target:
+        selected_app = {
+            "name": alias_target,
+            "path": None,
+        }
+    else:
+        apps = discover_apps()
+        apps = filter_apps(apps, query, config["alias"])
 
-    if not apps:
-        fail("no applications found.")
+        if not apps:
+            fail("no applications found.")
 
-    selected_app = choose_app(apps, config)
+        selected_app = select_app(apps, config, bool(query))
 
     if not selected_app:
         return

@@ -65,6 +65,7 @@ For zsh, put that line in `~/.zshrc`.
 `bm` opens Safari bookmarks from the terminal. It reads Safari's
 `Bookmarks.plist`, shows matching bookmark paths and URLs in `fzf`, and opens
 the selected URL in your configured browser.
+When a query matches exactly one bookmark, `bm` opens it directly.
 
 ```sh
 bm
@@ -118,6 +119,8 @@ bookmarks_path = "~/path/to/compatible/Bookmarks.plist"
 `app` launches installed macOS applications from the terminal. It discovers
 application bundles with Spotlight metadata, shows matching application names,
 aliases, and paths in `fzf`, and opens the selected application path.
+When a query matches exactly one application, `app` opens it directly. An exact
+alias match launches the configured application without opening `fzf`.
 
 ```sh
 app

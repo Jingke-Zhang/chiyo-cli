@@ -259,6 +259,13 @@ def choose_bookmark(bookmarks, config):
     return bookmarks[index][1]
 
 
+def select_bookmark(bookmarks, config, allow_direct):
+    if allow_direct and len(bookmarks) == 1:
+        return bookmarks[0][1]
+
+    return choose_bookmark(bookmarks, config)
+
+
 def open_url(url, browser):
     if shutil.which("open") is None:
         fail("macOS 'open' command is not available.")
@@ -295,7 +302,7 @@ def main(argv=None):
     if not bookmarks:
         fail("no bookmarks found.")
 
-    url = choose_bookmark(bookmarks, config)
+    url = select_bookmark(bookmarks, config, bool(query))
 
     if not url:
         return

@@ -147,6 +147,33 @@ class AppTests(unittest.TestCase):
         self.assertIn("--ansi", run.call_args.args[0])
         self.assertIn("--with-nth=1", run.call_args.args[0])
 
+    @mock.patch("app.choose_app")
+    def test_select_app_returns_single_match_directly_when_allowed(self, choose):
+        app = {"name": "Safari", "path": "/Applications/Safari.app"}
+
+        selected = APP.select_app(
+            [app],
+            {"fzf_prompt": "app> "},
+            allow_direct=True,
+        )
+
+        self.assertEqual(selected, app)
+        choose.assert_not_called()
+
+    @mock.patch("app.choose_app")
+    def test_select_app_uses_fzf_for_single_match_without_query(self, choose):
+        app = {"name": "Safari", "path": "/Applications/Safari.app"}
+        choose.return_value = app
+
+        selected = APP.select_app(
+            [app],
+            {"fzf_prompt": "app> "},
+            allow_direct=False,
+        )
+
+        self.assertEqual(selected, app)
+        choose.assert_called_once()
+
     @mock.patch("app.shutil.which", return_value="/usr/bin/open")
     @mock.patch("app.subprocess.run")
     def test_open_app_uses_exact_application_path(self, run, _which):
@@ -160,6 +187,34 @@ class AppTests(unittest.TestCase):
         APP.open_app({"name": "Safari", "path": "/Applications/Safari.app"})
 
         self.assertEqual(run.call_args.args[0], ["open", "/Applications/Safari.app"])
+
+    @mock.patch("app.shutil.which", return_value="/usr/bin/open")
+    @mock.patch("app.subprocess.run")
+    def test_open_app_uses_open_a_for_alias_target(self, run, _which):
+        run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+        APP.open_app({"name": "Safari", "path": None})
+
+        self.assertEqual(run.call_args.args[0], ["open", "-a", "Safari"])
+
+    @mock.patch("app.open_app")
+    @mock.patch("app.discover_apps")
+    @mock.patch("app.load_config")
+    def test_main_opens_alias_without_discovery(self, load_config, discover, open_app):
+        load_config.return_value = {
+            "fzf_prompt": "app> ",
+            "alias": {"browser": "Safari"},
+        }
+
+        APP.main(["browser"])
+
+        discover.assert_not_called()
+        open_app.assert_called_once_with({"name": "Safari", "path": None})
 
 
 if __name__ == "__main__":

@@ -162,6 +162,28 @@ class BookmarkTests(unittest.TestCase):
         self.assertIn("--ansi", run.call_args.args[0])
         self.assertIn("--with-nth=1", run.call_args.args[0])
 
+    @mock.patch("bm.choose_bookmark")
+    def test_select_bookmark_returns_single_match_directly_when_allowed(self, choose):
+        selected = BM.select_bookmark(
+            [("Example", "https://example.com")],
+            {"fzf_prompt": "bm> "},
+            allow_direct=True,
+        )
+
+        self.assertEqual(selected, "https://example.com")
+        choose.assert_not_called()
+
+    @mock.patch("bm.choose_bookmark", return_value="https://example.com")
+    def test_select_bookmark_uses_fzf_for_single_match_without_query(self, choose):
+        selected = BM.select_bookmark(
+            [("Example", "https://example.com")],
+            {"fzf_prompt": "bm> "},
+            allow_direct=False,
+        )
+
+        self.assertEqual(selected, "https://example.com")
+        choose.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
