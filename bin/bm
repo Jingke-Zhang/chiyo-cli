@@ -176,19 +176,31 @@ def filter_bookmarks(bookmarks, query):
     return [
         (display_name, url)
         for display_name, url in bookmarks
-        if query in display_name.lower()
+        if query in display_name.lower() or query in url.lower()
     ]
+
+
+def format_choice(index, display_name, url):
+    return f"{display_name}\t{url}\t#{index}"
 
 
 def choose_bookmark(bookmarks, config):
     if shutil.which("fzf") is None:
         fail("fzf is not installed or not in PATH.")
 
-    display_to_url = {display_name: url for display_name, url in bookmarks}
+    choices = [
+        format_choice(index, display_name, url)
+        for index, (display_name, url) in enumerate(bookmarks)
+    ]
 
     result = subprocess.run(
-        ["fzf", f"--prompt={config['fzf_prompt']}"],
-        input="\n".join(display_to_url.keys()),
+        [
+            "fzf",
+            f"--prompt={config['fzf_prompt']}",
+            "--with-nth=1,2",
+            "--delimiter=\t",
+        ],
+        input="\n".join(choices),
         text=True,
         capture_output=True,
         check=False,
@@ -205,7 +217,8 @@ def choose_bookmark(bookmarks, config):
     if not selected:
         return None
 
-    return display_to_url[selected]
+    index = int(selected.rsplit("#", 1)[1])
+    return bookmarks[index][1]
 
 
 def open_url(url, browser):
