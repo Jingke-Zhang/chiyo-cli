@@ -4,21 +4,15 @@ import os
 import sys
 import plistlib
 import subprocess
-import ast
-import json
-import re
 
-try:
-    import tomllib
-except ModuleNotFoundError:
-    # Python 3.11+ includes tomllib. Older installs can optionally use tomli.
-    try:
-        import tomli as tomllib
-    except ModuleNotFoundError:
-        tomllib = None
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+from chiyo_cli.config import CONFIG_PATH, init_module_config, load_module_config
 
 
-CONFIG_PATH = "~/.config/chiyo-cli/config.toml"
 CONFIG_MODULE = "bm"
 
 # Keep universal defaults in code. User-specific preferences can live in
@@ -37,191 +31,22 @@ DEFAULT_CONFIG = {
 }
 
 
-def strip_toml_comment(line):
-    # Strip comments without treating a # inside a quoted string as a comment.
-    in_quote = False
-    escaped = False
-
-    for index, char in enumerate(line):
-        if escaped:
-            escaped = False
-            continue
-
-        if char == "\\":
-            escaped = True
-            continue
-
-        if char == '"':
-            in_quote = not in_quote
-            continue
-
-        if char == "#" and not in_quote:
-            return line[:index]
-
-    return line
-
-
-def parse_inline_table(value):
-    pairs = {}
-
-    for quoted_key, bare_key, item in re.findall(
-        r'(?:"([^"]+)"|([A-Za-z0-9_-]+))\s*=\s*("[^"]*")',
-        value,
-    ):
-        pairs[quoted_key or bare_key] = ast.literal_eval(item)
-
-    return pairs
-
-
-def parse_toml_value(value):
-    value = value.strip()
-
-    if value.startswith("{") and value.endswith("}"):
-        return parse_inline_table(value)
-
-    try:
-        return ast.literal_eval(value)
-    except (SyntaxError, ValueError):
-        return value
-
-
-def load_minimal_toml(path):
-    # Small fallback parser for this tool's simple config shape. It supports
-    # tables, dotted tables, strings, arrays, and simple inline string maps.
-    data = {}
-    current_table = None
-
-    with open(path, "r", encoding="utf-8") as file:
-        for line in file:
-            line = strip_toml_comment(line).strip()
-
-            if not line:
-                continue
-
-            if line.startswith("[") and line.endswith("]"):
-                table_path = line[1:-1].strip().split(".")
-                current_table = data
-
-                for table in table_path:
-                    current_table = current_table.setdefault(table, {})
-
-                continue
-
-            if current_table is not None and "=" in line:
-                key, value = line.split("=", 1)
-                current_table[key.strip()] = parse_toml_value(value)
-
-    return data
-
-
 def load_config():
-    # config.toml is optional. Missing values fall back to DEFAULT_CONFIG.
-    config = DEFAULT_CONFIG.copy()
-    config["skip_folders"] = list(DEFAULT_CONFIG["skip_folders"])
-    config["rename_folders"] = {}
-
-    config_path = os.path.expanduser(CONFIG_PATH)
-
-    if not os.path.exists(config_path):
-        config["bookmarks_path"] = os.path.expanduser(config["bookmarks_path"])
-        config["skip_folders"] = set(config["skip_folders"])
-        return config
-
-    if tomllib is None:
-        data = load_minimal_toml(config_path)
-    else:
-        with open(config_path, "rb") as file:
-            data = tomllib.load(file)
-
-    bm_config = data.get(CONFIG_MODULE, {})
-
-    if not isinstance(bm_config, dict):
-        print("Invalid config: [bm] must be a table.", file=sys.stderr)
+    try:
+        config = load_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
+    except ValueError as error:
+        print(f"bm: {error}", file=sys.stderr)
         sys.exit(1)
-
-    for key in config:
-        if key in bm_config:
-            config[key] = bm_config[key]
 
     config["bookmarks_path"] = os.path.expanduser(config["bookmarks_path"])
     config["skip_folders"] = set(config["skip_folders"])
+    config["rename_folders"] = config.get("rename_folders", {})
 
     return config
 
 
-def toml_quote(value):
-    return json.dumps(value)
-
-
-def format_toml_list(values):
-    return "[" + ", ".join(toml_quote(value) for value in values) + "]"
-
-
-def format_default_config_module():
-    # --config-init writes only this command's module so the shared config file
-    # can also hold settings for other Chiyo CLI commands.
-    lines = [
-        f"[{CONFIG_MODULE}]",
-        f"bookmarks_path = {toml_quote(DEFAULT_CONFIG['bookmarks_path'])}",
-        f"skip_folders = {format_toml_list(DEFAULT_CONFIG['skip_folders'])}",
-        f"fzf_prompt = {toml_quote(DEFAULT_CONFIG['fzf_prompt'])}",
-        f"browser = {toml_quote(DEFAULT_CONFIG['browser'])}",
-    ]
-
-    return "\n".join(lines) + "\n"
-
-
-def is_config_module_header(line):
-    stripped = line.strip()
-
-    if not stripped.startswith("[") or not stripped.endswith("]"):
-        return False
-
-    table_name = stripped.strip("[]").strip()
-    return table_name == CONFIG_MODULE or table_name.startswith(f"{CONFIG_MODULE}.")
-
-
-def remove_config_module(content):
-    # Preserve other modules while replacing this command's own tables.
-    lines = content.splitlines()
-    kept_lines = []
-    skipping = False
-
-    for line in lines:
-        stripped = line.strip()
-        is_table_header = stripped.startswith("[") and stripped.endswith("]")
-
-        if is_table_header:
-            skipping = is_config_module_header(line)
-
-        if not skipping:
-            kept_lines.append(line)
-
-    return "\n".join(kept_lines).strip()
-
-
 def init_config():
-    config_path = os.path.expanduser(CONFIG_PATH)
-    config_dir = os.path.dirname(config_path)
-    os.makedirs(config_dir, exist_ok=True)
-
-    if os.path.exists(config_path):
-        with open(config_path, "r", encoding="utf-8") as file:
-            existing_config = file.read()
-    else:
-        existing_config = ""
-
-    remaining_config = remove_config_module(existing_config)
-    bm_config = format_default_config_module()
-
-    if remaining_config:
-        new_config = remaining_config + "\n\n" + bm_config
-    else:
-        new_config = bm_config
-
-    with open(config_path, "w", encoding="utf-8") as file:
-        file.write(new_config)
-
+    config_path = init_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
     print(f"Wrote {CONFIG_MODULE} config to {config_path}")
 
 
