@@ -116,8 +116,8 @@ bookmarks_path = "~/path/to/compatible/Bookmarks.plist"
 ### app
 
 `app` launches installed macOS applications from the terminal. It discovers
-application bundles with Spotlight metadata, shows matching application names in
-`fzf`, and opens the selected application.
+application bundles with Spotlight metadata, shows matching application names,
+aliases, and paths in `fzf`, and opens the selected application path.
 
 ```sh
 app
@@ -147,6 +147,9 @@ browser = "Safari"
 editor = "Emacs"
 terminal = "Ghostty"
 ```
+
+When more than one application has the same name, `app` keeps each discovered
+path as a separate selectable result.
 
 ## Requirements
 

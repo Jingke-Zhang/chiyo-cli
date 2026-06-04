@@ -18,7 +18,7 @@ class AppTests(unittest.TestCase):
 
     @mock.patch("app.shutil.which", return_value="/usr/bin/mdfind")
     @mock.patch("app.subprocess.run")
-    def test_discover_apps_uses_mdfind_and_deduplicates_names(self, run, _which):
+    def test_discover_apps_uses_mdfind_and_preserves_duplicate_names(self, run, _which):
         run.return_value = subprocess.CompletedProcess(
             args=[],
             returncode=0,
@@ -32,7 +32,23 @@ class AppTests(unittest.TestCase):
             stderr="",
         )
 
-        self.assertEqual(APP.discover_apps(), ["Calendar", "Safari"])
+        self.assertEqual(
+            APP.discover_apps(),
+            [
+                {
+                    "name": "Calendar",
+                    "path": "/System/Applications/Calendar.app",
+                },
+                {
+                    "name": "Safari",
+                    "path": "/Applications/Safari.app",
+                },
+                {
+                    "name": "Safari",
+                    "path": "/Users/me/Applications/Safari.app",
+                },
+            ],
+        )
         self.assertEqual(
             run.call_args.args[0],
             ["mdfind", 'kMDItemContentType == "com.apple.application-bundle"'],
@@ -49,8 +65,43 @@ class AppTests(unittest.TestCase):
 
     def test_filter_apps_matches_case_insensitively(self):
         self.assertEqual(
-            APP.filter_apps(["Safari", "Google Chrome", "Calendar"], "chrome"),
-            ["Google Chrome"],
+            APP.filter_apps(
+                [
+                    {"name": "Safari", "path": "/Applications/Safari.app"},
+                    {
+                        "name": "Google Chrome",
+                        "path": "/Applications/Google Chrome.app",
+                    },
+                    {"name": "Calendar", "path": "/System/Applications/Calendar.app"},
+                ],
+                "chrome",
+            ),
+            [{"name": "Google Chrome", "path": "/Applications/Google Chrome.app"}],
+        )
+
+    def test_filter_apps_matches_alias(self):
+        self.assertEqual(
+            APP.filter_apps(
+                [{"name": "Safari", "path": "/Applications/Safari.app"}],
+                "browser",
+                {"browser": "Safari"},
+            ),
+            [{"name": "Safari", "path": "/Applications/Safari.app"}],
+        )
+
+    def test_format_choice_shows_name_alias_and_path(self):
+        choice = APP.format_choice(
+            2,
+            {"name": "Safari", "path": "/Applications/Safari.app"},
+            "browser",
+            len("Calendar"),
+            len("browser"),
+        )
+
+        self.assertEqual(
+            choice,
+            "Safari    \033[1;32mbrowser\033[0m  "
+            "\033[3;4m/Applications/Safari.app\033[0m\t#2",
         )
 
     @mock.patch("app.shutil.which", return_value="/usr/bin/fzf")
@@ -63,14 +114,27 @@ class AppTests(unittest.TestCase):
             stderr="",
         )
 
-        selected = APP.choose_app(["Calendar", "Safari"], {"fzf_prompt": "app> "})
+        selected = APP.choose_app(
+            [
+                {"name": "Safari", "path": "/Applications/Safari.app"},
+                {"name": "Safari", "path": "/Users/me/Applications/Safari.app"},
+            ],
+            {
+                "fzf_prompt": "app> ",
+                "alias": {"browser": "Safari"},
+            },
+        )
 
-        self.assertEqual(selected, "Safari")
+        self.assertEqual(
+            selected,
+            {"name": "Safari", "path": "/Users/me/Applications/Safari.app"},
+        )
+        self.assertIn("--ansi", run.call_args.args[0])
         self.assertIn("--with-nth=1", run.call_args.args[0])
 
     @mock.patch("app.shutil.which", return_value="/usr/bin/open")
     @mock.patch("app.subprocess.run")
-    def test_open_app_uses_open_a_with_application_name(self, run, _which):
+    def test_open_app_uses_exact_application_path(self, run, _which):
         run.return_value = subprocess.CompletedProcess(
             args=[],
             returncode=0,
@@ -78,9 +142,9 @@ class AppTests(unittest.TestCase):
             stderr="",
         )
 
-        APP.open_app("Safari")
+        APP.open_app({"name": "Safari", "path": "/Applications/Safari.app"})
 
-        self.assertEqual(run.call_args.args[0], ["open", "-a", "Safari"])
+        self.assertEqual(run.call_args.args[0], ["open", "/Applications/Safari.app"])
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ import os
 import sys
 import shutil
 import subprocess
+import unicodedata
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -15,6 +16,10 @@ from chiyo_cli.config import init_module_config, load_module_config
 
 
 CONFIG_MODULE = "app"
+STYLE_RESET = "\033[0m"
+STYLE_ALIAS = "\033[1;32m"
+STYLE_PATH = "\033[3;4m"
+CHOICE_COLUMN_GAP = 2
 DEFAULT_CONFIG = {
     "fzf_prompt": "app> ",
     "alias": {},
@@ -92,19 +97,27 @@ def discover_apps():
         detail = result.stderr.strip() or "unknown error"
         fail(f"could not discover applications: {detail}")
 
-    seen = set()
     apps = []
+    seen_paths = set()
 
     for path in result.stdout.splitlines():
-        name = app_name_from_path(path)
-
-        if not name or name in seen:
+        if path in seen_paths:
             continue
 
-        seen.add(name)
-        apps.append(name)
+        name = app_name_from_path(path)
 
-    return sorted(apps, key=str.lower)
+        if not name:
+            continue
+
+        seen_paths.add(path)
+        apps.append(
+            {
+                "name": name,
+                "path": path,
+            }
+        )
+
+    return sorted(apps, key=lambda app: (app["name"].lower(), app["path"].lower()))
 
 
 def resolve_alias(query, aliases):
@@ -114,28 +127,93 @@ def resolve_alias(query, aliases):
     return aliases.get(query)
 
 
-def filter_apps(apps, query):
+def alias_for_app(name, aliases):
+    matching_aliases = [
+        alias
+        for alias, app_name in aliases.items()
+        if app_name == name
+    ]
+
+    if not matching_aliases:
+        return ""
+
+    return sorted(matching_aliases, key=str.lower)[0]
+
+
+def filter_apps(apps, query, aliases=None):
     if not query:
         return apps
 
     query = query.lower()
-    return [name for name in apps if query in name.lower()]
+    aliases = aliases or {}
+
+    return [
+        app
+        for app in apps
+        if query in app["name"].lower()
+        or query in app["path"].lower()
+        or query in alias_for_app(app["name"], aliases).lower()
+    ]
 
 
-def format_choice(index, name):
-    return f"{name}\t#{index}"
+def style_alias(value):
+    return f"{STYLE_ALIAS}{value}{STYLE_RESET}"
+
+
+def style_path(value):
+    return f"{STYLE_PATH}{value}{STYLE_RESET}"
+
+
+def display_width(value):
+    width = 0
+
+    for char in value:
+        if unicodedata.combining(char):
+            continue
+
+        if unicodedata.east_asian_width(char) in ("F", "W"):
+            width += 2
+        else:
+            width += 1
+
+    return width
+
+
+def format_choice(index, app, alias, name_width, alias_width):
+    name = app["name"]
+    path = app["path"]
+    name_padding = " " * (
+        name_width - display_width(name) + CHOICE_COLUMN_GAP
+    )
+    alias_padding = " " * (
+        alias_width - display_width(alias) + CHOICE_COLUMN_GAP
+    )
+
+    if alias:
+        alias = style_alias(alias)
+
+    visible_choice = f"{name}{name_padding}{alias}{alias_padding}{style_path(path)}"
+    return f"{visible_choice}\t#{index}"
 
 
 def choose_app(apps, config):
     if shutil.which("fzf") is None:
         fail("fzf is not installed or not in PATH.")
 
-    choices = [format_choice(index, name) for index, name in enumerate(apps)]
+    aliases = config.get("alias", {})
+    app_aliases = [alias_for_app(app["name"], aliases) for app in apps]
+    name_width = max(display_width(app["name"]) for app in apps)
+    alias_width = max([display_width(alias) for alias in app_aliases] or [0])
+    choices = [
+        format_choice(index, app, app_aliases[index], name_width, alias_width)
+        for index, app in enumerate(apps)
+    ]
 
     result = subprocess.run(
         [
             "fzf",
             f"--prompt={config['fzf_prompt']}",
+            "--ansi",
             "--with-nth=1",
             "--delimiter=\t",
         ],
@@ -160,12 +238,12 @@ def choose_app(apps, config):
     return apps[index]
 
 
-def open_app(name):
+def open_app(app):
     if shutil.which("open") is None:
         fail("macOS 'open' command is not available.")
 
     result = subprocess.run(
-        ["open", "-a", name],
+        ["open", app["path"]],
         capture_output=True,
         text=True,
         check=False,
@@ -173,7 +251,7 @@ def open_app(name):
 
     if result.returncode != 0:
         detail = result.stderr.strip() or "unknown error"
-        fail(f"could not open application '{name}': {detail}")
+        fail(f"could not open application '{app['name']}': {detail}")
 
 
 def main(argv=None):
@@ -185,25 +263,25 @@ def main(argv=None):
 
     config = load_config()
     query = " ".join(args.query)
-    selected_name = resolve_alias(query, config["alias"])
+    alias_target = resolve_alias(query, config["alias"])
+    app_query = alias_target or query
 
-    if selected_name is None:
-        apps = discover_apps()
-        apps = filter_apps(apps, query)
+    apps = discover_apps()
+    apps = filter_apps(apps, app_query, config["alias"])
 
-        if not apps:
-            fail("no applications found.")
+    if not apps:
+        fail("no applications found.")
 
-        selected_name = choose_app(apps, config)
+    selected_app = choose_app(apps, config)
 
-    if not selected_name:
+    if not selected_app:
         return
 
     if args.print_name:
-        print(selected_name)
+        print(selected_app["name"])
         return
 
-    open_app(selected_name)
+    open_app(selected_app)
 
 
 if __name__ == "__main__":
