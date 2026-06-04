@@ -1,0 +1,361 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import plistlib
+import subprocess
+import ast
+import json
+import re
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    # Python 3.11+ includes tomllib. Older installs can optionally use tomli.
+    try:
+        import tomli as tomllib
+    except ModuleNotFoundError:
+        tomllib = None
+
+
+CONFIG_PATH = "~/.config/chiyo-cli/config.toml"
+CONFIG_MODULE = "bm"
+
+# Keep universal defaults in code. User-specific preferences can live in
+# ~/.config/chiyo-cli/config.toml under the [bm] table.
+DEFAULT_CONFIG = {
+    "bookmarks_path": "~/Library/Safari/Bookmarks.plist",
+    "skip_folders": [
+        "Bookmarks",
+        "BookmarksMenu",
+        "Tab Group Favorites",
+        "com.apple.ReadingList",
+        "Reading List",
+    ],
+    "fzf_prompt": "bm> ",
+    "browser": "Safari",
+}
+
+
+def strip_toml_comment(line):
+    # Strip comments without treating a # inside a quoted string as a comment.
+    in_quote = False
+    escaped = False
+
+    for index, char in enumerate(line):
+        if escaped:
+            escaped = False
+            continue
+
+        if char == "\\":
+            escaped = True
+            continue
+
+        if char == '"':
+            in_quote = not in_quote
+            continue
+
+        if char == "#" and not in_quote:
+            return line[:index]
+
+    return line
+
+
+def parse_inline_table(value):
+    pairs = {}
+
+    for quoted_key, bare_key, item in re.findall(
+        r'(?:"([^"]+)"|([A-Za-z0-9_-]+))\s*=\s*("[^"]*")',
+        value,
+    ):
+        pairs[quoted_key or bare_key] = ast.literal_eval(item)
+
+    return pairs
+
+
+def parse_toml_value(value):
+    value = value.strip()
+
+    if value.startswith("{") and value.endswith("}"):
+        return parse_inline_table(value)
+
+    try:
+        return ast.literal_eval(value)
+    except (SyntaxError, ValueError):
+        return value
+
+
+def load_minimal_toml(path):
+    # Small fallback parser for this tool's simple config shape. It supports
+    # tables, dotted tables, strings, arrays, and simple inline string maps.
+    data = {}
+    current_table = None
+
+    with open(path, "r", encoding="utf-8") as file:
+        for line in file:
+            line = strip_toml_comment(line).strip()
+
+            if not line:
+                continue
+
+            if line.startswith("[") and line.endswith("]"):
+                table_path = line[1:-1].strip().split(".")
+                current_table = data
+
+                for table in table_path:
+                    current_table = current_table.setdefault(table, {})
+
+                continue
+
+            if current_table is not None and "=" in line:
+                key, value = line.split("=", 1)
+                current_table[key.strip()] = parse_toml_value(value)
+
+    return data
+
+
+def load_config():
+    # config.toml is optional. Missing values fall back to DEFAULT_CONFIG.
+    config = DEFAULT_CONFIG.copy()
+    config["skip_folders"] = list(DEFAULT_CONFIG["skip_folders"])
+    config["rename_folders"] = {}
+
+    config_path = os.path.expanduser(CONFIG_PATH)
+
+    if not os.path.exists(config_path):
+        config["bookmarks_path"] = os.path.expanduser(config["bookmarks_path"])
+        config["skip_folders"] = set(config["skip_folders"])
+        return config
+
+    if tomllib is None:
+        data = load_minimal_toml(config_path)
+    else:
+        with open(config_path, "rb") as file:
+            data = tomllib.load(file)
+
+    bm_config = data.get(CONFIG_MODULE, {})
+
+    if not isinstance(bm_config, dict):
+        print("Invalid config: [bm] must be a table.", file=sys.stderr)
+        sys.exit(1)
+
+    for key in config:
+        if key in bm_config:
+            config[key] = bm_config[key]
+
+    config["bookmarks_path"] = os.path.expanduser(config["bookmarks_path"])
+    config["skip_folders"] = set(config["skip_folders"])
+
+    return config
+
+
+def toml_quote(value):
+    return json.dumps(value)
+
+
+def format_toml_list(values):
+    return "[" + ", ".join(toml_quote(value) for value in values) + "]"
+
+
+def format_default_config_module():
+    # --config-init writes only this command's module so the shared config file
+    # can also hold settings for other Chiyo CLI commands.
+    lines = [
+        f"[{CONFIG_MODULE}]",
+        f"bookmarks_path = {toml_quote(DEFAULT_CONFIG['bookmarks_path'])}",
+        f"skip_folders = {format_toml_list(DEFAULT_CONFIG['skip_folders'])}",
+        f"fzf_prompt = {toml_quote(DEFAULT_CONFIG['fzf_prompt'])}",
+        f"browser = {toml_quote(DEFAULT_CONFIG['browser'])}",
+    ]
+
+    return "\n".join(lines) + "\n"
+
+
+def is_config_module_header(line):
+    stripped = line.strip()
+
+    if not stripped.startswith("[") or not stripped.endswith("]"):
+        return False
+
+    table_name = stripped.strip("[]").strip()
+    return table_name == CONFIG_MODULE or table_name.startswith(f"{CONFIG_MODULE}.")
+
+
+def remove_config_module(content):
+    # Preserve other modules while replacing this command's own tables.
+    lines = content.splitlines()
+    kept_lines = []
+    skipping = False
+
+    for line in lines:
+        stripped = line.strip()
+        is_table_header = stripped.startswith("[") and stripped.endswith("]")
+
+        if is_table_header:
+            skipping = is_config_module_header(line)
+
+        if not skipping:
+            kept_lines.append(line)
+
+    return "\n".join(kept_lines).strip()
+
+
+def init_config():
+    config_path = os.path.expanduser(CONFIG_PATH)
+    config_dir = os.path.dirname(config_path)
+    os.makedirs(config_dir, exist_ok=True)
+
+    if os.path.exists(config_path):
+        with open(config_path, "r", encoding="utf-8") as file:
+            existing_config = file.read()
+    else:
+        existing_config = ""
+
+    remaining_config = remove_config_module(existing_config)
+    bm_config = format_default_config_module()
+
+    if remaining_config:
+        new_config = remaining_config + "\n\n" + bm_config
+    else:
+        new_config = bm_config
+
+    with open(config_path, "w", encoding="utf-8") as file:
+        file.write(new_config)
+
+    print(f"Wrote {CONFIG_MODULE} config to {config_path}")
+
+
+def get_node_name(node):
+    # Safari stores names in different fields depending on the bookmark node.
+    uri_dict = node.get("URIDictionary")
+
+    if isinstance(uri_dict, dict):
+        title = uri_dict.get("title")
+        if title:
+            return title
+
+    return node.get("Title") or node.get("WebBookmarkTitle")
+
+
+def normalize_path(parts, skip_folders, rename_folders):
+    # Convert Safari's internal folder names into display paths shown in fzf.
+    normalized = []
+
+    for part in parts:
+        if not part:
+            continue
+
+        if part in skip_folders:
+            continue
+
+        part = rename_folders.get(part, part)
+        normalized.append(part)
+
+    return normalized
+
+
+def walk_bookmarks(node, path, results, config):
+    # Safari bookmarks are stored as a nested plist tree.
+    name = get_node_name(node)
+
+    if name:
+        path = path + [name]
+
+    if "URLString" in node:
+        normalized_path = normalize_path(
+            path,
+            config["skip_folders"],
+            config["rename_folders"],
+        )
+
+        if normalized_path:
+            display_name = "/".join(normalized_path)
+            url = node["URLString"]
+            results.append((display_name, url))
+
+        return
+
+    for child in node.get("Children", []):
+        walk_bookmarks(child, path, results, config)
+
+
+def load_bookmarks(config):
+    with open(config["bookmarks_path"], "rb") as file:
+        data = plistlib.load(file)
+
+    results = []
+    walk_bookmarks(data, [], results, config)
+
+    seen = set()
+    unique_results = []
+
+    for display_name, url in results:
+        key = (display_name, url)
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        unique_results.append((display_name, url))
+
+    return unique_results
+
+
+def filter_bookmarks(bookmarks, query):
+    if not query:
+        return bookmarks
+
+    query = query.lower()
+
+    return [
+        (display_name, url)
+        for display_name, url in bookmarks
+        if query in display_name.lower()
+    ]
+
+
+def choose_bookmark(bookmarks, config):
+    display_to_url = {display_name: url for display_name, url in bookmarks}
+
+    selected = subprocess.run(
+        ["fzf", f"--prompt={config['fzf_prompt']}"],
+        input="\n".join(display_to_url.keys()),
+        text=True,
+        capture_output=True,
+    ).stdout.strip()
+
+    if not selected:
+        return None
+
+    return display_to_url[selected]
+
+
+def open_url(url, config):
+    subprocess.run(["open", "-a", config["browser"], url])
+
+
+def main():
+    if sys.argv[1:] == ["--config-init"]:
+        init_config()
+        return
+
+    config = load_config()
+    bookmarks = load_bookmarks(config)
+    query = " ".join(sys.argv[1:])
+
+    bookmarks = filter_bookmarks(bookmarks, query)
+
+    if not bookmarks:
+        print("No bookmarks found.", file=sys.stderr)
+        sys.exit(1)
+
+    url = choose_bookmark(bookmarks, config)
+
+    if not url:
+        return
+
+    open_url(url, config)
+
+
+if __name__ == "__main__":
+    main()
