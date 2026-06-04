@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import sys
+import shutil
+import subprocess
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+from chiyo_cli.config import init_module_config, load_module_config
+from chiyo_cli.fzf import Field, STYLE_PRIMARY, STYLE_SECONDARY, choose_item
+
+
+CONFIG_MODULE = "gop"
+DEFAULT_CONFIG = {
+    "roots": ["~"],
+    "fzf_prompt": "gop> ",
+}
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(
+        description="Select a file or directory path with fd and fzf.",
+    )
+    parser.add_argument(
+        "query",
+        nargs="*",
+        help="Optional fd pattern used to pre-filter paths.",
+    )
+    parser.add_argument(
+        "--config-init",
+        action="store_true",
+        help="Write the default [gop] config to the shared Chiyo CLI config file.",
+    )
+    parser.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Always confirm the selected path in fzf.",
+    )
+    return parser.parse_args(argv)
+
+
+def fail(message, exit_code=1):
+    print(f"gop-select: {message}", file=sys.stderr)
+    sys.exit(exit_code)
+
+
+def load_config():
+    try:
+        config = load_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
+    except ValueError as error:
+        fail(str(error))
+
+    roots = config.get("roots", [])
+
+    if not isinstance(roots, list) or not roots:
+        fail("Invalid config: [gop] roots must be a non-empty list.")
+
+    config["roots"] = [os.path.abspath(os.path.expanduser(root)) for root in roots]
+    return config
+
+
+def init_config():
+    config_path = init_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
+    print(f"Wrote {CONFIG_MODULE} config to {config_path}")
+
+
+def run_fd(query, roots):
+    if shutil.which("fd") is None:
+        fail("fd is not installed or not in PATH.")
+
+    pattern = query or "."
+    result = subprocess.run(
+        ["fd", "--absolute-path", pattern, *roots],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        detail = result.stderr.strip() or "unknown error"
+        fail(f"fd failed while searching paths: {detail}")
+
+    return result.stdout.splitlines()
+
+
+def compact_path(path):
+    home = os.path.expanduser("~")
+
+    if path == home:
+        return "~"
+
+    if path.startswith(home + os.sep):
+        return "~" + path[len(home):]
+
+    return path
+
+
+def path_kind(path):
+    if os.path.isdir(path):
+        return "dir"
+
+    return "file"
+
+
+def unique_paths(paths):
+    seen = set()
+    unique = []
+
+    for path in paths:
+        if not path or path in seen:
+            continue
+
+        seen.add(path)
+        unique.append(path)
+
+    return unique
+
+
+def path_fields(path):
+    return [
+        Field(compact_path(path), STYLE_PRIMARY),
+        Field(path_kind(path), STYLE_SECONDARY),
+    ]
+
+
+def choose_path(paths, config):
+    rows = [path_fields(path) for path in paths]
+    return choose_item(
+        paths,
+        rows,
+        config["fzf_prompt"],
+        "a path",
+        fail,
+    )
+
+
+def select_path(paths, config, allow_direct):
+    if allow_direct and len(paths) == 1:
+        return paths[0]
+
+    return choose_path(paths, config)
+
+
+def main(argv=None):
+    args = parse_args(argv if argv is not None else sys.argv[1:])
+
+    if args.config_init:
+        init_config()
+        return
+
+    config = load_config()
+    query = " ".join(args.query)
+    paths = unique_paths(run_fd(query, config["roots"]))
+
+    if not paths:
+        fail("no paths found.")
+
+    selected_path = select_path(paths, config, bool(query) and not args.confirm)
+
+    if selected_path:
+        print(selected_path)
+
+
+if __name__ == "__main__":
+    main()

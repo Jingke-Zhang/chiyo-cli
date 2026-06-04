@@ -58,6 +58,12 @@ export PATH="$HOME/path/to/chiyo-cli/bin:$PATH"
 
 For zsh, put that line in `~/.zshrc`.
 
+Some tools need shell functions. Source them from zsh:
+
+```sh
+source "$HOME/path/to/chiyo-cli/shell/gop.zsh"
+```
+
 ## Tools
 
 ### bm
@@ -158,10 +164,45 @@ terminal = "Ghostty"
 When more than one application has the same name, `app` keeps each discovered
 path as a separate selectable result.
 
+### gop
+
+`gop` selects files and directories with `fd` and `fzf`. The helper
+`gop-select` prints the selected path, while the zsh function decides the
+action: directories are opened with `cd`, and everything else is opened with
+macOS `open`.
+
+```sh
+gop
+gop project
+gop --confirm project
+gop --config-init
+```
+
+Useful options:
+
+- `--confirm`: always confirm the selected path in `fzf`
+- `--config-init`: write the default `[gop]` config into the shared config file
+
+Default generated config:
+
+```toml
+[gop]
+roots = ["~"]
+fzf_prompt = "gop> "
+```
+
+Edit `roots` to control the search range:
+
+```toml
+[gop]
+roots = ["~/Documents", "~/Downloads"]
+```
+
 ## Requirements
 
 - macOS
 - Python 3
+- `fd`
 - `fzf`
 - Safari bookmarks, unless `bookmarks_path` points to another compatible plist
 
