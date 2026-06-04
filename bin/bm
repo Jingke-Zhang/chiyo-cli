@@ -6,6 +6,7 @@ import sys
 import plistlib
 import shutil
 import subprocess
+import unicodedata
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -16,6 +17,10 @@ from chiyo_cli.config import CONFIG_PATH, init_module_config, load_module_config
 
 
 CONFIG_MODULE = "bm"
+STYLE_RESET = "\033[0m"
+STYLE_TITLE = "\033[1;32m"
+STYLE_URL = "\033[3;4m"
+CHOICE_COLUMN_GAP = 2
 
 # Keep universal defaults in code. User-specific preferences can live in
 # ~/.config/chiyo-cli/config.toml under the [bm] table.
@@ -30,6 +35,11 @@ DEFAULT_CONFIG = {
     ],
     "fzf_prompt": "bm> ",
     "browser": "Safari",
+}
+GENERATED_CONFIG = {
+    key: value
+    for key, value in DEFAULT_CONFIG.items()
+    if key != "bookmarks_path"
 }
 
 
@@ -78,7 +88,7 @@ def load_config():
 
 
 def init_config():
-    config_path = init_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
+    config_path = init_module_config(CONFIG_MODULE, GENERATED_CONFIG)
     print(f"Wrote {CONFIG_MODULE} config to {config_path}")
 
 
@@ -142,7 +152,8 @@ def load_bookmarks(config):
     if not os.path.exists(bookmarks_path):
         fail(
             f"bookmark file not found: {bookmarks_path}\n"
-            f"Run 'bm --config-init' and edit {os.path.expanduser(CONFIG_PATH)} "
+            f"Run 'bm --config-init' and add bookmarks_path to "
+            f"{os.path.expanduser(CONFIG_PATH)} "
             "if your bookmarks live somewhere else."
         )
 
@@ -180,16 +191,42 @@ def filter_bookmarks(bookmarks, query):
     ]
 
 
-def format_choice(index, display_name, url):
-    return f"{display_name}\t{url}\t#{index}"
+def style_title(value):
+    return f"{STYLE_TITLE}{value}{STYLE_RESET}"
+
+
+def style_url(value):
+    return f"{STYLE_URL}{value}{STYLE_RESET}"
+
+
+def display_width(value):
+    width = 0
+
+    for char in value:
+        if unicodedata.combining(char):
+            continue
+
+        if unicodedata.east_asian_width(char) in ("F", "W"):
+            width += 2
+        else:
+            width += 1
+
+    return width
+
+
+def format_choice(index, display_name, url, title_width):
+    padding = " " * (title_width - display_width(display_name) + CHOICE_COLUMN_GAP)
+    visible_choice = f"{style_title(display_name)}{padding}{style_url(url)}"
+    return f"{visible_choice}\t#{index}"
 
 
 def choose_bookmark(bookmarks, config):
     if shutil.which("fzf") is None:
         fail("fzf is not installed or not in PATH.")
 
+    title_width = max(display_width(display_name) for display_name, _url in bookmarks)
     choices = [
-        format_choice(index, display_name, url)
+        format_choice(index, display_name, url, title_width)
         for index, (display_name, url) in enumerate(bookmarks)
     ]
 
@@ -197,7 +234,8 @@ def choose_bookmark(bookmarks, config):
         [
             "fzf",
             f"--prompt={config['fzf_prompt']}",
-            "--with-nth=1,2",
+            "--ansi",
+            "--with-nth=1",
             "--delimiter=\t",
         ],
         input="\n".join(choices),

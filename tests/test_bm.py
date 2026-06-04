@@ -114,6 +114,34 @@ class BookmarkTests(unittest.TestCase):
         finally:
             os.unlink(path)
 
+    def test_format_choice_styles_and_aligns_path_and_url(self):
+        choice = BM.format_choice(
+            3,
+            "Personal/Example",
+            "https://example.com",
+            len("Personal/Longer Example"),
+        )
+
+        self.assertEqual(
+            choice,
+            "\033[1;32mPersonal/Example\033[0m"
+            "         \033[3;4mhttps://example.com\033[0m\t#3",
+        )
+
+    def test_format_choice_aligns_wide_characters_by_display_width(self):
+        choice = BM.format_choice(
+            1,
+            "BookmarksBar/ペン字",
+            "https://example.com",
+            BM.display_width("BookmarksBar/Longer"),
+        )
+
+        self.assertEqual(
+            choice,
+            "\033[1;32mBookmarksBar/ペン字\033[0m"
+            "  \033[3;4mhttps://example.com\033[0m\t#1",
+        )
+
     @mock.patch("bm.shutil.which", return_value="/usr/bin/fzf")
     @mock.patch("bm.subprocess.run")
     def test_choose_bookmark_preserves_duplicate_display_names(self, run, _which):
@@ -131,6 +159,8 @@ class BookmarkTests(unittest.TestCase):
         selected = BM.choose_bookmark(bookmarks, {"fzf_prompt": "bm> "})
 
         self.assertEqual(selected, "https://second.example")
+        self.assertIn("--ansi", run.call_args.args[0])
+        self.assertIn("--with-nth=1", run.call_args.args[0])
 
 
 if __name__ == "__main__":

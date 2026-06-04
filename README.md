@@ -1,10 +1,10 @@
 # Chiyo CLI
 
-A collection of small command-line tools for daily work and life.
+A collection of small search-oriented command-line tools.
 
-Chiyo CLI is a personal toolbox for small, focused utilities that make everyday
-terminal workflows easier. The tools live in `bin/` and are designed to be easy
-to read, customize, and compose with other command-line programs.
+Chiyo CLI is a personal toolbox for reaching known objects faster from the
+terminal. The tools live in `bin/` and are designed to be small, focused, easy
+to read, customizable, and composable with other command-line programs.
 
 ## Why
 
@@ -63,8 +63,8 @@ For zsh, put that line in `~/.zshrc`.
 ### bm
 
 `bm` opens Safari bookmarks from the terminal. It reads Safari's
-`Bookmarks.plist`, shows matching bookmarks in `fzf`, and opens the selected URL
-in your configured browser.
+`Bookmarks.plist`, shows matching bookmark paths and URLs in `fzf`, and opens
+the selected URL in your configured browser.
 
 ```sh
 bm
@@ -93,7 +93,6 @@ Default generated config:
 
 ```toml
 [bm]
-bookmarks_path = "~/Library/Safari/Bookmarks.plist"
 skip_folders = ["Bookmarks", "BookmarksMenu", "Tab Group Favorites", "com.apple.ReadingList", "Reading List"]
 fzf_prompt = "bm> "
 browser = "Safari"
@@ -106,6 +105,12 @@ paths:
 [bm.rename_folders]
 BookmarksBar = "Personal"
 Favorites = "Personal"
+```
+
+Advanced bookmark source override can be added to the existing `[bm]` table:
+
+```toml
+bookmarks_path = "~/path/to/compatible/Bookmarks.plist"
 ```
 
 ## Requirements
