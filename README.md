@@ -6,6 +6,25 @@ Chiyo CLI is a personal toolbox for reaching known objects faster from the
 terminal. The tools live in `bin/` and are designed to be small, focused, easy
 to read, customizable, and composable with other command-line programs.
 
+## Quick Start
+
+```sh
+./install.sh
+export PATH="$HOME/.local/bin:$PATH"
+eval "$(chiyo init zsh)"
+chiyo doctor
+```
+
+Try a few commands:
+
+```sh
+ws gh chiyo-cli
+app safari
+bm github
+proj cli-tools
+gop docs
+```
+
 ## Why
 
 Over the years, I found myself increasingly frustrated with modern software.
@@ -86,6 +105,9 @@ Check local setup:
 chiyo doctor
 ```
 
+After shell integration is loaded, initialize or edit config as needed. See
+[Config](#config) for `chiyo config init` commands and config-file behavior.
+
 The zsh integration loads bundled shell functions and registers zsh
 completions. It does not manage `PATH`; keep that in your shell config.
 
@@ -119,6 +141,12 @@ Path-like tools follow a small file palette:
 - Manual review of the current AI-assisted codebase
 - More small search tools that follow the same Search -> Pick -> Action shape
 
+## Project Status
+
+Chiyo CLI is in the v0.x development-install stage. Command behavior is intended
+to stay small and understandable, but config details and installation mechanics
+may still change before a stable release.
+
 ## Requirements
 
 - macOS
@@ -126,6 +154,8 @@ Path-like tools follow a small file palette:
 - `fd`
 - `fzf`
 - Safari bookmarks, unless `bm` uses another compatible plist
+- Full Disk Access for your terminal app on macOS, so Chiyo can read bookmarks,
+  application metadata, and configured filesystem roots
 
 ## Config
 
@@ -169,6 +199,29 @@ Tools that support dynamic shell completion expose a common interface:
 The command prints plain text candidates, one per line. zsh completion files in
 `completions/` call this interface instead of parsing config files or platform
 data directly.
+
+## Development
+
+Run the test suite:
+
+```sh
+make test
+```
+
+This repository uses GitHub Actions to run the same test command on macOS.
+Contributions should keep tool behavior focused, documented, and covered by
+tests where practical. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## Security
+
+Chiyo CLI runs locally but may read local bookmarks, application metadata,
+configured filesystem roots, and shared config. See [SECURITY.md](SECURITY.md)
+for the local data and external-action model.
+
+On macOS, grant Full Disk Access to the terminal app you use with Chiyo CLI.
+Without it, commands such as `bm` and `app` may be unable to read Safari
+bookmarks or application data even when the command itself is installed
+correctly.
 
 ## License
 
