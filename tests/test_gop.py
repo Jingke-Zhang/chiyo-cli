@@ -20,6 +20,7 @@ class GopTests(unittest.TestCase):
                     [
                         "[gop]",
                         'roots = ["~"]',
+                        'exclude = ["Library"]',
                         'fzf_prompt = "gop> "',
                     ]
                 ),
@@ -38,6 +39,7 @@ class GopTests(unittest.TestCase):
             ]
 
             self.assertEqual(config["roots"], [os.path.expanduser("~")])
+            self.assertEqual(config["exclude"], ["Library"])
 
     @mock.patch("gop_select.shutil.which", return_value="/usr/bin/fd")
     @mock.patch("gop_select.subprocess.run")
@@ -68,11 +70,26 @@ class GopTests(unittest.TestCase):
             stderr="",
         )
 
-        GOP.run_fd("project", ["/Users/me"], max_results=2)
+        GOP.run_fd(
+            "project",
+            ["/Users/me"],
+            ["Library", "node_modules"],
+            max_results=2,
+        )
 
         self.assertEqual(
             run.call_args.args[0],
-            ["fd", "--absolute-path", "--max-results=2", "project", "/Users/me"],
+            [
+                "fd",
+                "--absolute-path",
+                "--exclude",
+                "Library",
+                "--exclude",
+                "node_modules",
+                "--max-results=2",
+                "project",
+                "/Users/me",
+            ],
         )
 
     def test_compact_path_uses_home_prefix(self):
@@ -145,6 +162,7 @@ class GopTests(unittest.TestCase):
         selected = GOP.choose_path_stream(
             "project",
             ["/Users/me"],
+            [],
             {"fzf_prompt": "gop> "},
         )
 
@@ -162,12 +180,33 @@ class GopTests(unittest.TestCase):
     def test_main_can_override_roots_from_command_line(self, load_config, run_fd, print_):
         load_config.return_value = {
             "roots": ["/Users/me"],
+            "exclude": [],
             "fzf_prompt": "gop> ",
         }
 
         GOP.main(["--root", "/tmp", "project"])
 
         self.assertEqual(run_fd.call_args.args[1], ["/tmp"])
+        print_.assert_called_once_with("/tmp/project")
+
+    @mock.patch("builtins.print")
+    @mock.patch("gop_select.run_fd", return_value=["/tmp/project"])
+    @mock.patch("gop_select.load_config")
+    def test_main_combines_config_and_command_line_excludes(
+        self,
+        load_config,
+        run_fd,
+        print_,
+    ):
+        load_config.return_value = {
+            "roots": ["/tmp"],
+            "exclude": ["Library"],
+            "fzf_prompt": "gop> ",
+        }
+
+        GOP.main(["--exclude", "node_modules", "project"])
+
+        self.assertEqual(run_fd.call_args.args[2], ["Library", "node_modules"])
         print_.assert_called_once_with("/tmp/project")
 
 

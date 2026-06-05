@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import sys
+import shutil
+import subprocess
+from urllib.parse import quote
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+from chiyo_cli.config import CONFIG_PATH, load_module_config, remove_module_config
+from chiyo_cli.fzf import Field, STYLE_PRIMARY, choose_item
+
+
+CONFIG_MODULE = "ws"
+DEFAULT_ENGINES = {
+    "g": {
+        "name": "Google",
+        "url": "https://www.google.com/search?q={query}",
+    },
+    "gh": {
+        "name": "GitHub",
+        "url": "https://github.com/search?q={query}",
+    },
+    "ytb": {
+        "name": "YouTube",
+        "url": "https://www.youtube.com/results?search_query={query}",
+    },
+    "scholar": {
+        "name": "Google Scholar",
+        "url": "https://scholar.google.com/scholar?q={query}",
+    },
+}
+DEFAULT_CONFIG = {
+    "fzf_prompt": "ws> ",
+    "engines": DEFAULT_ENGINES,
+}
+
+
+def parse_args(argv):
+    force_interactive = bool(argv and argv[0] == "--")
+
+    if force_interactive:
+        argv = argv[1:]
+
+    parser = argparse.ArgumentParser(
+        description="Open a web search URL from a configured search engine.",
+    )
+    parser.add_argument(
+        "terms",
+        nargs="*",
+        help="Search engine key and query, or just a query for interactive engine selection.",
+    )
+    parser.add_argument(
+        "--config-init",
+        action="store_true",
+        help="Write the default [ws] config to the shared Chiyo CLI config file.",
+    )
+    args = parser.parse_args(argv)
+    args.force_interactive = force_interactive
+    return args
+
+
+def fail(message, exit_code=1):
+    print(f"ws: {message}", file=sys.stderr)
+    sys.exit(exit_code)
+
+
+def validate_engine(key, engine):
+    if not isinstance(engine, dict):
+        fail(f"Invalid config: [ws.engines.{key}] must be a table.")
+
+    name = engine.get("name")
+    url = engine.get("url")
+
+    if not isinstance(name, str) or not name:
+        fail(f"Invalid config: [ws.engines.{key}] name must be a string.")
+
+    if not isinstance(url, str) or "{query}" not in url:
+        fail(f"Invalid config: [ws.engines.{key}] url must contain {{query}}.")
+
+
+def load_config():
+    try:
+        config = load_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
+    except ValueError as error:
+        fail(str(error))
+
+    engines = config.get("engines", {})
+
+    if not isinstance(engines, dict) or not engines:
+        fail("Invalid config: [ws.engines] must contain at least one engine.")
+
+    for key, engine in engines.items():
+        validate_engine(key, engine)
+
+    config["engines"] = engines
+    return config
+
+
+def format_default_config():
+    lines = ["[ws]", 'fzf_prompt = "ws> "', ""]
+
+    for key, engine in DEFAULT_ENGINES.items():
+        lines.extend(
+            [
+                f"[ws.engines.{key}]",
+                f'name = "{engine["name"]}"',
+                f'url = "{engine["url"]}"',
+                "",
+            ]
+        )
+
+    return "\n".join(lines)
+
+
+def init_config():
+    config_path = os.path.expanduser(CONFIG_PATH)
+    config_dir = os.path.dirname(config_path)
+    os.makedirs(config_dir, exist_ok=True)
+
+    if os.path.exists(config_path):
+        with open(config_path, "r", encoding="utf-8") as file:
+            existing_config = file.read()
+    else:
+        existing_config = ""
+
+    remaining_config = remove_module_config(existing_config, CONFIG_MODULE)
+    module_config = format_default_config()
+
+    if remaining_config:
+        new_config = remaining_config + "\n\n" + module_config
+    else:
+        new_config = module_config
+
+    with open(config_path, "w", encoding="utf-8") as file:
+        file.write(new_config)
+
+    print(f"Wrote {CONFIG_MODULE} config to {config_path}")
+
+
+def parse_search(terms, engines, force_interactive=False):
+    if not terms:
+        return None, ""
+
+    if not force_interactive and terms[0] in engines:
+        return terms[0], " ".join(terms[1:])
+
+    return None, " ".join(terms)
+
+
+def engine_fields(key, engine):
+    return [
+        Field(key, STYLE_PRIMARY),
+        Field(engine["name"]),
+    ]
+
+
+def choose_engine(engines, config):
+    items = sorted(engines.items(), key=lambda item: item[0])
+    rows = [engine_fields(key, engine) for key, engine in items]
+    selected = choose_item(
+        items,
+        rows,
+        config["fzf_prompt"],
+        "a search engine",
+        fail,
+    )
+
+    if selected is None:
+        return None
+
+    return selected[0]
+
+
+def prompt_query():
+    try:
+        return input("query> ").strip()
+    except EOFError:
+        return ""
+
+
+def build_search_url(engine, query):
+    encoded_query = quote(query)
+    return engine["url"].replace("{query}", encoded_query)
+
+
+def open_url(url):
+    if shutil.which("open") is None:
+        fail("macOS 'open' command is not available.")
+
+    result = subprocess.run(
+        ["open", url],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        detail = result.stderr.strip() or "unknown error"
+        fail(f"could not open URL: {detail}")
+
+
+def main(argv=None):
+    argv = argv if argv is not None else sys.argv[1:]
+    args = parse_args(argv)
+
+    if args.config_init:
+        init_config()
+        return
+
+    config = load_config()
+    engines = config["engines"]
+    engine_key, query = parse_search(
+        args.terms,
+        engines,
+        args.force_interactive,
+    )
+
+    if engine_key is None:
+        engine_key = choose_engine(engines, config)
+
+    if engine_key is None:
+        return
+
+    if not query:
+        query = prompt_query()
+
+    if not query:
+        return
+
+    open_url(build_search_url(engines[engine_key], query))
+
+
+if __name__ == "__main__":
+    main()

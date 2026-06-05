@@ -197,6 +197,52 @@ terminal = "Ghostty"
 When more than one application has the same name, `app` keeps each discovered
 path as a separate selectable result.
 
+### ws
+
+`ws` opens web search URLs from the terminal. It maps short engine keys to URL
+templates, URL-encodes the query, and opens the generated URL in the system
+default browser.
+
+```sh
+ws g wavelet tree
+ws gh chiyo-cli
+ws scholar beaver triple
+ws wavelet tree
+ws -- g wavelet tree
+ws --config-init
+```
+
+Useful options:
+
+- `--config-init`: write the default `[ws]` config into the shared config file
+
+Default generated config:
+
+```toml
+[ws]
+fzf_prompt = "ws> "
+
+[ws.engines.g]
+name = "Google"
+url = "https://www.google.com/search?q={query}"
+
+[ws.engines.gh]
+name = "GitHub"
+url = "https://github.com/search?q={query}"
+
+[ws.engines.ytb]
+name = "YouTube"
+url = "https://www.youtube.com/results?search_query={query}"
+
+[ws.engines.scholar]
+name = "Google Scholar"
+url = "https://scholar.google.com/scholar?q={query}"
+```
+
+When the first argument is a configured engine key, `ws` uses that engine
+directly. Otherwise it opens `fzf` to choose an engine. Use `--` when the query
+itself starts with an engine key.
+
 ### gop
 
 `gop` selects files and directories with `fd` and `fzf`. The helper
@@ -208,6 +254,7 @@ macOS `open`.
 gop
 gop project
 gop -r ~/Documents project
+gop --exclude node_modules project
 gop --confirm project
 gop --config-init
 ```
@@ -215,6 +262,7 @@ gop --config-init
 Useful options:
 
 - `-r, --root DIR`: search this directory instead of configured roots; repeat to search multiple directories
+- `-E, --exclude PATTERN`: exclude an `fd` glob pattern; repeat to exclude multiple patterns
 - `--confirm`: always confirm the selected path in `fzf`
 - `--config-init`: write the default `[gop]` config into the shared config file
 
@@ -229,14 +277,17 @@ Default generated config:
 ```toml
 [gop]
 roots = ["~"]
+exclude = ["Library", "node_modules", "OrbStack"]
 fzf_prompt = "gop> "
 ```
 
-Edit `roots` to control the search range:
+Edit `roots` to control the search range and `exclude` to skip large or noisy
+directories:
 
 ```toml
 [gop]
 roots = ["~/Documents", "~/Downloads"]
+exclude = ["Library", "node_modules", "OrbStack"]
 ```
 
 ## Requirements

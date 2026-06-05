@@ -21,6 +21,7 @@ STYLE_FILE = ""
 STYLE_EXECUTABLE = "\033[1;32m"
 DEFAULT_CONFIG = {
     "roots": ["~"],
+    "exclude": ["Library", "node_modules", "OrbStack"],
     "fzf_prompt": "gop> ",
 }
 
@@ -39,6 +40,12 @@ def parse_args(argv):
         "--root",
         action="append",
         help="Search this directory instead of configured roots. Can be used more than once.",
+    )
+    parser.add_argument(
+        "-E",
+        "--exclude",
+        action="append",
+        help="Exclude a glob pattern from fd search. Can be used more than once.",
     )
     parser.add_argument(
         "--config-init",
@@ -69,7 +76,13 @@ def load_config():
     if not isinstance(roots, list) or not roots:
         fail("Invalid config: [gop] roots must be a non-empty list.")
 
-    config["roots"] = [os.path.abspath(os.path.expanduser(root)) for root in roots]
+    exclude = config.get("exclude", [])
+
+    if not isinstance(exclude, list):
+        fail("Invalid config: [gop] exclude must be a list.")
+
+    config["roots"] = normalize_roots(roots)
+    config["exclude"] = exclude
     return config
 
 
@@ -82,9 +95,13 @@ def normalize_roots(roots):
     return [os.path.abspath(os.path.expanduser(root)) for root in roots]
 
 
-def fd_command(query, roots, max_results=None):
+def fd_command(query, roots, exclude=None, max_results=None):
     pattern = query or "."
     command = ["fd", "--absolute-path"]
+    exclude = exclude or []
+
+    for pattern_to_exclude in exclude:
+        command.extend(["--exclude", pattern_to_exclude])
 
     if max_results is not None:
         command.append(f"--max-results={max_results}")
@@ -102,10 +119,10 @@ def require_fzf():
         fail("fzf is not installed or not in PATH.")
 
 
-def run_fd(query, roots, max_results=None):
+def run_fd(query, roots, exclude=None, max_results=None):
     require_fd()
     result = subprocess.run(
-        fd_command(query, roots, max_results),
+        fd_command(query, roots, exclude, max_results),
         capture_output=True,
         text=True,
         check=False,
@@ -214,11 +231,11 @@ def choose_path(paths, config):
     return parse_choice(selected)
 
 
-def choose_path_stream(query, roots, config):
+def choose_path_stream(query, roots, exclude, config):
     require_fd()
     require_fzf()
     fd_process = subprocess.Popen(
-        fd_command(query, roots),
+        fd_command(query, roots, exclude),
         stdout=subprocess.PIPE,
         text=True,
     )
@@ -294,9 +311,10 @@ def main(argv=None):
     config = load_config()
     query = " ".join(args.query)
     roots = normalize_roots(args.root) if args.root else config["roots"]
+    exclude = config["exclude"] + (args.exclude or [])
 
     if query and not args.confirm:
-        paths = unique_paths(run_fd(query, roots, max_results=2))
+        paths = unique_paths(run_fd(query, roots, exclude, max_results=2))
 
         if not paths:
             fail("no paths found.")
@@ -304,9 +322,9 @@ def main(argv=None):
         if len(paths) == 1:
             selected_path = paths[0]
         else:
-            selected_path = choose_path_stream(query, roots, config)
+            selected_path = choose_path_stream(query, roots, exclude, config)
     else:
-        selected_path = choose_path_stream(query, roots, config)
+        selected_path = choose_path_stream(query, roots, exclude, config)
 
     if selected_path:
         print(selected_path)
