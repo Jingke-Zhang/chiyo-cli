@@ -40,6 +40,7 @@ app
 ws
 chiyo
 gop-select
+proj-select
 ```
 
 zsh completions are linked into `~/.local/share/zsh/site-functions`.

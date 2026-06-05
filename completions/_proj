@@ -1,0 +1,23 @@
+#compdef proj
+
+local -a projects
+
+if [[ "$PREFIX" == -* ]]; then
+  _arguments \
+    '-r[search this directory instead of configured roots]:root:_directories' \
+    '--root[search this directory instead of configured roots]:root:_directories' \
+    '-E[exclude a glob pattern from project search]:pattern:' \
+    '--exclude[exclude a glob pattern from project search]:pattern:' \
+    '--confirm[always confirm the selected project in fzf]' \
+    '--config-init[write the default proj config]' \
+    '--help[show help]'
+  return
+fi
+
+projects=("${(@f)$(proj-select --list-completions "$PREFIX" 2>/dev/null)}")
+
+if (( ${#projects} == 0 )); then
+  return 0
+fi
+
+_describe 'projects' projects

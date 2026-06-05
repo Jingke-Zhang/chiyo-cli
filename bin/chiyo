@@ -12,8 +12,8 @@ COMPLETIONS_DIR = os.path.join(REPO_ROOT, "completions")
 CONFIG_PATH = "~/.config/chiyo-cli/config.toml"
 LOCAL_BIN_DIR = "~/.local/bin"
 ZSH_SITE_FUNCTIONS_DIR = "~/.local/share/zsh/site-functions"
-COMMANDS = ["bm", "app", "ws", "chiyo", "gop-select"]
-COMPLETIONS = ["_bm", "_app", "_ws", "_gop"]
+COMMANDS = ["bm", "app", "ws", "chiyo", "gop-select", "proj-select"]
+COMPLETIONS = ["_bm", "_app", "_ws", "_gop", "_proj"]
 SHELL_INTEGRATION = 'eval "$(chiyo init zsh)"'
 
 
@@ -52,6 +52,7 @@ def init_zsh():
             "autoload -Uz compinit",
             "compinit",
             f'source "{os.path.join(SHELL_DIR, "gop.zsh")}"',
+            f'source "{os.path.join(SHELL_DIR, "proj.zsh")}"',
             "",
         ]
     )
@@ -167,6 +168,10 @@ def doctor_lines():
         (
             *check_file(os.path.join(SHELL_DIR, "gop.zsh")),
             "gop shell integration file",
+        ),
+        (
+            *check_file(os.path.join(SHELL_DIR, "proj.zsh")),
+            "proj shell integration file",
         ),
         (
             *check_file(ZSH_SITE_FUNCTIONS_DIR),

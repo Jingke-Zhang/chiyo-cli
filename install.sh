@@ -5,8 +5,8 @@ REPO_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 BIN_DIR="${HOME}/.local/bin"
 ZSH_COMPLETIONS_DIR="${HOME}/.local/share/zsh/site-functions"
 
-commands="bm app ws chiyo gop-select"
-completions="_bm _app _ws _gop"
+commands="bm app ws chiyo gop-select proj-select"
+completions="_bm _app _ws _gop _proj"
 zshrc="${ZDOTDIR:-$HOME}/.zshrc"
 shell_integration='eval "$(chiyo init zsh)"'
 

@@ -25,6 +25,10 @@ class ChiyoTests(unittest.TestCase):
             f'source "{os.path.join(CHIYO.SHELL_DIR, "gop.zsh")}"',
             script,
         )
+        self.assertIn(
+            f'source "{os.path.join(CHIYO.SHELL_DIR, "proj.zsh")}"',
+            script,
+        )
 
     @mock.patch("chiyo.shutil.which")
     def test_doctor_lines_reports_missing_development_install(self, which):
@@ -103,6 +107,14 @@ class ChiyoTests(unittest.TestCase):
         )
         self.assertIn(
             f"ok      _bm completion: {site_functions}/_bm -> {CHIYO.COMPLETIONS_DIR}/_bm",
+            lines,
+        )
+        self.assertIn(
+            f"ok      proj-select symlink: {local_bin}/proj-select -> {CHIYO.BIN_DIR}/proj-select",
+            lines,
+        )
+        self.assertIn(
+            f"ok      _proj completion: {site_functions}/_proj -> {CHIYO.COMPLETIONS_DIR}/_proj",
             lines,
         )
         self.assertIn(

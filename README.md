@@ -111,11 +111,11 @@ Path-like tools follow a small file palette:
 - [`app`](docs/app.md): search installed macOS applications and launch one
 - [`ws`](docs/ws.md): build web search URLs and open them
 - [`gop`](docs/gop.md): search files/directories, then `cd` or `open`
+- [`proj`](docs/proj.md): search git projects, then `cd` into one
 - [Installation details](docs/install.md): development install and shell setup
 
 ## Future Work
 
-- `proj`: a project switching tool for quickly jumping between known workspaces
 - Manual review of the current AI-assisted codebase
 - More small search tools that follow the same Search -> Pick -> Action shape
 
