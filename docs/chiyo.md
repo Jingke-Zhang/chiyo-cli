@@ -4,13 +4,24 @@
 
 ```sh
 chiyo init zsh
+chiyo config init --all --write
+chiyo config init ws --force
+chiyo config init app --append
 chiyo doctor
 ```
 
 ## Commands
 
 - `init zsh`: print zsh integration code for completions and shell functions
+- `config init`: write explicit default config for selected tools
 - `doctor`: check common dependencies and setup paths
+
+`config init` requires either `--all` or at least one tool name. Its write modes
+are:
+
+- `--write`: write only when the config file is missing or empty; this is the default
+- `--append`: add missing tool sections without replacing existing sections
+- `--force`: replace selected tool sections
 
 `init zsh` does not add `~/.local/bin` to `PATH`. The development installer
 creates symlinks there, but users should manage PATH in their own shell config.

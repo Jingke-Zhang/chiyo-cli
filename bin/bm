@@ -167,7 +167,7 @@ def load_bookmarks(config):
     if not os.path.exists(bookmarks_path):
         fail(
             f"bookmark file not found: {bookmarks_path}\n"
-            f"Run 'bm --config-init' and add bookmarks_path to "
+            f"Run 'chiyo config init bm --append' and edit bookmarks_path in "
             f"{os.path.expanduser(CONFIG_PATH)} "
             "if your bookmarks live somewhere else."
         )

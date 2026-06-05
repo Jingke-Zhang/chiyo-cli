@@ -11,7 +11,7 @@ gop project
 gop -r ~/Documents project
 gop --exclude node_modules project
 gop --confirm project
-gop --config-init
+chiyo config init gop --append
 gop-select --list-completions
 ```
 
@@ -20,7 +20,6 @@ gop-select --list-completions
 - `-r, --root DIR`: search this directory instead of configured roots; repeat to search multiple directories
 - `-E, --exclude PATTERN`: exclude an `fd` glob pattern; repeat to exclude multiple patterns
 - `--confirm`: always confirm the selected path in `fzf`
-- `--config-init`: write the default `[gop]` config into the shared config file
 - `--list-completions`: print path candidates from `gop-select` for shell completion
 
 ## Display Colors

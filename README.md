@@ -138,10 +138,23 @@ All tools in this repository share one config file:
 Each command owns its own TOML table. For example, `bm` uses `[bm]`. Future tools
 can add their own sections without interfering with existing ones.
 
-`--config-init` writes the command's full default config so user choices are
-visible and editable. If a command table exists, Chiyo treats it as explicit
-user config: missing keys fall back to code defaults with a warning, but
-configured lists and tables are not silently merged with default choices.
+Use `chiyo config init` to write explicit default config:
+
+```sh
+chiyo config init --all --write
+chiyo config init ws --force
+chiyo config init app --append
+```
+
+`chiyo config init` requires either `--all` or at least one tool name. The
+default `--write` mode only writes when the config file is missing or empty.
+Use `--append` to add missing tool sections and `--force` to replace selected
+sections.
+
+Generated config is meant to be edited. If a command table exists, Chiyo treats
+it as explicit user config: missing keys fall back to code defaults with a
+warning, but configured lists and tables are not silently merged with default
+choices.
 
 Shared config loading and initialization helpers live in `chiyo_cli/config.py`.
 

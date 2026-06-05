@@ -12,7 +12,7 @@ bm github
 bm --print-url github
 bm --browser "Google Chrome" github
 bm --confirm github
-bm --config-init
+chiyo config init bm --append
 bm --list-completions
 ```
 
@@ -21,12 +21,11 @@ bm --list-completions
 - `--print-url`: print the selected URL instead of opening it
 - `--browser NAME`: open the selected URL with a browser for this run
 - `--confirm`: always confirm the selected bookmark in `fzf`
-- `--config-init`: write the default `[bm]` config into the shared config file
 - `--list-completions`: print bookmark display paths for shell completion
 
 ## Config
 
-`bm --config-init` creates or updates this tool's config section in:
+`chiyo config init bm --append` creates this tool's config section in:
 
 ```text
 ~/.config/chiyo-cli/config.toml

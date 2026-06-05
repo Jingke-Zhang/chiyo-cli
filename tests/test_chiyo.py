@@ -14,6 +14,10 @@ class ChiyoTests(unittest.TestCase):
     def test_init_zsh_prints_path_and_gop_source(self):
         script = CHIYO.init_zsh()
 
+        self.assertIn(
+            "# Config: run `chiyo config init --all --write` once for explicit defaults.",
+            script,
+        )
         self.assertNotIn("export PATH=", script)
         self.assertIn(
             f'fpath=("{os.path.expanduser(CHIYO.ZSH_SITE_FUNCTIONS_DIR)}" $fpath)',
@@ -136,6 +140,80 @@ class ChiyoTests(unittest.TestCase):
                     "bm symlink",
                 ),
             )
+
+    def test_validate_config_init_requires_target(self):
+        args = mock.Mock(all=False, tools=[])
+
+        with self.assertRaises(ValueError):
+            CHIYO.validate_config_init_args(args)
+
+    def test_config_init_all_write_writes_every_tool_when_config_is_empty(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.config_init_lines(sorted(CHIYO.CONFIG_TOOLS), "write")
+
+            content = Path(config_path).read_text(encoding="utf-8")
+
+        self.assertIn("wrote [ws] config", "\n".join(lines))
+        self.assertIn("[bm]", content)
+        self.assertIn("[app.alias]", content)
+        self.assertIn("[ws.engines.g]", content)
+        self.assertIn("[proj]", content)
+
+    def test_config_init_write_refuses_non_empty_config(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text("[other]\n", encoding="utf-8")
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with self.assertRaises(CHIYO.ConfigInitRefused):
+                    CHIYO.config_init_lines(["ws"], "write")
+
+    def test_config_init_append_skips_existing_and_adds_missing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text("[ws]\nfzf_prompt = \"old> \"\n", encoding="utf-8")
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.config_init_lines(["ws", "app"], "append")
+
+            content = Path(config_path).read_text(encoding="utf-8")
+
+        self.assertIn("skip [ws] config: already exists", lines)
+        self.assertIn("append [app] config", "\n".join(lines))
+        self.assertIn("[app.alias]", content)
+        self.assertIn('fzf_prompt = "old> "', content)
+
+    def test_config_init_force_replaces_selected_tool(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[other]",
+                        'name = "kept"',
+                        "",
+                        "[ws]",
+                        'fzf_prompt = "old> "',
+                        "",
+                        "[ws.engines.old]",
+                        'name = "Old"',
+                        'url = "https://old.test?q={query}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                CHIYO.config_init_lines(["ws"], "force")
+
+            content = Path(config_path).read_text(encoding="utf-8")
+
+        self.assertIn("[other]", content)
+        self.assertIn("[ws.engines.g]", content)
+        self.assertNotIn("[ws.engines.old]", content)
 
     @mock.patch("chiyo.shutil.which")
     def test_doctor_lines_reports_available_command(self, which):

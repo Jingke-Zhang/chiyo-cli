@@ -10,13 +10,12 @@ ws gh chiyo-cli
 ws scholar beaver triple
 ws wavelet tree
 ws -- g wavelet tree
-ws --config-init
+chiyo config init ws --append
 ws --list-completions
 ```
 
 ## Options
 
-- `--config-init`: write the default `[ws]` config into the shared config file
 - `--list-completions`: print configured engine keys for shell completion
 
 ## Config

@@ -62,6 +62,12 @@ Then load Chiyo shell integration:
 eval "$(chiyo init zsh)"
 ```
 
+Initialize explicit default config separately:
+
+```sh
+chiyo config init --all --write
+```
+
 ## Uninstall
 
 ```sh

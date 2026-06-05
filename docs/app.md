@@ -13,7 +13,7 @@ app safari
 app browser
 app --print-name safari
 app --confirm browser
-app --config-init
+chiyo config init app --append
 app --list-completions
 ```
 
@@ -21,7 +21,6 @@ app --list-completions
 
 - `--print-name`: print the selected application name instead of opening it
 - `--confirm`: always confirm the selected application in `fzf`
-- `--config-init`: write the default `[app]` config into the shared config file
 - `--list-completions`: print discovered application names for shell completion
 
 ## Config
