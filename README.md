@@ -48,6 +48,16 @@ experimental. All of them are built around the same idea:
 
 Build the smallest tool that solves the problem well enough.
 
+## AI-Assisted
+
+This project is built with AI assistance. The tools are intentionally small
+enough that generated changes can be read, questioned, and reshaped without
+turning the codebase into a black box.
+
+The current code should be treated as not yet fully audited. AI helps with
+drafting, refactoring, tests, and documentation, but the final responsibility
+for behavior, design, and maintainability stays with me.
+
 ## Install
 
 Generate zsh integration from this repository:
@@ -85,6 +95,12 @@ Path-like tools follow a small file palette:
 - [`app`](docs/app.md): search installed macOS applications and launch one
 - [`ws`](docs/ws.md): build web search URLs and open them
 - [`gop`](docs/gop.md): search files/directories, then `cd` or `open`
+
+## Future Work
+
+- `proj`: a project switching tool for quickly jumping between known workspaces
+- Manual review of the current AI-assisted codebase
+- More small search tools that follow the same Search -> Pick -> Action shape
 
 ## Requirements
 
