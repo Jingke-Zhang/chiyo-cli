@@ -92,7 +92,10 @@ def doctor_lines():
         ("fzf", *check_command("fzf")),
         ("fd", *check_command("fd")),
         ("gop-select", *check_tool("gop-select")),
-        ("gop shell function", *check_file(os.path.join(SHELL_DIR, "gop.zsh"))),
+        (
+            "gop shell integration file",
+            *check_file(os.path.join(SHELL_DIR, "gop.zsh")),
+        ),
         ("config", *check_file(CONFIG_PATH)),
     ]
 
