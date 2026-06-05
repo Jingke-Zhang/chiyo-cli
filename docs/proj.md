@@ -1,8 +1,9 @@
 # proj
 
 `proj` switches to a project directory from the terminal. The helper
-`proj-select` discovers git repositories, selects a project with direct matching
-or `fzf`, and prints the selected directory. The zsh function then `cd`s there.
+`proj-select` discovers directories that contain project marker paths, selects a
+project with direct matching or `fzf`, and prints the selected directory. The
+zsh function then `cd`s there.
 
 ```sh
 proj
@@ -29,12 +30,19 @@ Default generated config:
 ```toml
 [proj]
 roots = ["~/Documents", "~/Projects", "~/Developer"]
+markers = [".project", ".git"]
 exclude = ["node_modules", "Library", ".cache"]
 fzf_prompt = "proj> "
 ```
 
+Marker names are configurable. A directory is considered a project when it
+contains any configured marker.
+
 Missing search roots are skipped with a warning. If no configured roots exist,
 `proj-select` exits with an error.
+
+In `fzf`, project names and paths are displayed as aligned columns. Fuzzy search
+only matches the project name column; paths are shown for disambiguation.
 
 ## Completion Data
 

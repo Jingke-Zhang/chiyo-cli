@@ -13,9 +13,33 @@ PROJ = SourceFileLoader("proj_select", str(REPO_ROOT / "bin" / "proj-select")).l
 
 
 class ProjTests(unittest.TestCase):
-    def test_project_from_git_dir_returns_parent_directory(self):
+    def test_load_config_preserves_custom_markers(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "config.toml"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "[proj]",
+                        f'roots = ["{temp_dir}"]',
+                        'markers = [".project", "package.json"]',
+                        'exclude = ["node_modules"]',
+                        'fzf_prompt = "proj> "',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            config = PROJ.load_module_config(
+                "proj",
+                PROJ.DEFAULT_CONFIG,
+                config_path=str(config_path),
+            )
+
+            self.assertEqual(config["markers"], [".project", "package.json"])
+
+    def test_project_from_marker_returns_parent_directory(self):
         self.assertEqual(
-            PROJ.project_from_git_dir("/Users/me/project/.git"),
+            PROJ.project_from_marker("/Users/me/project/.project"),
             "/Users/me/project",
         )
 
@@ -31,17 +55,17 @@ class ProjTests(unittest.TestCase):
 
     @mock.patch("proj_select.shutil.which", return_value="/usr/bin/fd")
     @mock.patch("proj_select.subprocess.run")
-    def test_run_fd_searches_git_directories(self, run, _which):
+    def test_run_fd_searches_project_markers(self, run, _which):
         run.return_value = subprocess.CompletedProcess(
             args=[],
             returncode=0,
-            stdout="/Users/me/project/.git\n",
+            stdout="/Users/me/project/.project\n",
             stderr="",
         )
 
         self.assertEqual(
-            PROJ.run_fd(["/Users/me"], ["node_modules"]),
-            ["/Users/me/project/.git"],
+            PROJ.run_fd(["/Users/me"], [".project", ".git"], ["node_modules"]),
+            ["/Users/me/project/.project"],
         )
         self.assertEqual(
             run.call_args.args[0],
@@ -49,11 +73,9 @@ class ProjTests(unittest.TestCase):
                 "fd",
                 "--absolute-path",
                 "--hidden",
-                "--type",
-                "d",
                 "--exclude",
                 "node_modules",
-                "^\\.git$",
+                "^(\\.project|\\.git)$",
                 "/Users/me",
             ],
         )
@@ -61,31 +83,60 @@ class ProjTests(unittest.TestCase):
     @mock.patch("proj_select.run_fd")
     def test_all_projects_deduplicates_project_paths(self, run_fd):
         run_fd.return_value = [
-            "/Users/me/project/.git",
+            "/Users/me/project/.project",
             "/Users/me/project/.git",
         ]
 
         self.assertEqual(
-            PROJ.all_projects(["/Users/me"], []),
+            PROJ.all_projects(["/Users/me"], [".project", ".git"], []),
             ["/Users/me/project"],
         )
 
-    def test_filter_projects_matches_name_or_compact_path(self):
+    def test_filter_projects_matches_only_project_name(self):
         projects = [
             "/Users/me/Documents/chiyo-cli",
-            "/Users/me/Projects/other",
+            "/Users/me/special-path/other",
         ]
 
         self.assertEqual(
             PROJ.filter_projects(projects, "chiyo"),
             ["/Users/me/Documents/chiyo-cli"],
         )
+        self.assertEqual(PROJ.filter_projects(projects, "special-path"), [])
+
+    def test_project_widths_uses_display_width(self):
+        self.assertEqual(
+            PROJ.project_widths(["/tmp/a", "/tmp/長い"]),
+            [4],
+        )
 
     def test_format_project_choice_hides_exact_path_in_last_column(self):
-        choice = PROJ.format_project_choice("/Users/me/Documents/chiyo-cli")
+        choice = PROJ.format_project_choice(
+            "/Users/me/Documents/chiyo-cli",
+            [9],
+        )
 
         self.assertIn("chiyo-cli", choice)
-        self.assertTrue(choice.endswith("\t/Users/me/Documents/chiyo-cli"))
+        self.assertTrue(choice.endswith("\tchiyo-cli\t/Users/me/Documents/chiyo-cli"))
+
+    @mock.patch("proj_select.shutil.which", return_value="/usr/bin/fzf")
+    @mock.patch("proj_select.subprocess.run")
+    def test_choose_project_searches_only_hidden_project_name_column(self, run, _which):
+        run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="chiyo-cli  ~/Documents/chiyo-cli\tchiyo-cli\t/Users/me/Documents/chiyo-cli\n",
+            stderr="",
+        )
+
+        selected = PROJ.choose_project(
+            ["/Users/me/Documents/chiyo-cli"],
+            {"fzf_prompt": "proj> "},
+        )
+
+        self.assertEqual(selected, "/Users/me/Documents/chiyo-cli")
+        self.assertIn("--with-nth=1", run.call_args.args[0])
+        self.assertIn("--nth=2", run.call_args.args[0])
 
     @mock.patch("proj_select.choose_project")
     def test_select_project_returns_single_match_directly_when_allowed(self, choose):

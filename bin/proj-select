@@ -12,6 +12,7 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from chiyo_cli.config import init_module_config, load_module_config
+from chiyo_cli.fzf import display_width
 
 
 CONFIG_MODULE = "proj"
@@ -20,6 +21,7 @@ STYLE_PRIMARY = "\033[1;32m"
 STYLE_SECONDARY = "\033[3;4m"
 DEFAULT_CONFIG = {
     "roots": ["~/Documents", "~/Projects", "~/Developer"],
+    "markers": [".project", ".git"],
     "exclude": ["node_modules", "Library", ".cache"],
     "fzf_prompt": "proj> ",
 }
@@ -32,7 +34,7 @@ def parse_args(argv):
     parser.add_argument(
         "query",
         nargs="*",
-        help="Optional text used to pre-filter project names or paths.",
+        help="Optional text used to pre-filter project names.",
     )
     parser.add_argument(
         "-r",
@@ -84,12 +86,22 @@ def load_config():
     if not isinstance(roots, list) or not roots:
         fail("Invalid config: [proj] roots must be a non-empty list.")
 
+    markers = config.get("markers", [])
+
+    if not isinstance(markers, list) or not markers:
+        fail("Invalid config: [proj] markers must be a non-empty list.")
+
+    for marker in markers:
+        if not isinstance(marker, str) or not marker:
+            fail("Invalid config: [proj] markers must contain non-empty strings.")
+
     exclude = config.get("exclude", [])
 
     if not isinstance(exclude, list):
         fail("Invalid config: [proj] exclude must be a list.")
 
     config["roots"] = roots
+    config["markers"] = markers
     config["exclude"] = exclude
     return config
 
@@ -127,8 +139,29 @@ def require_fzf():
         fail("fzf is not installed or not in PATH.")
 
 
-def fd_command(roots, exclude=None, max_results=None):
-    command = ["fd", "--absolute-path", "--hidden", "--type", "d"]
+def escape_fd_alternative(value):
+    escaped = []
+
+    for char in value:
+        if char in r"\.^$*+?{}[]|()":
+            escaped.append("\\" + char)
+        else:
+            escaped.append(char)
+
+    return "".join(escaped)
+
+
+def marker_pattern(markers):
+    alternatives = [escape_fd_alternative(marker) for marker in markers]
+
+    if len(alternatives) == 1:
+        return f"^{alternatives[0]}$"
+
+    return "^(" + "|".join(alternatives) + ")$"
+
+
+def fd_command(roots, markers, exclude=None, max_results=None):
+    command = ["fd", "--absolute-path", "--hidden"]
     exclude = exclude or []
 
     for pattern_to_exclude in exclude:
@@ -137,13 +170,13 @@ def fd_command(roots, exclude=None, max_results=None):
     if max_results is not None:
         command.append(f"--max-results={max_results}")
 
-    return [*command, "^\\.git$", *roots]
+    return [*command, marker_pattern(markers), *roots]
 
 
-def run_fd(roots, exclude=None, max_results=None):
+def run_fd(roots, markers, exclude=None, max_results=None):
     require_fd()
     result = subprocess.run(
-        fd_command(roots, exclude, max_results),
+        fd_command(roots, markers, exclude, max_results),
         capture_output=True,
         text=True,
         check=False,
@@ -156,7 +189,7 @@ def run_fd(roots, exclude=None, max_results=None):
     return result.stdout.splitlines()
 
 
-def project_from_git_dir(path):
+def project_from_marker(path):
     return os.path.dirname(path.rstrip(os.sep))
 
 
@@ -197,9 +230,9 @@ def unique_paths(paths):
     return unique
 
 
-def all_projects(roots, exclude, max_results=None):
-    git_dirs = run_fd(roots, exclude, max_results)
-    projects = [project_from_git_dir(path) for path in git_dirs]
+def all_projects(roots, markers, exclude, max_results=None):
+    marker_paths = run_fd(roots, markers, exclude, max_results)
+    projects = [project_from_marker(path) for path in marker_paths]
     return unique_paths(projects)
 
 
@@ -212,14 +245,21 @@ def filter_projects(projects, query):
     return [
         path
         for path in projects
-        if query in project_name(path).lower() or query in compact_path(path).lower()
+        if query in project_name(path).lower()
     ]
 
 
-def format_project_choice(path):
+def project_widths(projects):
+    return [
+        max((display_width(project_name(path)) for path in projects), default=0),
+    ]
+
+
+def format_project_choice(path, widths):
     name = style_text(project_name(path), STYLE_PRIMARY)
     compact = style_text(compact_path(path), STYLE_SECONDARY)
-    return f"{name}\t{compact}\t{path}"
+    name_padding = " " * (widths[0] - display_width(project_name(path)) + 2)
+    return f"{name}{name_padding}{compact}\t{project_name(path)}\t{path}"
 
 
 def parse_choice(choice):
@@ -231,15 +271,17 @@ def parse_choice(choice):
 
 def choose_project(projects, config):
     require_fzf()
+    widths = project_widths(projects)
     result = subprocess.run(
         [
             "fzf",
             f"--prompt={config['fzf_prompt']}",
             "--ansi",
-            "--with-nth=1,2",
+            "--with-nth=1",
+            "--nth=2",
             "--delimiter=\t",
         ],
-        input="\n".join(format_project_choice(path) for path in projects),
+        input="\n".join(format_project_choice(path, widths) for path in projects),
         text=True,
         capture_output=True,
         check=False,
@@ -282,7 +324,7 @@ def main(argv=None):
     query = " ".join(args.query)
     roots = normalize_roots(args.root if args.root else config["roots"])
     exclude = config["exclude"] + (args.exclude or [])
-    projects = filter_projects(all_projects(roots, exclude), query)
+    projects = filter_projects(all_projects(roots, config["markers"], exclude), query)
 
     if args.list_completions:
         list_completions(projects)
