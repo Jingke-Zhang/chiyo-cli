@@ -50,18 +50,13 @@ Build the smallest tool that solves the problem well enough.
 
 ## Install
 
-Add this repository's `bin` directory to your shell path:
+Generate zsh integration from this repository:
 
 ```sh
-export PATH="$HOME/path/to/chiyo-cli/bin:$PATH"
+/path/to/chiyo-cli/bin/chiyo init zsh >> ~/.zshrc
 ```
 
-For zsh, put that line in `~/.zshrc`, then reload your shell.
-
-Install shell integrations:
-
 ```sh
-chiyo init zsh >> ~/.zshrc
 source ~/.zshrc
 ```
 
@@ -85,210 +80,11 @@ Path-like tools follow a small file palette:
 
 ## Tools
 
-### chiyo
-
-`chiyo` manages shell integration and local diagnostics.
-
-```sh
-chiyo init zsh
-chiyo doctor
-```
-
-Useful commands:
-
-- `init zsh`: print zsh initialization code for shell functions
-- `doctor`: check common dependencies and setup paths
-
-### bm
-
-`bm` opens Safari bookmarks from the terminal. It reads Safari's
-`Bookmarks.plist`, shows matching bookmark paths and URLs in `fzf`, and opens
-the selected URL in your configured browser.
-When a query matches exactly one bookmark, `bm` opens it directly.
-
-```sh
-bm
-bm github
-bm --print-url github
-bm --browser "Google Chrome" github
-bm --confirm github
-bm --config-init
-```
-
-Useful options:
-
-- `--print-url`: print the selected URL instead of opening it
-- `--browser NAME`: open the selected URL with a browser for this run
-- `--confirm`: always confirm the selected bookmark in `fzf`
-- `--config-init`: write the default `[bm]` config into the shared config file
-
-`bm --config-init` creates or updates this tool's config section in:
-
-```text
-~/.config/chiyo-cli/config.toml
-```
-
-The config file is optional. If it does not exist, the tool uses defaults from
-the script.
-
-Default generated config:
-
-```toml
-[bm]
-skip_folders = ["Bookmarks", "BookmarksMenu", "Tab Group Favorites", "com.apple.ReadingList", "Reading List"]
-fzf_prompt = "bm> "
-browser = "Safari"
-```
-
-Optional folder renaming can be added manually when you want shorter display
-paths:
-
-```toml
-[bm.rename_folders]
-BookmarksBar = "Personal"
-Favorites = "Personal"
-```
-
-Advanced bookmark source override can be added to the existing `[bm]` table:
-
-```toml
-bookmarks_path = "~/path/to/compatible/Bookmarks.plist"
-```
-
-### app
-
-`app` launches installed macOS applications from the terminal. It discovers
-application bundles with Spotlight metadata, shows matching application names,
-aliases, and paths in `fzf`, and opens the selected application path.
-When a query matches exactly one application, `app` opens it directly. An exact
-alias match launches the configured application without opening `fzf`.
-
-```sh
-app
-app safari
-app browser
-app --print-name safari
-app --confirm browser
-app --config-init
-```
-
-Useful options:
-
-- `--print-name`: print the selected application name instead of opening it
-- `--confirm`: always confirm the selected application in `fzf`
-- `--config-init`: write the default `[app]` config into the shared config file
-
-Default generated config:
-
-```toml
-[app]
-fzf_prompt = "app> "
-```
-
-Optional aliases can be added manually:
-
-```toml
-[app.alias]
-browser = "Safari"
-editor = "Emacs"
-terminal = "Ghostty"
-```
-
-When more than one application has the same name, `app` keeps each discovered
-path as a separate selectable result.
-
-### ws
-
-`ws` opens web search URLs from the terminal. It maps short engine keys to URL
-templates, URL-encodes the query, and opens the generated URL in the system
-default browser.
-
-```sh
-ws g wavelet tree
-ws gh chiyo-cli
-ws scholar beaver triple
-ws wavelet tree
-ws -- g wavelet tree
-ws --config-init
-```
-
-Useful options:
-
-- `--config-init`: write the default `[ws]` config into the shared config file
-
-Default generated config:
-
-```toml
-[ws]
-fzf_prompt = "ws> "
-
-[ws.engines.g]
-name = "Google"
-url = "https://www.google.com/search?q={query}"
-
-[ws.engines.gh]
-name = "GitHub"
-url = "https://github.com/search?q={query}"
-
-[ws.engines.ytb]
-name = "YouTube"
-url = "https://www.youtube.com/results?search_query={query}"
-
-[ws.engines.scholar]
-name = "Google Scholar"
-url = "https://scholar.google.com/scholar?q={query}"
-```
-
-When the first argument is a configured engine key, `ws` uses that engine
-directly. Otherwise it opens `fzf` to choose an engine. Use `--` when the query
-itself starts with an engine key.
-
-### gop
-
-`gop` selects files and directories with `fd` and `fzf`. The helper
-`gop-select` prints the selected path, while the zsh function decides the
-action: directories are opened with `cd`, and everything else is opened with
-macOS `open`.
-
-```sh
-gop
-gop project
-gop -r ~/Documents project
-gop --exclude node_modules project
-gop --confirm project
-gop --config-init
-```
-
-Useful options:
-
-- `-r, --root DIR`: search this directory instead of configured roots; repeat to search multiple directories
-- `-E, --exclude PATTERN`: exclude an `fd` glob pattern; repeat to exclude multiple patterns
-- `--confirm`: always confirm the selected path in `fzf`
-- `--config-init`: write the default `[gop]` config into the shared config file
-
-Display colors:
-
-- directories: bold blue
-- regular files: plain
-- executables: bold green
-
-Default generated config:
-
-```toml
-[gop]
-roots = ["~"]
-exclude = ["Library", "node_modules", "OrbStack"]
-fzf_prompt = "gop> "
-```
-
-Edit `roots` to control the search range and `exclude` to skip large or noisy
-directories:
-
-```toml
-[gop]
-roots = ["~/Documents", "~/Downloads"]
-exclude = ["Library", "node_modules", "OrbStack"]
-```
+- [`chiyo`](docs/chiyo.md): shell integration and setup diagnostics
+- [`bm`](docs/bm.md): search Safari bookmarks and open URLs
+- [`app`](docs/app.md): search installed macOS applications and launch one
+- [`ws`](docs/ws.md): build web search URLs and open them
+- [`gop`](docs/gop.md): search files/directories, then `cd` or `open`
 
 ## Requirements
 
@@ -296,7 +92,7 @@ exclude = ["Library", "node_modules", "OrbStack"]
 - Python 3
 - `fd`
 - `fzf`
-- Safari bookmarks, unless `bookmarks_path` points to another compatible plist
+- Safari bookmarks, unless `bm` uses another compatible plist
 
 ## Config
 
