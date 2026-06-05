@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import shutil
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BIN_DIR = os.path.join(REPO_ROOT, "bin")
+SHELL_DIR = os.path.join(REPO_ROOT, "shell")
+CONFIG_PATH = "~/.config/chiyo-cli/config.toml"
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(
+        description="Manage Chiyo CLI shell integration and diagnostics.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    init_parser = subparsers.add_parser(
+        "init",
+        help="Print shell initialization code.",
+    )
+    init_parser.add_argument(
+        "shell",
+        choices=["zsh"],
+        help="Shell to initialize.",
+    )
+
+    subparsers.add_parser(
+        "doctor",
+        help="Check local Chiyo CLI setup.",
+    )
+
+    return parser.parse_args(argv)
+
+
+def init_zsh():
+    return "\n".join(
+        [
+            "# Chiyo CLI",
+            f'export PATH="{BIN_DIR}:$PATH"',
+            f'source "{os.path.join(SHELL_DIR, "gop.zsh")}"',
+            "",
+        ]
+    )
+
+
+def print_init(shell):
+    if shell == "zsh":
+        print(init_zsh())
+        return
+
+    raise ValueError(f"Unsupported shell: {shell}")
+
+
+def check_command(name):
+    path = shutil.which(name)
+
+    if path:
+        return True, path
+
+    return False, "not found"
+
+
+def check_tool(name):
+    ok, detail = check_command(name)
+
+    if ok:
+        return ok, detail
+
+    bundled_path = os.path.join(BIN_DIR, name)
+
+    if os.path.exists(bundled_path):
+        return False, f"not in PATH; bundled at {bundled_path}"
+
+    return False, detail
+
+
+def check_file(path):
+    expanded = os.path.expanduser(path)
+
+    if os.path.exists(expanded):
+        return True, expanded
+
+    return False, "not found"
+
+
+def doctor_lines():
+    checks = [
+        ("python3", *check_command("python3")),
+        ("fzf", *check_command("fzf")),
+        ("fd", *check_command("fd")),
+        ("gop-select", *check_tool("gop-select")),
+        ("gop shell function", *check_file(os.path.join(SHELL_DIR, "gop.zsh"))),
+        ("config", *check_file(CONFIG_PATH)),
+    ]
+
+    lines = []
+
+    for label, ok, detail in checks:
+        status = "ok" if ok else "missing"
+        lines.append(f"{status:7} {label}: {detail}")
+
+    if not shutil.which("gop-select"):
+        lines.append("")
+        lines.append("Run: chiyo init zsh >> ~/.zshrc")
+
+    if not os.path.exists(os.path.expanduser(CONFIG_PATH)):
+        lines.append("Run tool-specific --config-init commands to create config.")
+
+    return lines
+
+
+def doctor():
+    print("\n".join(doctor_lines()))
+
+
+def main(argv=None):
+    args = parse_args(argv if argv is not None else sys.argv[1:])
+
+    if args.command == "init":
+        print_init(args.shell)
+        return
+
+    if args.command == "doctor":
+        doctor()
+        return
+
+
+if __name__ == "__main__":
+    main()

@@ -56,15 +56,36 @@ Add this repository's `bin` directory to your shell path:
 export PATH="$HOME/path/to/chiyo-cli/bin:$PATH"
 ```
 
-For zsh, put that line in `~/.zshrc`.
+For zsh, put that line in `~/.zshrc`, then reload your shell.
 
-Some tools need shell functions. Source them from zsh:
+Install shell integrations:
 
 ```sh
-source "$HOME/path/to/chiyo-cli/shell/gop.zsh"
+chiyo init zsh >> ~/.zshrc
+source ~/.zshrc
+```
+
+Check local setup:
+
+```sh
+chiyo doctor
 ```
 
 ## Tools
+
+### chiyo
+
+`chiyo` manages shell integration and local diagnostics.
+
+```sh
+chiyo init zsh
+chiyo doctor
+```
+
+Useful commands:
+
+- `init zsh`: print zsh initialization code for shell functions
+- `doctor`: check common dependencies and setup paths
 
 ### bm
 
