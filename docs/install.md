@@ -12,6 +12,19 @@ the installed commands immediately.
 ./install.sh
 ```
 
+The installer is safe to run repeatedly. Existing links that already point to
+this repository are skipped, outdated links are updated, and regular files are
+left untouched with a warning.
+
+The installer also checks whether `~/.zshrc` already contains:
+
+```zsh
+eval "$(chiyo init zsh)"
+```
+
+If the line is missing, it is reported as a todo. The installer does not edit
+shell config files automatically.
+
 The installer creates:
 
 ```text
@@ -47,6 +60,15 @@ Then load Chiyo shell integration:
 ```zsh
 eval "$(chiyo init zsh)"
 ```
+
+## Uninstall
+
+```sh
+./install.sh --uninstall
+```
+
+Uninstall removes only symlinks that point back to the current repository.
+Regular files and symlinks that point elsewhere are left untouched.
 
 ## Repository Moves
 
