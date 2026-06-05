@@ -12,10 +12,14 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from chiyo_cli.config import init_module_config, load_module_config
-from chiyo_cli.fzf import Field, STYLE_PRIMARY, STYLE_SECONDARY, choose_item
 
 
 CONFIG_MODULE = "gop"
+STYLE_RESET = "\033[0m"
+STYLE_DIR = "\033[1;34m"
+STYLE_FILE = "\033[1;32m"
+STYLE_EXECUTABLE = "\033[1;35m"
+STYLE_KIND = "\033[3;4m"
 DEFAULT_CONFIG = {
     "roots": ["~"],
     "fzf_prompt": "gop> ",
@@ -30,6 +34,12 @@ def parse_args(argv):
         "query",
         nargs="*",
         help="Optional fd pattern used to pre-filter paths.",
+    )
+    parser.add_argument(
+        "-r",
+        "--root",
+        action="append",
+        help="Search this directory instead of configured roots. Can be used more than once.",
     )
     parser.add_argument(
         "--config-init",
@@ -69,13 +79,34 @@ def init_config():
     print(f"Wrote {CONFIG_MODULE} config to {config_path}")
 
 
-def run_fd(query, roots):
+def normalize_roots(roots):
+    return [os.path.abspath(os.path.expanduser(root)) for root in roots]
+
+
+def fd_command(query, roots, max_results=None):
+    pattern = query or "."
+    command = ["fd", "--absolute-path"]
+
+    if max_results is not None:
+        command.append(f"--max-results={max_results}")
+
+    return [*command, pattern, *roots]
+
+
+def require_fd():
     if shutil.which("fd") is None:
         fail("fd is not installed or not in PATH.")
 
-    pattern = query or "."
+
+def require_fzf():
+    if shutil.which("fzf") is None:
+        fail("fzf is not installed or not in PATH.")
+
+
+def run_fd(query, roots, max_results=None):
+    require_fd()
     result = subprocess.run(
-        ["fd", "--absolute-path", pattern, *roots],
+        fd_command(query, roots, max_results),
         capture_output=True,
         text=True,
         check=False,
@@ -104,7 +135,38 @@ def path_kind(path):
     if os.path.isdir(path):
         return "dir"
 
+    if os.access(path, os.X_OK):
+        return "exec"
+
     return "file"
+
+
+def style_for_kind(kind):
+    if kind == "dir":
+        return STYLE_DIR
+
+    if kind == "exec":
+        return STYLE_EXECUTABLE
+
+    return STYLE_FILE
+
+
+def style_text(value, style):
+    return f"{style}{value}{STYLE_RESET}"
+
+
+def format_path_choice(path):
+    kind = path_kind(path)
+    visible_path = style_text(compact_path(path), style_for_kind(kind))
+    visible_kind = style_text(kind, STYLE_KIND)
+    return f"{visible_path}  {visible_kind}\t{path}"
+
+
+def parse_choice(choice):
+    if "\t" not in choice:
+        return choice
+
+    return choice.rsplit("\t", 1)[1]
 
 
 def unique_paths(paths):
@@ -121,22 +183,97 @@ def unique_paths(paths):
     return unique
 
 
-def path_fields(path):
-    return [
-        Field(compact_path(path), STYLE_PRIMARY),
-        Field(path_kind(path), STYLE_SECONDARY),
-    ]
-
-
 def choose_path(paths, config):
-    rows = [path_fields(path) for path in paths]
-    return choose_item(
-        paths,
-        rows,
-        config["fzf_prompt"],
-        "a path",
-        fail,
+    require_fzf()
+    result = subprocess.run(
+        [
+            "fzf",
+            f"--prompt={config['fzf_prompt']}",
+            "--ansi",
+            "--with-nth=1",
+            "--delimiter=\t",
+        ],
+        input="\n".join(format_path_choice(path) for path in paths),
+        text=True,
+        capture_output=True,
+        check=False,
     )
+
+    if result.returncode == 130:
+        return None
+
+    if result.returncode != 0:
+        fail("fzf failed while selecting a path.")
+
+    selected = result.stdout.strip()
+
+    if not selected:
+        return None
+
+    return parse_choice(selected)
+
+
+def choose_path_stream(query, roots, config):
+    require_fd()
+    require_fzf()
+    fd_process = subprocess.Popen(
+        fd_command(query, roots),
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+
+    fzf_process = subprocess.Popen(
+        [
+            "fzf",
+            f"--prompt={config['fzf_prompt']}",
+            "--ansi",
+            "--with-nth=1",
+            "--delimiter=\t",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    try:
+        if fd_process.stdout is not None and fzf_process.stdin is not None:
+            for path in fd_process.stdout:
+                path = path.rstrip("\n")
+
+                if not path:
+                    continue
+
+                try:
+                    fzf_process.stdin.write(format_path_choice(path) + "\n")
+                except BrokenPipeError:
+                    break
+
+        if fzf_process.stdin is not None:
+            fzf_process.stdin.close()
+
+        stdout = fzf_process.stdout.read() if fzf_process.stdout is not None else ""
+        if fzf_process.stderr is not None:
+            fzf_process.stderr.read()
+        returncode = fzf_process.wait()
+    finally:
+        if fd_process.stdout is not None:
+            fd_process.stdout.close()
+
+        fd_process.wait()
+
+    if returncode == 130:
+        return None
+
+    if returncode != 0:
+        fail("fzf failed while selecting a path.")
+
+    selected = stdout.strip()
+
+    if not selected:
+        return None
+
+    return parse_choice(selected)
 
 
 def select_path(paths, config, allow_direct):
@@ -155,12 +292,20 @@ def main(argv=None):
 
     config = load_config()
     query = " ".join(args.query)
-    paths = unique_paths(run_fd(query, config["roots"]))
+    roots = normalize_roots(args.root) if args.root else config["roots"]
 
-    if not paths:
-        fail("no paths found.")
+    if query and not args.confirm:
+        paths = unique_paths(run_fd(query, roots, max_results=2))
 
-    selected_path = select_path(paths, config, bool(query) and not args.confirm)
+        if not paths:
+            fail("no paths found.")
+
+        if len(paths) == 1:
+            selected_path = paths[0]
+        else:
+            selected_path = choose_path_stream(query, roots, config)
+    else:
+        selected_path = choose_path_stream(query, roots, config)
 
     if selected_path:
         print(selected_path)

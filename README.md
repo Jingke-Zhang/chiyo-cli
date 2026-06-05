@@ -195,14 +195,22 @@ macOS `open`.
 ```sh
 gop
 gop project
+gop -r ~/Documents project
 gop --confirm project
 gop --config-init
 ```
 
 Useful options:
 
+- `-r, --root DIR`: search this directory instead of configured roots; repeat to search multiple directories
 - `--confirm`: always confirm the selected path in `fzf`
 - `--config-init`: write the default `[gop]` config into the shared config file
+
+Display colors:
+
+- directories: blue and bold
+- files: green and bold
+- executables: magenta and bold
 
 Default generated config:
 
