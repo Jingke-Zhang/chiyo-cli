@@ -13,6 +13,7 @@ if REPO_ROOT not in sys.path:
 
 from chiyo_cli.config import init_module_config, load_module_config
 from chiyo_cli.fzf import display_width
+from chiyo_cli.output import print_warning
 
 
 CONFIG_MODULE = "proj"
@@ -72,7 +73,7 @@ def fail(message, exit_code=1):
 
 
 def warn(message):
-    print(f"proj-select: warning: {message}", file=sys.stderr)
+    print_warning("proj-select", message)
 
 
 def load_config():

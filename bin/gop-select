@@ -12,6 +12,7 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from chiyo_cli.config import init_module_config, load_module_config
+from chiyo_cli.output import print_warning
 
 
 CONFIG_MODULE = "gop"
@@ -71,7 +72,7 @@ def fail(message, exit_code=1):
 
 
 def warn(message):
-    print(f"gop-select: warning: {message}", file=sys.stderr)
+    print_warning("gop-select", message)
 
 
 def load_config():

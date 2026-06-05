@@ -14,6 +14,7 @@ if REPO_ROOT not in sys.path:
 
 from chiyo_cli.config import CONFIG_PATH, init_module_config, load_module_config
 from chiyo_cli.fzf import Field, STYLE_PRIMARY, STYLE_SECONDARY, choose_item
+from chiyo_cli.output import print_warning
 
 
 CONFIG_MODULE = "bm"
@@ -76,7 +77,7 @@ def fail(message, exit_code=1):
 
 
 def warn(message):
-    print(f"bm: warning: {message}", file=sys.stderr)
+    print_warning("bm", message)
 
 
 def load_config():
