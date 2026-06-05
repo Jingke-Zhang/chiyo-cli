@@ -27,6 +27,8 @@ def style_text(value, style):
 
 
 def display_width(value):
+    # fzf aligns by terminal cells, not Python string length. East Asian wide
+    # characters occupy two cells, while combining marks occupy none.
     width = 0
 
     for char in value:
@@ -68,6 +70,9 @@ def format_row(index, fields, widths):
 
         cells.append(style_text(field.value, field.style) + padding)
 
+    # Keep the stable item index outside the visible fzf columns. The caller can
+    # style and align display text freely while selection still maps back to the
+    # original object.
     return "".join(cells) + f"\t#{index}"
 
 
@@ -80,6 +85,8 @@ def format_rows(rows):
 
 
 def choose_item(items, rows, prompt, error_label, fail):
+    # fzf sees the hidden tab-delimited index, but --with-nth shows only the
+    # formatted display columns to the user.
     if shutil.which("fzf") is None:
         fail("fzf is not installed or not in PATH.")
 

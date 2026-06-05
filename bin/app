@@ -87,6 +87,9 @@ def discover_apps():
     if shutil.which("mdfind") is None:
         fail("macOS 'mdfind' command is not available.")
 
+    # Spotlight is the source of truth here because it finds system apps,
+    # user-installed apps, and nested application bundles without hard-coding
+    # every possible Applications directory.
     result = subprocess.run(
         ["mdfind", 'kMDItemContentType == "com.apple.application-bundle"'],
         capture_output=True,
@@ -129,6 +132,9 @@ def resolve_alias(query, aliases):
 
 
 def alias_for_app(name, aliases):
+    # Aliases are configured as alias -> app name. For display we need the
+    # reverse direction, and we pick one stable alias when several point to the
+    # same application.
     matching_aliases = [
         alias
         for alias, app_name in aliases.items()
@@ -158,6 +164,8 @@ def filter_apps(apps, query, aliases=None):
 
 
 def app_fields(app, alias):
+    # The primary green label marks the thing the user can type. With an alias,
+    # the alias becomes primary and the original app name stays plain.
     if alias:
         name_style = ""
         alias_style = STYLE_PRIMARY
@@ -227,6 +235,8 @@ def main(argv=None):
     query = " ".join(args.query)
     alias_target = resolve_alias(query, config["alias"])
 
+    # Exact aliases are intentionally stronger than search matches. Since alias
+    # keys are unique, they can launch directly unless the user asks to confirm.
     if alias_target and not args.confirm:
         selected_app = {
             "name": alias_target,

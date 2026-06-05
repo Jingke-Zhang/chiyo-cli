@@ -44,6 +44,8 @@ def strip_toml_comment(line):
 
 
 def parse_inline_table(value):
+    # The fallback parser only needs the inline table shape used by this repo:
+    # {alias = "App Name"}. Full TOML parsing is delegated to tomllib/tomli.
     pairs = {}
 
     for quoted_key, bare_key, item in re.findall(
@@ -134,6 +136,8 @@ def format_toml_value(value):
 
 
 def format_module_config(module_name, defaults):
+    # Shared init only renders flat keys. Tools with nested tables, such as ws,
+    # provide their own renderer and still reuse remove_module_config.
     lines = [f"[{module_name}]"]
 
     for key, value in defaults.items():

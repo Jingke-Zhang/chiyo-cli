@@ -36,6 +36,8 @@ def parse_args(argv):
 
 
 def init_zsh():
+    # Print shell code instead of editing dotfiles directly; callers can review
+    # it, append it, or embed it in their own shell management setup.
     return "\n".join(
         [
             "# Chiyo CLI",
@@ -64,6 +66,8 @@ def check_command(name):
 
 
 def check_tool(name):
+    # A tool can exist in this repo but still be unusable from the shell if bin/
+    # has not been added to PATH yet.
     ok, detail = check_command(name)
 
     if ok:

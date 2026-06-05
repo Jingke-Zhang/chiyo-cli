@@ -164,6 +164,8 @@ def load_bookmarks(config):
     results = []
     walk_bookmarks(data, [], results, config)
 
+    # Safari can expose the same bookmark more than once through internal
+    # folders. Deduplicate after path normalization so fzf shows each row once.
     seen = set()
     unique_results = []
 
@@ -215,6 +217,8 @@ def choose_bookmark(bookmarks, config):
 
 
 def select_bookmark(bookmarks, config, allow_direct):
+    # Direct open keeps single-result searches fast; --confirm routes even a
+    # single match through fzf when the user wants to inspect it first.
     if allow_direct and len(bookmarks) == 1:
         return bookmarks[0][1]
 

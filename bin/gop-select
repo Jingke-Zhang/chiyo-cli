@@ -96,6 +96,9 @@ def init_config():
 
 
 def normalize_roots(roots):
+    # Defaults include common macOS folders that may not exist on every machine.
+    # Missing roots should be noisy enough to explain a smaller search space but
+    # not fatal while at least one usable root remains.
     normalized = []
 
     for root in roots:
@@ -114,6 +117,8 @@ def normalize_roots(roots):
 
 
 def fd_command(query, roots, exclude=None, max_results=None):
+    # fd treats "." as "match everything", which gives the interactive empty
+    # query mode a natural full-root listing.
     pattern = query or "."
     command = ["fd", "--absolute-path"]
     exclude = exclude or []
@@ -193,12 +198,16 @@ def style_text(value, style):
 
 
 def format_path_choice(path):
+    # The first column is for humans; the second tab-delimited column is the
+    # exact path returned after fzf selection.
     kind = path_kind(path)
     visible_path = style_text(compact_path(path), style_for_kind(kind))
     return f"{visible_path}\t{path}"
 
 
 def parse_choice(choice):
+    # During tests or unexpected fzf output we may receive a raw path. Accept it
+    # rather than failing because the shell wrapper can still act on the path.
     if "\t" not in choice:
         return choice
 
@@ -315,6 +324,8 @@ def choose_path_stream(query, roots, exclude, config):
 
 
 def select_path(paths, config, allow_direct):
+    # Non-confirmed queries probe fd with --max-results=2 first. One result can
+    # open directly; two means "there may be more", so fall back to streaming fzf.
     if allow_direct and len(paths) == 1:
         return paths[0]
 

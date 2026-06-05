@@ -42,6 +42,8 @@ DEFAULT_CONFIG = {
 
 
 def parse_args(argv):
+    # A leading -- means "do not treat the first term as an engine key". This
+    # lets users search for text such as "g wavelet tree" interactively.
     force_interactive = bool(argv and argv[0] == "--")
 
     if force_interactive:
@@ -103,6 +105,8 @@ def load_config():
 
 
 def format_default_config():
+    # ws has nested [ws.engines.*] tables, so it renders its default config
+    # explicitly instead of using the flat shared init helper.
     lines = ["[ws]", 'fzf_prompt = "ws> "', ""]
 
     for key, engine in DEFAULT_ENGINES.items():
@@ -144,6 +148,8 @@ def init_config():
 
 
 def parse_search(terms, engines, force_interactive=False):
+    # Engine keys win unless -- forced interactive mode. This keeps "ws g ..."
+    # predictable while still supporting queries that begin with an engine key.
     if not terms:
         return None, ""
 
@@ -185,6 +191,8 @@ def prompt_query():
 
 
 def build_search_url(engine, query):
+    # Encode before replacing the template token so each engine owns only its
+    # URL shape, not query escaping rules.
     encoded_query = quote(query)
     return engine["url"].replace("{query}", encoded_query)
 
