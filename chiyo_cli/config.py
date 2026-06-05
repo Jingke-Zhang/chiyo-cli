@@ -111,16 +111,30 @@ def load_config_file(config_path=CONFIG_PATH):
         return tomllib.load(file)
 
 
-def load_module_config(module_name, defaults, config_path=CONFIG_PATH):
-    # config.toml is optional. Missing values fall back to command defaults.
-    config = copy.deepcopy(defaults)
+def load_module_config(module_name, defaults, config_path=CONFIG_PATH, warn=None):
+    # If a module table exists, treat it as the user's explicit configuration.
+    # Defaults are only copied in for missing keys so tools keep running, and
+    # callers can surface that fallback as a warning.
     data = load_config_file(config_path)
-    module_config = data.get(module_name, {})
+    module_config = data.get(module_name)
+
+    if module_config is None:
+        return copy.deepcopy(defaults)
 
     if not isinstance(module_config, dict):
         raise ValueError(f"Invalid config: [{module_name}] must be a table.")
 
-    config.update(module_config)
+    config = copy.deepcopy(module_config)
+
+    for key, value in defaults.items():
+        if key in config:
+            continue
+
+        if warn is not None:
+            warn(f"config [{module_name}] missing {key}; using default.")
+
+        config[key] = copy.deepcopy(value)
+
     return config
 
 
@@ -136,15 +150,25 @@ def format_toml_value(value):
 
 
 def format_module_config(module_name, defaults):
-    # Shared init only renders flat keys. Tools with nested tables, such as ws,
-    # provide their own renderer and still reuse remove_module_config.
     lines = [f"[{module_name}]"]
+    nested_tables = []
 
     for key, value in defaults.items():
         if isinstance(value, dict):
+            nested_tables.append((key, value))
             continue
 
         lines.append(f"{key} = {format_toml_value(value)}")
+
+    for key, table in nested_tables:
+        lines.append("")
+        lines.append(f"[{module_name}.{key}]")
+
+        for nested_key, nested_value in table.items():
+            if isinstance(nested_value, dict):
+                continue
+
+            lines.append(f"{nested_key} = {format_toml_value(nested_value)}")
 
     return "\n".join(lines) + "\n"
 

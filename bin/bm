@@ -32,11 +32,6 @@ DEFAULT_CONFIG = {
     "fzf_prompt": "bm> ",
     "browser": "Safari",
 }
-GENERATED_CONFIG = {
-    key: value
-    for key, value in DEFAULT_CONFIG.items()
-    if key != "bookmarks_path"
-}
 
 
 def parse_args(argv):
@@ -80,9 +75,18 @@ def fail(message, exit_code=1):
     sys.exit(exit_code)
 
 
+def warn(message):
+    print(f"bm: warning: {message}", file=sys.stderr)
+
+
 def load_config():
     try:
-        config = load_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
+        config = load_module_config(
+            CONFIG_MODULE,
+            DEFAULT_CONFIG,
+            config_path=CONFIG_PATH,
+            warn=warn,
+        )
     except ValueError as error:
         fail(str(error))
 
@@ -94,7 +98,11 @@ def load_config():
 
 
 def init_config():
-    config_path = init_module_config(CONFIG_MODULE, GENERATED_CONFIG)
+    config_path = init_module_config(
+        CONFIG_MODULE,
+        DEFAULT_CONFIG,
+        config_path=CONFIG_PATH,
+    )
     print(f"Wrote {CONFIG_MODULE} config to {config_path}")
 
 

@@ -77,6 +77,10 @@ def fail(message, exit_code=1):
     sys.exit(exit_code)
 
 
+def warn(message):
+    print(f"ws: warning: {message}", file=sys.stderr)
+
+
 def validate_engine(key, engine):
     if not isinstance(engine, dict):
         fail(f"Invalid config: [ws.engines.{key}] must be a table.")
@@ -93,7 +97,12 @@ def validate_engine(key, engine):
 
 def load_config():
     try:
-        config = load_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
+        config = load_module_config(
+            CONFIG_MODULE,
+            DEFAULT_CONFIG,
+            config_path=CONFIG_PATH,
+            warn=warn,
+        )
     except ValueError as error:
         fail(str(error))
 

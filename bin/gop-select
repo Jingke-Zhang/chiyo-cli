@@ -76,7 +76,7 @@ def warn(message):
 
 def load_config():
     try:
-        config = load_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
+        config = load_module_config(CONFIG_MODULE, DEFAULT_CONFIG, warn=warn)
     except ValueError as error:
         fail(str(error))
 

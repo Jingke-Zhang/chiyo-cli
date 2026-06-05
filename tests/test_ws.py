@@ -113,6 +113,40 @@ class WsTests(unittest.TestCase):
 
             self.assertEqual(config["engines"]["g"]["name"], "Google")
 
+    def test_load_config_does_not_merge_default_engines_when_ws_is_configured(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "config.toml"
+            path.write_text(
+                "\n".join(
+                    [
+                        "[ws]",
+                        'fzf_prompt = "ws> "',
+                        "",
+                        "[ws.engines.custom]",
+                        'name = "Custom"',
+                        'url = "https://custom.test/search?q={query}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(WS, "CONFIG_PATH", str(path)):
+                config = WS.load_config()
+
+            self.assertEqual(list(config["engines"]), ["custom"])
+
+    def test_load_config_warns_when_ws_uses_default_engines_fallback(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "config.toml"
+            path.write_text("[ws]\nfzf_prompt = \"ws> \"\n", encoding="utf-8")
+
+            with mock.patch.object(WS, "CONFIG_PATH", str(path)):
+                with mock.patch("ws.warn") as warn:
+                    config = WS.load_config()
+
+            self.assertIn("g", config["engines"])
+            warn.assert_called_once_with("config [ws] missing engines; using default.")
+
     def test_init_config_replaces_ws_tables_and_preserves_other_modules(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "config.toml"

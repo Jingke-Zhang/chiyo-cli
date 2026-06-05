@@ -31,6 +31,8 @@ Default generated config:
 ```toml
 [app]
 fzf_prompt = "app> "
+
+[app.alias]
 ```
 
 Optional aliases can be added manually:

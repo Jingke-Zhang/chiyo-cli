@@ -48,6 +48,9 @@ When the first argument is a configured engine key, `ws` uses that engine
 directly. Otherwise it opens `fzf` to choose an engine. Use `--` when the query
 itself starts with an engine key.
 
+When `[ws]` is present in the config file, configured engines are treated as the
+complete engine set. Delete an engine table to disable that key.
+
 ## Completion Data
 
 `ws --list-completions` prints one configured engine key per line. User-added

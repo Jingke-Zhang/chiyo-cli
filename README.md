@@ -138,6 +138,11 @@ All tools in this repository share one config file:
 Each command owns its own TOML table. For example, `bm` uses `[bm]`. Future tools
 can add their own sections without interfering with existing ones.
 
+`--config-init` writes the command's full default config so user choices are
+visible and editable. If a command table exists, Chiyo treats it as explicit
+user config: missing keys fall back to code defaults with a warning, but
+configured lists and tables are not silently merged with default choices.
+
 Shared config loading and initialization helpers live in `chiyo_cli/config.py`.
 
 ## Completions
