@@ -7,7 +7,12 @@ gop() {
   esac
 
   local target
-  target="$(gop-select "$@")" || return
+
+  if [ "$#" -eq 1 ] && [ -e "$1" ]; then
+    target="$1"
+  else
+    target="$(gop-select "$@")" || return
+  fi
 
   [ -z "$target" ] && return
 

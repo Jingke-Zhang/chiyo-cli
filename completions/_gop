@@ -1,0 +1,23 @@
+#compdef gop
+
+local -a paths
+
+if [[ "$PREFIX" == -* ]]; then
+  _arguments \
+    '-r[search this directory instead of configured roots]:root:_directories' \
+    '--root[search this directory instead of configured roots]:root:_directories' \
+    '-E[exclude a glob pattern from fd search]:pattern:' \
+    '--exclude[exclude a glob pattern from fd search]:pattern:' \
+    '--confirm[always confirm the selected path in fzf]' \
+    '--config-init[write the default gop config]' \
+    '--help[show help]'
+  return
+fi
+
+paths=("${(@f)$(gop-select --list-completions "$PREFIX" 2>/dev/null)}")
+
+if (( ${#paths} == 0 )); then
+  return 0
+fi
+
+_describe 'paths' paths

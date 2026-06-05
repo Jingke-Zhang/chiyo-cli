@@ -1,0 +1,15 @@
+#compdef ws
+
+local -a engines
+
+if (( CURRENT != 2 )); then
+  return 0
+fi
+
+engines=("${(@f)$(ws --list-completions 2>/dev/null)}")
+
+if (( ${#engines} == 0 )); then
+  return 0
+fi
+
+_describe 'search engines' engines

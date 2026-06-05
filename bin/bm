@@ -7,7 +7,7 @@ import plistlib
 import shutil
 import subprocess
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
@@ -66,6 +66,11 @@ def parse_args(argv):
         "--confirm",
         action="store_true",
         help="Always confirm the selected bookmark in fzf.",
+    )
+    parser.add_argument(
+        "--list-completions",
+        action="store_true",
+        help="Print completion candidates, one per line.",
     )
     return parser.parse_args(argv)
 
@@ -216,6 +221,11 @@ def choose_bookmark(bookmarks, config):
     return selected[1]
 
 
+def list_completions(bookmarks):
+    for display_name, _url in bookmarks:
+        print(display_name)
+
+
 def select_bookmark(bookmarks, config, allow_direct):
     # Direct open keeps single-result searches fast; --confirm routes even a
     # single match through fzf when the user wants to inspect it first.
@@ -254,6 +264,11 @@ def main(argv=None):
         config["browser"] = args.browser
 
     bookmarks = load_bookmarks(config)
+
+    if args.list_completions:
+        list_completions(bookmarks)
+        return
+
     query = " ".join(args.query)
 
     bookmarks = filter_bookmarks(bookmarks, query)

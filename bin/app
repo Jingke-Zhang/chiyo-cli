@@ -6,7 +6,7 @@ import sys
 import shutil
 import subprocess
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
@@ -45,6 +45,11 @@ def parse_args(argv):
         "--confirm",
         action="store_true",
         help="Always confirm the selected application in fzf.",
+    )
+    parser.add_argument(
+        "--list-completions",
+        action="store_true",
+        help="Print completion candidates, one per line.",
     )
     return parser.parse_args(argv)
 
@@ -196,6 +201,19 @@ def choose_app(apps, config):
     )
 
 
+def list_completions(apps):
+    seen = set()
+
+    for app in apps:
+        name = app["name"]
+
+        if name in seen:
+            continue
+
+        seen.add(name)
+        print(name)
+
+
 def select_app(apps, config, allow_direct):
     if allow_direct and len(apps) == 1:
         return apps[0]
@@ -232,6 +250,11 @@ def main(argv=None):
         return
 
     config = load_config()
+
+    if args.list_completions:
+        list_completions(discover_apps())
+        return
+
     query = " ".join(args.query)
     alias_target = resolve_alias(query, config["alias"])
 

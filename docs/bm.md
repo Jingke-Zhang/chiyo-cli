@@ -13,6 +13,7 @@ bm --print-url github
 bm --browser "Google Chrome" github
 bm --confirm github
 bm --config-init
+bm --list-completions
 ```
 
 ## Options
@@ -21,6 +22,7 @@ bm --config-init
 - `--browser NAME`: open the selected URL with a browser for this run
 - `--confirm`: always confirm the selected bookmark in `fzf`
 - `--config-init`: write the default `[bm]` config into the shared config file
+- `--list-completions`: print bookmark display paths for shell completion
 
 ## Config
 
@@ -53,3 +55,8 @@ Advanced bookmark source override can be added to the existing `[bm]` table:
 ```toml
 bookmarks_path = "~/path/to/compatible/Bookmarks.plist"
 ```
+
+## Completion Data
+
+`bm --list-completions` prints one normalized bookmark path per line. Folder
+skip and rename rules are applied before candidates are printed.

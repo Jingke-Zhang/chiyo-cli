@@ -12,6 +12,7 @@ gop -r ~/Documents project
 gop --exclude node_modules project
 gop --confirm project
 gop --config-init
+gop-select --list-completions
 ```
 
 ## Options
@@ -20,6 +21,7 @@ gop --config-init
 - `-E, --exclude PATTERN`: exclude an `fd` glob pattern; repeat to exclude multiple patterns
 - `--confirm`: always confirm the selected path in `fzf`
 - `--config-init`: write the default `[gop]` config into the shared config file
+- `--list-completions`: print path candidates from `gop-select` for shell completion
 
 ## Display Colors
 
@@ -49,3 +51,9 @@ directories:
 roots = ["~/Documents", "~/Downloads"]
 exclude = ["Library", "node_modules", "OrbStack"]
 ```
+
+## Completion Data
+
+`gop` is a shell function, so its completion script asks `gop-select` for path
+candidates. `gop-select --list-completions` prints compact paths from configured
+roots, one per line.

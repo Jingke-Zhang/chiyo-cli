@@ -1,6 +1,7 @@
 import subprocess
 import tempfile
 import unittest
+from io import StringIO
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
@@ -44,6 +45,34 @@ class WsTests(unittest.TestCase):
         choose_item.return_value = ("gh", engines["gh"])
 
         self.assertEqual(WS.choose_engine(engines, {"fzf_prompt": "ws> "}), "gh")
+
+    def test_list_completions_prints_engine_keys(self):
+        config = {
+            "engines": {
+                "scholar": {"name": "Scholar", "url": "https://s.test?q={query}"},
+                "g": {"name": "Google", "url": "https://g.test?q={query}"},
+            }
+        }
+
+        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+            WS.list_completions(config)
+
+        self.assertEqual(stdout.getvalue(), "scholar\ng\n")
+
+    @mock.patch("ws.open_url")
+    @mock.patch("ws.load_config")
+    def test_main_lists_completions_without_opening_url(self, load_config, open_url):
+        load_config.return_value = {
+            "engines": {
+                "g": {"name": "Google", "url": "https://g.test?q={query}"},
+            }
+        }
+
+        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+            WS.main(["--list-completions"])
+
+        self.assertEqual(stdout.getvalue(), "g\n")
+        open_url.assert_not_called()
 
     @mock.patch("ws.shutil.which", return_value="/usr/bin/open")
     @mock.patch("ws.subprocess.run")

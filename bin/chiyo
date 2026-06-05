@@ -5,10 +5,13 @@ import os
 import shutil
 import sys
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 BIN_DIR = os.path.join(REPO_ROOT, "bin")
 SHELL_DIR = os.path.join(REPO_ROOT, "shell")
+COMPLETIONS_DIR = os.path.join(REPO_ROOT, "completions")
 CONFIG_PATH = "~/.config/chiyo-cli/config.toml"
+LOCAL_BIN_DIR = "~/.local/bin"
+ZSH_SITE_FUNCTIONS_DIR = "~/.local/share/zsh/site-functions"
 
 
 def parse_args(argv):
@@ -38,10 +41,13 @@ def parse_args(argv):
 def init_zsh():
     # Print shell code instead of editing dotfiles directly; callers can review
     # it, append it, or embed it in their own shell management setup.
+    completions_dir = os.path.expanduser(ZSH_SITE_FUNCTIONS_DIR)
     return "\n".join(
         [
             "# Chiyo CLI",
-            f'export PATH="{BIN_DIR}:$PATH"',
+            f'fpath=("{completions_dir}" $fpath)',
+            "autoload -Uz compinit",
+            "compinit",
             f'source "{os.path.join(SHELL_DIR, "gop.zsh")}"',
             "",
         ]
@@ -95,10 +101,18 @@ def doctor_lines():
         ("python3", *check_command("python3")),
         ("fzf", *check_command("fzf")),
         ("fd", *check_command("fd")),
+        ("bm", *check_tool("bm")),
+        ("app", *check_tool("app")),
+        ("ws", *check_tool("ws")),
+        ("chiyo", *check_tool("chiyo")),
         ("gop-select", *check_tool("gop-select")),
         (
             "gop shell integration file",
             *check_file(os.path.join(SHELL_DIR, "gop.zsh")),
+        ),
+        (
+            "zsh site-functions directory",
+            *check_file(ZSH_SITE_FUNCTIONS_DIR),
         ),
         ("config", *check_file(CONFIG_PATH)),
     ]
@@ -109,9 +123,10 @@ def doctor_lines():
         status = "ok" if ok else "missing"
         lines.append(f"{status:7} {label}: {detail}")
 
-    if not shutil.which("gop-select"):
+    if not shutil.which("bm"):
         lines.append("")
-        lines.append("Run: chiyo init zsh >> ~/.zshrc")
+        lines.append("Run: ./install.sh")
+        lines.append(f"Ensure {LOCAL_BIN_DIR} is in PATH.")
 
     if not os.path.exists(os.path.expanduser(CONFIG_PATH)):
         lines.append("Run tool-specific --config-init commands to create config.")

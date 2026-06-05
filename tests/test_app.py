@@ -1,5 +1,6 @@
 import subprocess
 import unittest
+from io import StringIO
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
@@ -129,6 +130,38 @@ class AppTests(unittest.TestCase):
             {"name": "Safari", "path": "/Users/me/Applications/Safari.app"},
         )
         self.assertEqual(choose_item.call_args.args[0], apps)
+
+    def test_list_completions_prints_unique_app_names(self):
+        apps = [
+            {"name": "Safari", "path": "/Applications/Safari.app"},
+            {"name": "Calendar", "path": "/System/Applications/Calendar.app"},
+            {"name": "Safari", "path": "/Users/me/Applications/Safari.app"},
+        ]
+
+        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+            APP.list_completions(apps)
+
+        self.assertEqual(stdout.getvalue(), "Safari\nCalendar\n")
+
+    @mock.patch("app.open_app")
+    @mock.patch("app.discover_apps")
+    @mock.patch("app.load_config")
+    def test_main_lists_completions_without_opening_app(
+        self,
+        load_config,
+        discover_apps,
+        open_app,
+    ):
+        load_config.return_value = {"fzf_prompt": "app> ", "alias": {}}
+        discover_apps.return_value = [
+            {"name": "Safari", "path": "/Applications/Safari.app"},
+        ]
+
+        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+            APP.main(["--list-completions"])
+
+        self.assertEqual(stdout.getvalue(), "Safari\n")
+        open_app.assert_not_called()
 
     @mock.patch("app.choose_app")
     def test_select_app_returns_single_match_directly_when_allowed(self, choose):

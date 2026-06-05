@@ -1,0 +1,11 @@
+#compdef app
+
+local -a apps
+
+apps=("${(@f)$(app --list-completions 2>/dev/null)}")
+
+if (( ${#apps} == 0 )); then
+  return 0
+fi
+
+_describe 'applications' apps

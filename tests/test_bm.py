@@ -2,6 +2,7 @@ import os
 import plistlib
 import tempfile
 import unittest
+from io import StringIO
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
@@ -125,6 +126,43 @@ class BookmarkTests(unittest.TestCase):
 
         self.assertEqual(selected, "https://second.example")
         self.assertEqual(choose_item.call_args.args[0], bookmarks)
+
+    def test_list_completions_prints_bookmark_paths(self):
+        bookmarks = [
+            ("Academic/Google Scholar", "https://scholar.google.com"),
+            ("Personal/YouTube", "https://youtube.com"),
+        ]
+
+        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+            BM.list_completions(bookmarks)
+
+        self.assertEqual(stdout.getvalue(), "Academic/Google Scholar\nPersonal/YouTube\n")
+
+    @mock.patch("bm.open_url")
+    @mock.patch("bm.load_bookmarks")
+    @mock.patch("bm.load_config")
+    def test_main_lists_completions_without_opening_url(
+        self,
+        load_config,
+        load_bookmarks,
+        open_url,
+    ):
+        load_config.return_value = {
+            "bookmarks_path": "/tmp/bookmarks.plist",
+            "skip_folders": set(),
+            "rename_folders": {},
+            "fzf_prompt": "bm> ",
+            "browser": "Safari",
+        }
+        load_bookmarks.return_value = [
+            ("Academic/Google Scholar", "https://scholar.google.com"),
+        ]
+
+        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+            BM.main(["--list-completions"])
+
+        self.assertEqual(stdout.getvalue(), "Academic/Google Scholar\n")
+        open_url.assert_not_called()
 
     @mock.patch("bm.choose_bookmark")
     def test_select_bookmark_returns_single_match_directly_when_allowed(self, choose):

@@ -2,6 +2,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from io import StringIO
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
@@ -160,6 +161,20 @@ class GopTests(unittest.TestCase):
 
         self.assertEqual(selected, "/Users/me/project")
         choose.assert_called_once()
+
+    @mock.patch("gop_select.run_fd")
+    def test_list_completions_prints_compact_paths(self, run_fd):
+        home = os.path.expanduser("~")
+        run_fd.return_value = [
+            os.path.join(home, "Documents", "Project"),
+            os.path.join(home, "Documents", "Project"),
+        ]
+
+        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+            GOP.list_completions("Proj", [home], ["Library"])
+
+        self.assertEqual(stdout.getvalue(), "~/Documents/Project\n")
+        run_fd.assert_called_once_with("Proj", [home], ["Library"], max_results=200)
 
     @mock.patch("gop_select.shutil.which", return_value="/usr/bin/tool")
     @mock.patch("gop_select.subprocess.Popen")

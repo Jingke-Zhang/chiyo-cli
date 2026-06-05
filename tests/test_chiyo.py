@@ -13,7 +13,13 @@ class ChiyoTests(unittest.TestCase):
     def test_init_zsh_prints_path_and_gop_source(self):
         script = CHIYO.init_zsh()
 
-        self.assertIn(f'export PATH="{CHIYO.BIN_DIR}:$PATH"', script)
+        self.assertNotIn("export PATH=", script)
+        self.assertIn(
+            f'fpath=("{os.path.expanduser(CHIYO.ZSH_SITE_FUNCTIONS_DIR)}" $fpath)',
+            script,
+        )
+        self.assertIn("autoload -Uz compinit", script)
+        self.assertIn("compinit", script)
         self.assertIn(
             f'source "{os.path.join(CHIYO.SHELL_DIR, "gop.zsh")}"',
             script,
@@ -28,7 +34,8 @@ class ChiyoTests(unittest.TestCase):
         lines = CHIYO.doctor_lines()
 
         self.assertIn("missing fzf: not found", lines)
-        self.assertIn("Run: chiyo init zsh >> ~/.zshrc", lines)
+        self.assertIn("Run: ./install.sh", lines)
+        self.assertIn("Ensure ~/.local/bin is in PATH.", lines)
 
     @mock.patch("chiyo.shutil.which", return_value=None)
     @mock.patch("chiyo.os.path.exists")

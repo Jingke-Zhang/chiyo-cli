@@ -1,0 +1,11 @@
+#compdef bm
+
+local -a bookmarks
+
+bookmarks=("${(@f)$(bm --list-completions 2>/dev/null)}")
+
+if (( ${#bookmarks} == 0 )); then
+  return 0
+fi
+
+_describe 'bookmarks' bookmarks

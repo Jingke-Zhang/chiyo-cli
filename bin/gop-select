@@ -6,7 +6,7 @@ import sys
 import shutil
 import subprocess
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
@@ -56,6 +56,11 @@ def parse_args(argv):
         "--confirm",
         action="store_true",
         help="Always confirm the selected path in fzf.",
+    )
+    parser.add_argument(
+        "--list-completions",
+        action="store_true",
+        help="Print completion candidates, one per line.",
     )
     return parser.parse_args(argv)
 
@@ -332,6 +337,11 @@ def select_path(paths, config, allow_direct):
     return choose_path(paths, config)
 
 
+def list_completions(query, roots, exclude):
+    for path in unique_paths(run_fd(query, roots, exclude, max_results=200)):
+        print(compact_path(path))
+
+
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
 
@@ -343,6 +353,10 @@ def main(argv=None):
     query = " ".join(args.query)
     roots = normalize_roots(args.root) if args.root else config["roots"]
     exclude = config["exclude"] + (args.exclude or [])
+
+    if args.list_completions:
+        list_completions(query, roots, exclude)
+        return
 
     if query and not args.confirm:
         paths = unique_paths(run_fd(query, roots, exclude, max_results=2))

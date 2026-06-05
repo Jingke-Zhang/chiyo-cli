@@ -11,11 +11,13 @@ ws scholar beaver triple
 ws wavelet tree
 ws -- g wavelet tree
 ws --config-init
+ws --list-completions
 ```
 
 ## Options
 
 - `--config-init`: write the default `[ws]` config into the shared config file
+- `--list-completions`: print configured engine keys for shell completion
 
 ## Config
 
@@ -45,3 +47,8 @@ url = "https://scholar.google.com/scholar?q={query}"
 When the first argument is a configured engine key, `ws` uses that engine
 directly. Otherwise it opens `fzf` to choose an engine. Use `--` when the query
 itself starts with an engine key.
+
+## Completion Data
+
+`ws --list-completions` prints one configured engine key per line. User-added
+engines under `[ws.engines.*]` appear automatically.

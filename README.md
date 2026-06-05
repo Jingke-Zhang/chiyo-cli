@@ -60,14 +60,24 @@ for behavior, design, and maintainability stays with me.
 
 ## Install
 
-Generate zsh integration from this repository:
+Chiyo CLI currently uses development installation. Commands and completions are
+symlinked from this repository into `~/.local`, so changes in the repository
+take effect immediately.
 
 ```sh
-/path/to/chiyo-cli/bin/chiyo init zsh >> ~/.zshrc
+./install.sh
 ```
 
+Make sure `~/.local/bin` is in your `PATH`:
+
 ```sh
-source ~/.zshrc
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Add shell integration to `~/.zshrc`:
+
+```sh
+eval "$(chiyo init zsh)"
 ```
 
 Check local setup:
@@ -75,6 +85,12 @@ Check local setup:
 ```sh
 chiyo doctor
 ```
+
+The zsh integration loads bundled shell functions and registers zsh
+completions. It does not manage `PATH`; keep that in your shell config.
+
+Because installation uses symlinks, moving this repository breaks installed
+commands until `./install.sh` is run again from the new location.
 
 ## Display Style
 
@@ -95,6 +111,7 @@ Path-like tools follow a small file palette:
 - [`app`](docs/app.md): search installed macOS applications and launch one
 - [`ws`](docs/ws.md): build web search URLs and open them
 - [`gop`](docs/gop.md): search files/directories, then `cd` or `open`
+- [Installation details](docs/install.md): development install and shell setup
 
 ## Future Work
 
@@ -122,6 +139,18 @@ Each command owns its own TOML table. For example, `bm` uses `[bm]`. Future tool
 can add their own sections without interfering with existing ones.
 
 Shared config loading and initialization helpers live in `chiyo_cli/config.py`.
+
+## Completions
+
+Tools that support dynamic shell completion expose a common interface:
+
+```sh
+<tool> --list-completions
+```
+
+The command prints plain text candidates, one per line. zsh completion files in
+`completions/` call this interface instead of parsing config files or platform
+data directly.
 
 ## License
 
