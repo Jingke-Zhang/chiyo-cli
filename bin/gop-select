@@ -20,7 +20,7 @@ STYLE_DIR = "\033[1;34m"
 STYLE_FILE = ""
 STYLE_EXECUTABLE = "\033[1;32m"
 DEFAULT_CONFIG = {
-    "roots": ["~"],
+    "roots": ["~/Documents", "~/Downloads", "~/Desktop"],
     "exclude": ["Library", "node_modules", "OrbStack"],
     "fzf_prompt": "gop> ",
 }
@@ -65,6 +65,10 @@ def fail(message, exit_code=1):
     sys.exit(exit_code)
 
 
+def warn(message):
+    print(f"gop-select: warning: {message}", file=sys.stderr)
+
+
 def load_config():
     try:
         config = load_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
@@ -92,7 +96,21 @@ def init_config():
 
 
 def normalize_roots(roots):
-    return [os.path.abspath(os.path.expanduser(root)) for root in roots]
+    normalized = []
+
+    for root in roots:
+        path = os.path.abspath(os.path.expanduser(root))
+
+        if not os.path.isdir(path):
+            warn(f"skipping missing search root: {path}")
+            continue
+
+        normalized.append(path)
+
+    if not normalized:
+        fail("no valid search roots found.")
+
+    return normalized
 
 
 def fd_command(query, roots, exclude=None, max_results=None):
@@ -232,6 +250,8 @@ def choose_path(paths, config):
 
 
 def choose_path_stream(query, roots, exclude, config):
+    # gop streams fd output through a tiny formatter before fzf so large roots
+    # can become interactive immediately instead of waiting for a full scan.
     require_fd()
     require_fzf()
     fd_process = subprocess.Popen(

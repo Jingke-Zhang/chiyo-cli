@@ -12,14 +12,16 @@ GOP = SourceFileLoader("gop_select", str(REPO_ROOT / "bin" / "gop-select")).load
 
 
 class GopTests(unittest.TestCase):
-    def test_load_config_expands_default_root(self):
+    def test_load_config_expands_existing_roots(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = Path(temp_dir) / "config.toml"
+            root = Path(temp_dir) / "docs"
+            root.mkdir()
             config_path.write_text(
                 "\n".join(
                     [
                         "[gop]",
-                        'roots = ["~"]',
+                        f'roots = ["{root}"]',
                         'exclude = ["Library"]',
                         'fzf_prompt = "gop> "',
                     ]
@@ -33,13 +35,28 @@ class GopTests(unittest.TestCase):
                 config_path=str(config_path),
             )
 
-            config["roots"] = [
-                os.path.abspath(os.path.expanduser(root))
-                for root in config["roots"]
-            ]
+            config["roots"] = GOP.normalize_roots(config["roots"])
 
-            self.assertEqual(config["roots"], [os.path.expanduser("~")])
+            self.assertEqual(config["roots"], [str(root)])
             self.assertEqual(config["exclude"], ["Library"])
+
+    @mock.patch("gop_select.warn")
+    def test_normalize_roots_skips_missing_directories_with_warning(self, warn):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            missing_root = os.path.join(temp_dir, "missing")
+
+            self.assertEqual(GOP.normalize_roots([temp_dir, missing_root]), [temp_dir])
+            warn.assert_called_once_with(
+                f"skipping missing search root: {missing_root}"
+            )
+
+    @mock.patch("gop_select.warn")
+    def test_normalize_roots_fails_when_no_roots_exist(self, _warn):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            missing_root = os.path.join(temp_dir, "missing")
+
+            with self.assertRaises(SystemExit):
+                GOP.normalize_roots([missing_root])
 
     @mock.patch("gop_select.shutil.which", return_value="/usr/bin/fd")
     @mock.patch("gop_select.subprocess.run")
