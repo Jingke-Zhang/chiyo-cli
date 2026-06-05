@@ -12,6 +12,9 @@ COMPLETIONS_DIR = os.path.join(REPO_ROOT, "completions")
 CONFIG_PATH = "~/.config/chiyo-cli/config.toml"
 LOCAL_BIN_DIR = "~/.local/bin"
 ZSH_SITE_FUNCTIONS_DIR = "~/.local/share/zsh/site-functions"
+COMMANDS = ["bm", "app", "ws", "chiyo", "gop-select"]
+COMPLETIONS = ["_bm", "_app", "_ws", "_gop"]
+SHELL_INTEGRATION = 'eval "$(chiyo init zsh)"'
 
 
 def parse_args(argv):
@@ -66,67 +69,131 @@ def check_command(name):
     path = shutil.which(name)
 
     if path:
-        return True, path
+        return "ok", path
 
-    return False, "not found"
-
-
-def check_tool(name):
-    # A tool can exist in this repo but still be unusable from the shell if bin/
-    # has not been added to PATH yet.
-    ok, detail = check_command(name)
-
-    if ok:
-        return ok, detail
-
-    bundled_path = os.path.join(BIN_DIR, name)
-
-    if os.path.exists(bundled_path):
-        return False, f"not in PATH; bundled at {bundled_path}"
-
-    return False, detail
+    return "missing", "not found"
 
 
 def check_file(path):
     expanded = os.path.expanduser(path)
 
     if os.path.exists(expanded):
-        return True, expanded
+        return "ok", expanded
 
-    return False, "not found"
+    return "missing", "not found"
+
+
+def check_symlink(label, target, expected_source):
+    target = os.path.expanduser(target)
+
+    if not os.path.lexists(target):
+        return "missing", f"{target} not found", label
+
+    if not os.path.islink(target):
+        return "warn", f"{target} exists but is not a symlink", label
+
+    current = os.readlink(target)
+
+    if current != expected_source:
+        return "warn", f"{target} -> {current}; expected {expected_source}", label
+
+    return "ok", f"{target} -> {expected_source}", label
+
+
+def check_path_contains(path):
+    expanded = os.path.expanduser(path)
+
+    if expanded in os.environ.get("PATH", "").split(os.pathsep):
+        return "ok", f"{expanded} is in PATH", "PATH"
+
+    return "todo", f"add {path} to PATH", "PATH"
+
+
+def zshrc_path():
+    zdotdir = os.environ.get("ZDOTDIR")
+
+    if zdotdir:
+        return os.path.join(os.path.expanduser(zdotdir), ".zshrc")
+
+    return os.path.expanduser("~/.zshrc")
+
+
+def check_shell_integration():
+    path = zshrc_path()
+
+    if not os.path.exists(path):
+        return "todo", f"add {SHELL_INTEGRATION} to {path}", "zsh integration"
+
+    with open(path, "r", encoding="utf-8") as file:
+        content = file.read()
+
+    if SHELL_INTEGRATION in content:
+        return "ok", f"{path} contains {SHELL_INTEGRATION}", "zsh integration"
+
+    return "todo", f"add {SHELL_INTEGRATION} to {path}", "zsh integration"
+
+
+def command_symlink_checks():
+    local_bin_dir = os.path.expanduser(LOCAL_BIN_DIR)
+
+    return [
+        check_symlink(
+            f"{command} symlink",
+            os.path.join(local_bin_dir, command),
+            os.path.join(BIN_DIR, command),
+        )
+        for command in COMMANDS
+    ]
+
+
+def completion_symlink_checks():
+    site_functions_dir = os.path.expanduser(ZSH_SITE_FUNCTIONS_DIR)
+
+    return [
+        check_symlink(
+            f"{completion} completion",
+            os.path.join(site_functions_dir, completion),
+            os.path.join(COMPLETIONS_DIR, completion),
+        )
+        for completion in COMPLETIONS
+    ]
 
 
 def doctor_lines():
     checks = [
-        ("python3", *check_command("python3")),
-        ("fzf", *check_command("fzf")),
-        ("fd", *check_command("fd")),
-        ("bm", *check_tool("bm")),
-        ("app", *check_tool("app")),
-        ("ws", *check_tool("ws")),
-        ("chiyo", *check_tool("chiyo")),
-        ("gop-select", *check_tool("gop-select")),
+        (*check_command("python3"), "python3"),
+        (*check_command("fzf"), "fzf"),
+        (*check_command("fd"), "fd"),
         (
-            "gop shell integration file",
             *check_file(os.path.join(SHELL_DIR, "gop.zsh")),
+            "gop shell integration file",
         ),
         (
-            "zsh site-functions directory",
             *check_file(ZSH_SITE_FUNCTIONS_DIR),
+            "zsh site-functions directory",
         ),
-        ("config", *check_file(CONFIG_PATH)),
+        (*check_file(CONFIG_PATH), "config"),
+        check_path_contains(LOCAL_BIN_DIR),
+        check_shell_integration(),
     ]
+    checks.extend(command_symlink_checks())
+    checks.extend(completion_symlink_checks())
 
     lines = []
 
-    for label, ok, detail in checks:
-        status = "ok" if ok else "missing"
+    for status, detail, label in checks:
         lines.append(f"{status:7} {label}: {detail}")
 
-    if not shutil.which("bm"):
+    if any(
+        status in ("missing", "warn")
+        for status, _, label in checks
+        if "symlink" in label or "completion" in label
+    ):
         lines.append("")
         lines.append("Run: ./install.sh")
-        lines.append(f"Ensure {LOCAL_BIN_DIR} is in PATH.")
+
+    if any(status == "todo" for status, _, _ in checks):
+        lines.append("Review todo items above.")
 
     if not os.path.exists(os.path.expanduser(CONFIG_PATH)):
         lines.append("Run tool-specific --config-init commands to create config.")
