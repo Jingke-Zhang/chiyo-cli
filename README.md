@@ -71,6 +71,18 @@ Check local setup:
 chiyo doctor
 ```
 
+## Display Style
+
+Selection UIs use color as lightweight type information, not decoration.
+Primary actionable labels use bold green when there is no more specific type
+color. Paths and URLs use italic underlining because they point somewhere.
+
+Path-like tools follow a small file palette:
+
+- directories: bold blue
+- regular files: plain
+- executables: bold green
+
 ## Tools
 
 ### chiyo
@@ -208,9 +220,9 @@ Useful options:
 
 Display colors:
 
-- directories: blue and bold
-- files: green and bold
-- executables: magenta and bold
+- directories: bold blue
+- regular files: plain
+- executables: bold green
 
 Default generated config:
 

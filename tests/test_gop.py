@@ -84,7 +84,7 @@ class GopTests(unittest.TestCase):
             "~/Documents",
         )
 
-    def test_format_path_choice_styles_directories_files_and_executables(self):
+    def test_format_path_choice_styles_paths_by_type_without_type_labels(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "note.txt")
             exec_path = os.path.join(temp_dir, "tool")
@@ -93,8 +93,11 @@ class GopTests(unittest.TestCase):
             os.chmod(exec_path, 0o755)
 
             self.assertIn("\033[1;34m", GOP.format_path_choice(temp_dir))
-            self.assertIn("\033[1;32m", GOP.format_path_choice(file_path))
-            self.assertIn("\033[1;35m", GOP.format_path_choice(exec_path))
+            self.assertNotIn("\033[", GOP.format_path_choice(file_path))
+            self.assertIn("\033[1;32m", GOP.format_path_choice(exec_path))
+            self.assertNotIn("  dir\t", GOP.format_path_choice(temp_dir))
+            self.assertNotIn("  file\t", GOP.format_path_choice(file_path))
+            self.assertNotIn("  exec\t", GOP.format_path_choice(exec_path))
 
     def test_unique_paths_preserves_order_and_removes_duplicates(self):
         self.assertEqual(

@@ -17,9 +17,8 @@ from chiyo_cli.config import init_module_config, load_module_config
 CONFIG_MODULE = "gop"
 STYLE_RESET = "\033[0m"
 STYLE_DIR = "\033[1;34m"
-STYLE_FILE = "\033[1;32m"
-STYLE_EXECUTABLE = "\033[1;35m"
-STYLE_KIND = "\033[3;4m"
+STYLE_FILE = ""
+STYLE_EXECUTABLE = "\033[1;32m"
 DEFAULT_CONFIG = {
     "roots": ["~"],
     "fzf_prompt": "gop> ",
@@ -152,14 +151,16 @@ def style_for_kind(kind):
 
 
 def style_text(value, style):
+    if not style:
+        return value
+
     return f"{style}{value}{STYLE_RESET}"
 
 
 def format_path_choice(path):
     kind = path_kind(path)
     visible_path = style_text(compact_path(path), style_for_kind(kind))
-    visible_kind = style_text(kind, STYLE_KIND)
-    return f"{visible_path}  {visible_kind}\t{path}"
+    return f"{visible_path}\t{path}"
 
 
 def parse_choice(choice):
