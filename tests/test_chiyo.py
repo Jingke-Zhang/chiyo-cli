@@ -15,28 +15,41 @@ FIXTURE_TOOL_DIR = REPO_ROOT / "tests" / "fixtures" / "user_tools"
 
 
 class ChiyoTests(unittest.TestCase):
-    def test_init_zsh_prints_path_and_gop_source(self):
-        script = CHIYO.init_zsh()
+    def test_init_zsh_prints_loader_for_installed_shell_artifacts(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            completion_dir = os.path.join(temp_dir, "zsh")
+            shell_dir = os.path.join(temp_dir, "shell")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        "enabled_tools = []",
+                        'wrapper_dir = "~/.local/bin"',
+                        f'completion_dir = "{completion_dir}"',
+                        f'shell_dir = "{shell_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                script = CHIYO.init_zsh()
 
         self.assertIn(
-            "# Config: run `chiyo config init --all --write` once for explicit defaults.",
+            "# Config: run `chiyo config init --all --append` once for explicit defaults.",
             script,
         )
         self.assertNotIn("export PATH=", script)
         self.assertIn(
-            f'fpath=("{os.path.expanduser(CHIYO.ZSH_SITE_FUNCTIONS_DIR)}" $fpath)',
+            f'fpath=("{completion_dir}" $fpath)',
             script,
         )
         self.assertIn("autoload -Uz compinit", script)
         self.assertIn("compinit", script)
-        self.assertIn(
-            f'source "{os.path.join(CHIYO.SHELL_DIR, "gop.zsh")}"',
-            script,
-        )
-        self.assertIn(
-            f'source "{os.path.join(CHIYO.SHELL_DIR, "proj.zsh")}"',
-            script,
-        )
+        self.assertIn(f'for chiyo_shell_file in "{shell_dir}"/*.zsh; do', script)
+        self.assertIn('source "$chiyo_shell_file"', script)
 
     @mock.patch("chiyo.shutil.which")
     def test_doctor_lines_reports_missing_development_install(self, which):
@@ -60,7 +73,8 @@ class ChiyoTests(unittest.TestCase):
                             lines = CHIYO.doctor_lines()
 
         self.assertIn("missing fzf: not found", lines)
-        self.assertIn(f"missing bm symlink: {local_bin}/bm not found", lines)
+        self.assertIn("missing rg: not found", lines)
+        self.assertIn(f"missing chiyo symlink: {local_bin}/chiyo not found", lines)
         self.assertIn(f"todo    PATH: add {local_bin} to PATH", lines)
         self.assertIn("Run: ./install.sh", lines)
         self.assertIn("Review todo items above.", lines)
@@ -91,12 +105,6 @@ class ChiyoTests(unittest.TestCase):
                     os.path.join(local_bin, command),
                 )
 
-            for completion in CHIYO.COMPLETIONS:
-                os.symlink(
-                    os.path.join(CHIYO.COMPLETIONS_DIR, completion),
-                    os.path.join(site_functions, completion),
-                )
-
             with mock.patch.object(CHIYO, "LOCAL_BIN_DIR", local_bin):
                 with mock.patch.object(CHIYO, "ZSH_SITE_FUNCTIONS_DIR", site_functions):
                     with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
@@ -109,22 +117,7 @@ class ChiyoTests(unittest.TestCase):
                         ):
                             lines = CHIYO.doctor_lines()
 
-        self.assertIn(
-            f"ok      bm symlink: {local_bin}/bm -> {CHIYO.BIN_DIR}/bm",
-            lines,
-        )
-        self.assertIn(
-            f"ok      _bm completion: {site_functions}/_bm -> {CHIYO.COMPLETIONS_DIR}/_bm",
-            lines,
-        )
-        self.assertIn(
-            f"ok      proj-select symlink: {local_bin}/proj-select -> {CHIYO.BIN_DIR}/proj-select",
-            lines,
-        )
-        self.assertIn(
-            f"ok      _proj completion: {site_functions}/_proj -> {CHIYO.COMPLETIONS_DIR}/_proj",
-            lines,
-        )
+        self.assertIn(f"ok      chiyo symlink: {local_bin}/chiyo -> {CHIYO.BIN_DIR}/chiyo", lines)
         self.assertIn(
             f"ok      zsh integration: {zshrc_path} contains {CHIYO.SHELL_INTEGRATION}",
             lines,
@@ -825,6 +818,49 @@ class ChiyoTests(unittest.TestCase):
                 CHIYO.completion_script("paper"),
             )
 
+    def test_install_shell_tool_writes_function_completion_and_helper(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            completion_dir = Path(temp_dir) / "zsh"
+            shell_dir = Path(temp_dir) / "shell"
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        'enabled_tools = ["gop"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                        f'shell_dir = "{shell_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.install_tool_lines("gop")
+
+            shell_file = shell_dir / "gop.zsh"
+            completion = completion_dir / "_gop"
+            helper = wrapper_dir / "gop-select"
+            wrapper = wrapper_dir / "gop"
+
+            self.assertIn(f"installed gop shell: {shell_file}", lines)
+            self.assertIn(f"installed _gop: {completion}", lines)
+            self.assertIn(f"installed gop-select: {helper}", lines)
+            self.assertEqual(
+                shell_file.read_text(encoding="utf-8"),
+                CHIYO.shell_function_script("gop"),
+            )
+            self.assertEqual(
+                completion.read_text(encoding="utf-8"),
+                CHIYO.completion_script("gop"),
+            )
+            self.assertTrue(helper.is_symlink())
+            self.assertEqual(os.readlink(helper), os.path.join(CHIYO.BIN_DIR, "gop-select"))
+            self.assertFalse(wrapper.exists())
+
     def test_install_tool_warns_when_tool_is_disabled(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             wrapper_dir = Path(temp_dir) / "bin"
@@ -931,6 +967,50 @@ class ChiyoTests(unittest.TestCase):
         )
         self.assertFalse(wrapper.exists())
         self.assertFalse(completion.exists())
+
+    def test_uninstall_shell_tool_removes_generated_artifacts(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            wrapper_dir.mkdir()
+            completion_dir = Path(temp_dir) / "zsh"
+            completion_dir.mkdir()
+            shell_dir = Path(temp_dir) / "shell"
+            shell_dir.mkdir()
+            shell_file = shell_dir / "gop.zsh"
+            shell_file.write_text(CHIYO.shell_function_script("gop"), encoding="utf-8")
+            completion = completion_dir / "_gop"
+            completion.write_text(CHIYO.completion_script("gop"), encoding="utf-8")
+            helper = wrapper_dir / "gop-select"
+            helper.symlink_to(os.path.join(CHIYO.BIN_DIR, "gop-select"))
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        'enabled_tools = ["gop"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                        f'shell_dir = "{shell_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.uninstall_tool_lines("gop")
+
+            self.assertEqual(
+                lines,
+                [
+                    f"uninstalled gop shell: {shell_file}",
+                    f"uninstalled _gop: {completion}",
+                    f"uninstalled gop-select: {helper}",
+                ],
+            )
+            self.assertFalse(shell_file.exists())
+            self.assertFalse(completion.exists())
+            self.assertFalse(helper.exists())
 
     def test_uninstall_tool_refuses_non_generated_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:

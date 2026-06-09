@@ -2,9 +2,9 @@
 
 Chiyo CLI uses development installation during the v0.x series.
 
-The repository remains the source of truth. `install.sh` creates symlinks from
-user-local directories back into this checkout, so editing the repository changes
-the installed commands immediately.
+The repository remains the source of truth. `install.sh` only bootstraps the
+`chiyo` command into `~/.local/bin`. Tool wrappers, zsh completions, shell
+functions, and helper commands are installed later through `chiyo install TOOL`.
 
 ## Install
 
@@ -12,41 +12,43 @@ the installed commands immediately.
 ./install.sh
 ```
 
-The installer is safe to run repeatedly. Existing links that already point to
-this repository are skipped, outdated links are updated, and regular files are
-left untouched with a warning.
+The installer is safe to run repeatedly. An existing `chiyo` link that already
+points to this repository is skipped, an outdated `chiyo` link is updated, and a
+regular file at `~/.local/bin/chiyo` is left untouched with a warning.
 
-The installer also checks whether `~/.zshrc` already contains:
+The installer also checks whether `~/.zshrc` already contains an active,
+uncommented shell integration line:
 
 ```zsh
 eval "$(chiyo init zsh)"
 ```
 
-If the line is missing, it is reported as a todo. The installer does not edit
-shell config files automatically.
+If the line is missing or only appears in a commented line, it is reported as a
+todo. The installer does not edit shell config files automatically.
 
 The installer creates:
 
 ```text
 ~/.local/bin/
-~/.local/share/zsh/site-functions/
 ```
 
-Commands are linked into `~/.local/bin`:
+Only `chiyo` is linked into `~/.local/bin`:
 
 ```text
-bm
-app
-ws
 chiyo
-gop-select
-proj-select
 ```
 
-zsh completions are linked into `~/.local/share/zsh/site-functions`.
+Tool installation is delegated to Chiyo:
 
-`gop` is provided as a shell function because changing directory must happen in
-the current shell process.
+```sh
+chiyo install ws
+chiyo install gop
+chiyo install proj
+```
+
+For ordinary tools, `chiyo install TOOL` creates a direct wrapper and generated
+completion. For shell-sensitive tools such as `gop` and `proj`, it installs a
+shell function, generated completion, and helper command such as `gop-select`.
 
 ## Shell Setup
 
@@ -65,7 +67,7 @@ eval "$(chiyo init zsh)"
 Initialize explicit default config separately:
 
 ```sh
-chiyo config init --all --write
+chiyo config init --all --append
 ```
 
 ## Uninstall
@@ -74,8 +76,9 @@ chiyo config init --all --write
 ./install.sh --uninstall
 ```
 
-Uninstall removes only symlinks that point back to the current repository.
-Regular files and symlinks that point elsewhere are left untouched.
+Uninstall removes only the `chiyo` bootstrap symlink when it points back to the
+current repository. Tool wrappers, completions, shell functions, and helper
+commands are managed with `chiyo uninstall TOOL`.
 
 ## Repository Moves
 
@@ -96,8 +99,8 @@ Run diagnostics first:
 chiyo doctor
 ```
 
-If `fzf` or `fd` is reported as missing, install it and make sure it is visible
-in `PATH`.
+If Python, `fd`, `rg`, or `fzf` is reported as missing, install it and make sure
+it is visible in `PATH`.
 
 If `bm` cannot read bookmarks, grant Full Disk Access to the terminal app you
 use with Chiyo CLI. Also check that Safari bookmarks exist, or configure `bm`

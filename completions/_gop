@@ -9,7 +9,6 @@ if [[ "$PREFIX" == -* ]]; then
     '-E[exclude a glob pattern from fd search]:pattern:' \
     '--exclude[exclude a glob pattern from fd search]:pattern:' \
     '--confirm[always confirm the selected path in fzf]' \
-    '--config-init[write the default gop config]' \
     '--help[show help]'
   return
 fi

@@ -19,6 +19,7 @@ DEFAULT_CHIYO_CONFIG = {
     "enabled_tools": ["gop", "ws"],
     "wrapper_dir": "~/.local/bin",
     "completion_dir": "~/.local/share/zsh/site-functions",
+    "shell_dir": "~/.local/share/chiyo-cli/shell",
 }
 
 
@@ -41,6 +42,7 @@ def load_chiyo_config(config_path=CONFIG_PATH, warn=None):
     config["tool_dirs"] = expand_paths(config["tool_dirs"])
     config["wrapper_dir"] = expand_path(config["wrapper_dir"])
     config["completion_dir"] = expand_path(config["completion_dir"])
+    config["shell_dir"] = expand_path(config["shell_dir"])
 
     return config
 

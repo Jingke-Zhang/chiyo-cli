@@ -9,7 +9,6 @@ if [[ "$PREFIX" == -* ]]; then
     '-E[exclude a glob pattern from project search]:pattern:' \
     '--exclude[exclude a glob pattern from project search]:pattern:' \
     '--confirm[always confirm the selected project in fzf]' \
-    '--config-init[write the default proj config]' \
     '--help[show help]'
   return
 fi

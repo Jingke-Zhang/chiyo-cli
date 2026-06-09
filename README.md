@@ -80,9 +80,9 @@ for behavior, design, and maintainability stays with me.
 
 ## Install
 
-Chiyo CLI currently uses development installation. Commands and completions are
-symlinked from this repository into `~/.local`, so changes in the repository
-take effect immediately.
+Chiyo CLI currently uses development installation. `install.sh` only bootstraps
+the `chiyo` command into `~/.local/bin`; tools, completions, and shell functions
+are installed later through `chiyo install TOOL`.
 
 ```sh
 ./install.sh
@@ -100,17 +100,23 @@ Add shell integration to `~/.zshrc`:
 eval "$(chiyo init zsh)"
 ```
 
+Initialize config and install tools as needed:
+
+```sh
+chiyo config init --all --append
+chiyo install ws
+chiyo install gop
+```
+
 Check local setup:
 
 ```sh
 chiyo doctor
 ```
 
-After shell integration is loaded, initialize or edit config as needed. See
-[Config](#config) for `chiyo config init` commands and config-file behavior.
-
-The zsh integration loads bundled shell functions and registers zsh
-completions. It does not manage `PATH`; keep that in your shell config.
+The zsh integration loads shell functions installed by `chiyo install TOOL` and
+registers zsh completions. It does not manage `PATH`; keep that in your shell
+config.
 
 Because installation uses symlinks, moving this repository breaks installed
 commands until `./install.sh` is run again from the new location.
@@ -156,6 +162,7 @@ may still change before a stable release.
 - macOS
 - Python 3
 - `fd`
+- `rg`
 - `fzf`
 - Safari bookmarks, unless `bm` uses another compatible plist
 - Zotero data, unless `zo` uses only the Zotero Local API
