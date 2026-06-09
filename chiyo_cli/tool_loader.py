@@ -1,6 +1,7 @@
 """User-tool loading and metadata validation."""
 
 import importlib.util
+import importlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,6 +10,14 @@ from chiyo_cli.toolkit import PickOpenTool, ToolFlagError, validate_tool_flags
 
 REQUIRED_METADATA = ["name", "command", "author", "description", "docs"]
 DESCRIPTION_LIMIT = 80
+BUILTIN_TOOL_MODULES = {
+    "app": "chiyo_cli.builtin_tools.app",
+    "bm": "chiyo_cli.builtin_tools.bm",
+    "gop": "chiyo_cli.builtin_tools.gop",
+    "proj": "chiyo_cli.builtin_tools.proj",
+    "ws": "chiyo_cli.builtin_tools.ws",
+    "zo": "chiyo_cli.builtin_tools.zo",
+}
 
 
 class ToolLoadError(Exception):
@@ -38,6 +47,15 @@ class ToolDiscovery:
 
 
 def load_module_from_path(path):
+    if str(path).startswith("builtin:"):
+        command = str(path).split(":", 1)[1]
+        module_name = BUILTIN_TOOL_MODULES.get(command)
+
+        if module_name is None:
+            raise ToolLoadError(f"unknown built-in tool: {command}")
+
+        return importlib.import_module(module_name)
+
     path = Path(path)
     module_name = f"chiyo_user_tool_{path.stem}_{abs(hash(str(path)))}"
     spec = importlib.util.spec_from_file_location(module_name, path)
@@ -140,4 +158,33 @@ def discover_user_tools(tool_dirs):
     return ToolDiscovery(
         sorted(tools, key=lambda tool: tool.command.lower()),
         errors,
+    )
+
+
+def discover_builtin_tools():
+    tools = []
+    errors = []
+
+    for command in sorted(BUILTIN_TOOL_MODULES):
+        path = f"builtin:{command}"
+
+        try:
+            tools.append(load_tool_metadata(path))
+        except ToolLoadError as error:
+            errors.append(ToolDiscoveryError(path, str(error)))
+
+    return ToolDiscovery(tools, errors)
+
+
+def discover_tools(tool_dirs, include_builtins=False):
+    discovery = discover_user_tools(tool_dirs)
+
+    if not include_builtins:
+        return discovery
+
+    builtins = discover_builtin_tools()
+
+    return ToolDiscovery(
+        sorted([*builtins.tools, *discovery.tools], key=lambda tool: tool.command.lower()),
+        [*builtins.errors, *discovery.errors],
     )

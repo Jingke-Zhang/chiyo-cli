@@ -6,6 +6,8 @@ from chiyo_cli.tool_loader import (
     DESCRIPTION_LIMIT,
     ToolLoadError,
     discover_tool_paths,
+    discover_builtin_tools,
+    discover_tools,
     discover_user_tools,
     load_tool_class,
     load_tool_metadata,
@@ -108,6 +110,25 @@ class ToolLoaderTests(unittest.TestCase):
 
         self.assertEqual(discovery.tools, [])
         self.assertEqual(discovery.errors, [])
+
+    def test_discover_builtin_tools_includes_ws(self):
+        discovery = discover_builtin_tools()
+
+        commands = [tool.command for tool in discovery.tools]
+        self.assertIn("app", commands)
+        self.assertIn("bm", commands)
+        self.assertIn("gop", commands)
+        self.assertIn("proj", commands)
+        self.assertIn("ws", commands)
+        self.assertIn("zo", commands)
+        self.assertEqual(discovery.errors, [])
+
+    def test_discover_tools_can_include_builtins(self):
+        discovery = discover_tools([FIXTURE_DIR], include_builtins=True)
+
+        commands = [tool.command for tool in discovery.tools]
+        self.assertIn("paper", commands)
+        self.assertIn("ws", commands)
 
 
 if __name__ == "__main__":

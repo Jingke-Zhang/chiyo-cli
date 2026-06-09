@@ -10,6 +10,8 @@ ws gh chiyo-cli
 ws scholar beaver triple
 ws wavelet tree
 ws -- g wavelet tree
+chiyo run ws g wavelet tree
+chiyo doc ws
 chiyo config init ws --append
 ws --list-completions
 ```
@@ -54,3 +56,10 @@ complete engine set. Delete an engine table to disable that key.
 
 `ws --list-completions` prints one configured engine key per line. User-added
 engines under `[ws.engines.*]` appear automatically.
+
+## Framework Entry
+
+`ws` is also available as a framework-backed built-in tool through
+`chiyo run ws ...` once `ws` is enabled in `[chiyo].enabled_tools`. This entry
+reads `[ws]` from `tools.toml` and supports generated wrappers through
+`chiyo install ws`.

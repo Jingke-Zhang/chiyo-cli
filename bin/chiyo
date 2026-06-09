@@ -78,6 +78,17 @@ def parse_args(argv):
         help="Arguments forwarded to the selected tool.",
     )
 
+    shell_parser = subparsers.add_parser(
+        "shell",
+        help="Print shell code for a shell-action tool.",
+    )
+    shell_parser.add_argument("tool", help="Enabled tool command to run.")
+    shell_parser.add_argument(
+        "tool_args",
+        nargs=argparse.REMAINDER,
+        help="Arguments forwarded to the selected tool.",
+    )
+
     install_parser = subparsers.add_parser(
         "install",
         help="Install a direct wrapper for a discoverable tool.",
@@ -575,10 +586,10 @@ def completion_symlink_checks():
 
 
 def user_tool_doctor_checks():
-    from chiyo_cli.tool_loader import discover_user_tools
+    from chiyo_cli.tool_loader import discover_tools
 
     config = chiyo_config()
-    discovery = discover_user_tools(config.get("tool_dirs", []))
+    discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
     tools_by_command = {tool.command: tool for tool in discovery.tools}
     checks = []
 
@@ -716,11 +727,11 @@ def print_tool_lines(lines):
 
 def tool_list_lines(include_docs=False):
     from chiyo_cli.tool_config import load_chiyo_config
-    from chiyo_cli.tool_loader import discover_user_tools
+    from chiyo_cli.tool_loader import discover_tools
 
     config = load_chiyo_config(config_path=CONFIG_PATH)
     enabled_tools = set(config.get("enabled_tools", []))
-    discovery = discover_user_tools(config.get("tool_dirs", []))
+    discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
     lines = []
 
     for tool in discovery.tools:
@@ -749,10 +760,10 @@ def tool_list_lines(include_docs=False):
 
 def tool_metadata_by_command(tool_command):
     from chiyo_cli.tool_config import load_chiyo_config
-    from chiyo_cli.tool_loader import discover_user_tools
+    from chiyo_cli.tool_loader import discover_tools
 
     config = load_chiyo_config(config_path=CONFIG_PATH)
-    discovery = discover_user_tools(config.get("tool_dirs", []))
+    discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
 
     for tool in discovery.tools:
         if tool.command == tool_command:
@@ -920,7 +931,7 @@ def uninstall_tool_lines(tool_command):
     return lines
 
 
-def run_tool(tool_command, tool_args):
+def run_tool(tool_command, tool_args, execute_shell_actions=True):
     from chiyo_cli.tool_config import load_chiyo_config, load_tool_config
     from chiyo_cli.tool_loader import load_tool_class
 
@@ -944,7 +955,37 @@ def run_tool(tool_command, tool_args):
         tool.default_config,
         config_path=TOOLS_CONFIG_PATH,
     )
-    return tool.run(tool_args, config=tool_config)
+    if execute_shell_actions:
+        return tool.run(tool_args, config=tool_config)
+
+    return tool.run(
+        tool_args,
+        config=tool_config,
+        execute_shell_actions=False,
+    )
+
+
+def shell_tool_lines(tool_command, tool_args):
+    from chiyo_cli.toolkit import ShellAction
+
+    result = run_tool(
+        tool_command,
+        tool_args,
+        execute_shell_actions=False,
+    )
+
+    if result is None:
+        return []
+
+    if not isinstance(result, ShellAction):
+        result = ShellAction.print(result)
+
+    rendered = result.render_shell()
+
+    if not rendered:
+        return []
+
+    return [rendered]
 
 
 def tool_doc_lines(tool_command):
@@ -987,6 +1028,14 @@ def main(argv=None):
             run_tool(args.tool, args.tool_args)
         except ToolCommandError as error:
             print(f"chiyo run: {error}", file=sys.stderr)
+            sys.exit(1)
+        return
+
+    if args.command == "shell":
+        try:
+            print_tool_lines(shell_tool_lines(args.tool, args.tool_args))
+        except ToolCommandError as error:
+            print(f"chiyo shell: {error}", file=sys.stderr)
             sys.exit(1)
         return
 

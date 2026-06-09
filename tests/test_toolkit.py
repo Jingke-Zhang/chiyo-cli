@@ -5,8 +5,10 @@ from unittest import mock
 from chiyo_cli.toolkit import (
     Field,
     PickOpenTool,
+    ShellAction,
     STYLE_PRIMARY,
     ToolFlagError,
+    ToolError,
     tool_argument_flags,
     validate_tool_flags,
 )
@@ -55,6 +57,13 @@ class ConflictingFlagTool(MemoryTool):
 
     def add_arguments(self, parser):
         parser.add_argument("--confirm", action="store_true")
+
+
+class ShellMemoryTool(MemoryTool):
+    command = "shell-memory"
+
+    def open_item(self, item, args, config):
+        return ShellAction.cd(item["path"])
 
 
 class ToolkitTests(unittest.TestCase):
@@ -132,6 +141,39 @@ class ToolkitTests(unittest.TestCase):
     def test_parser_rejects_framework_reserved_tool_flags(self):
         with self.assertRaisesRegex(ToolFlagError, "--confirm"):
             ConflictingFlagTool().parser()
+
+    def test_shell_action_renders_shell_safe_code(self):
+        self.assertEqual(
+            ShellAction.cd("/Users/me/My Project").render_shell(),
+            "cd '/Users/me/My Project'",
+        )
+        self.assertEqual(
+            ShellAction.print("hello world").render_shell(),
+            "printf '%s\\n' 'hello world'",
+        )
+        self.assertEqual(ShellAction.none().render_shell(), "")
+
+    @mock.patch("chiyo_cli.toolkit.open_location")
+    def test_shell_action_executes_open_and_print_actions(self, open_location):
+        self.assertEqual(ShellAction.open("/tmp/file").execute(), "/tmp/file")
+        open_location.assert_called_once_with("/tmp/file")
+
+        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+            self.assertEqual(ShellAction.print("value").execute(), "value")
+
+        self.assertEqual(stdout.getvalue(), "value\n")
+
+    def test_shell_action_cd_requires_shell_bridge_when_executed(self):
+        with self.assertRaisesRegex(ToolError, "chiyo shell"):
+            ShellAction.cd("/tmp/project").execute()
+
+    def test_run_can_return_raw_shell_action(self):
+        tool = ShellMemoryTool()
+        config = {"items": [{"title": "Project", "rank": 1, "path": "/tmp/project"}]}
+
+        result = tool.run(["project"], config, execute_shell_actions=False)
+
+        self.assertEqual(result, ShellAction.cd("/tmp/project"))
 
 
 if __name__ == "__main__":

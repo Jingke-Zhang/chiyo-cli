@@ -6,6 +6,8 @@ from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
 
+from chiyo_cli.toolkit import ShellAction
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHIYO = SourceFileLoader("chiyo", str(REPO_ROOT / "bin" / "chiyo")).load_module()
@@ -489,6 +491,260 @@ class ChiyoTests(unittest.TestCase):
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with self.assertRaises(CHIYO.ToolCommandError):
                     CHIYO.run_tool("missing", [])
+
+    def test_shell_tool_lines_render_shell_action(self):
+        with mock.patch.object(CHIYO, "run_tool") as run_tool:
+            run_tool.return_value = ShellAction.cd("/tmp/My Project")
+
+            lines = CHIYO.shell_tool_lines("proj", ["my"])
+
+        self.assertEqual(lines, ["cd '/tmp/My Project'"])
+        run_tool.assert_called_once_with(
+            "proj",
+            ["my"],
+            execute_shell_actions=False,
+        )
+
+    def test_shell_tool_lines_prints_plain_result_safely(self):
+        with mock.patch.object(CHIYO, "run_tool") as run_tool:
+            run_tool.return_value = "plain value"
+
+            lines = CHIYO.shell_tool_lines("tool", [])
+
+        self.assertEqual(lines, ["printf '%s\\n' 'plain value'"])
+
+    def test_run_tool_runs_builtin_ws(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        'tool_dirs = []',
+                        'enabled_tools = ["ws"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with mock.patch("chiyo_cli.builtin_tools.ws.open_location") as open_location:
+                        result = CHIYO.run_tool("ws", ["g", "wavelet", "tree"])
+
+        self.assertEqual(result, "https://www.google.com/search?q=wavelet%20tree")
+        open_location.assert_called_once_with(
+            "https://www.google.com/search?q=wavelet%20tree"
+        )
+
+    def test_run_tool_runs_builtin_app_alias(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        'tool_dirs = []',
+                        'enabled_tools = ["app"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                "\n".join(
+                    [
+                        "[app.alias]",
+                        'browser = "Safari"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with mock.patch("chiyo_cli.builtin_tools.app.LEGACY.open_app") as open_app:
+                        result = CHIYO.run_tool("app", ["browser"])
+
+        self.assertEqual(result, {"name": "Safari", "path": None})
+        open_app.assert_called_once_with({"name": "Safari", "path": None})
+
+    def test_run_tool_runs_builtin_bm_print_url(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        'tool_dirs = []',
+                        'enabled_tools = ["bm"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with mock.patch("chiyo_cli.builtin_tools.bm.LEGACY.load_bookmarks") as load_bookmarks:
+                        load_bookmarks.return_value = [
+                            ("Docs/Example", "https://example.test"),
+                        ]
+                        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+                            result = CHIYO.run_tool(
+                                "bm",
+                                ["--print-url", "Example"],
+                            )
+
+        self.assertEqual(result, "https://example.test")
+        self.assertEqual(stdout.getvalue(), "https://example.test\n")
+
+    def test_run_tool_runs_builtin_zo_default_open(self):
+        item = {
+            "key": "ITEMKEY1",
+            "library_type": "user",
+            "title": "Linear Algebra Done Right",
+            "creators": "Sheldon Axler",
+            "date": "2015",
+            "item_type": "book",
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        'tool_dirs = []',
+                        'enabled_tools = ["zo"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with mock.patch("chiyo_cli.builtin_tools.zo.LEGACY.load_items") as load_items:
+                        with mock.patch("chiyo_cli.builtin_tools.zo.LEGACY.open_location") as open_location:
+                            load_items.return_value = [item]
+                            result = CHIYO.run_tool("zo", ["linear"])
+
+        self.assertEqual(result, "zotero://select/library/items/ITEMKEY1")
+        open_location.assert_called_once_with("zotero://select/library/items/ITEMKEY1")
+
+    def test_shell_tool_lines_runs_builtin_proj(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project = Path(temp_dir) / "My Project"
+            project.mkdir()
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        'tool_dirs = []',
+                        'enabled_tools = ["proj"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with mock.patch("chiyo_cli.builtin_tools.proj.LEGACY.all_projects") as all_projects:
+                        with mock.patch("chiyo_cli.builtin_tools.proj.LEGACY.normalize_roots") as normalize_roots:
+                            normalize_roots.return_value = [temp_dir]
+                            all_projects.return_value = [str(project)]
+                            lines = CHIYO.shell_tool_lines("proj", ["Project"])
+
+        self.assertEqual(lines, [ShellAction.cd(str(project)).render_shell()])
+
+    def test_shell_tool_lines_runs_builtin_gop_directory(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "Target Dir"
+            target.mkdir()
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        'tool_dirs = []',
+                        'enabled_tools = ["gop"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with mock.patch("chiyo_cli.builtin_tools.gop.LEGACY.run_fd") as run_fd:
+                        run_fd.return_value = [str(target)]
+                        lines = CHIYO.shell_tool_lines("gop", ["Target"])
+
+        self.assertEqual(lines, [ShellAction.cd(str(target)).render_shell()])
+
+    def test_shell_tool_lines_runs_builtin_gop_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "paper.pdf"
+            target.write_text("pdf", encoding="utf-8")
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        'tool_dirs = []',
+                        'enabled_tools = ["gop"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with mock.patch("chiyo_cli.builtin_tools.gop.LEGACY.run_fd") as run_fd:
+                        run_fd.return_value = [str(target)]
+                        lines = CHIYO.shell_tool_lines("gop", ["paper"])
+
+        self.assertEqual(lines, [ShellAction.open(str(target)).render_shell()])
+
+    def test_tool_doc_lines_returns_builtin_docs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        'tool_dirs = []',
+                        'enabled_tools = []',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.tool_doc_lines("ws")
+
+        self.assertIn("# ws", "\n".join(lines))
 
     def test_install_tool_writes_wrapper_for_enabled_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:

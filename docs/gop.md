@@ -13,6 +13,8 @@ gop --exclude node_modules project
 gop --confirm project
 chiyo config init gop --append
 gop-select --list-completions
+chiyo shell gop project
+chiyo doc gop
 ```
 
 ## Options
@@ -59,3 +61,10 @@ exclude = ["Library", "node_modules", "OrbStack"]
 `gop` is a shell function, so its completion script asks `gop-select` for path
 candidates. `gop-select --list-completions` prints compact paths from configured
 roots, one per line.
+
+## Framework Entry
+
+`gop` is also available as a framework-backed built-in through
+`chiyo shell gop ...` once `gop` is enabled in `[chiyo].enabled_tools`. This
+entry reads `[gop]` from `tools.toml`, reuses the streaming selector, and prints
+shell-safe `cd ...` or `open ...` code for shell integration.

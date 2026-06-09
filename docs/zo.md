@@ -19,6 +19,8 @@ zo --print-path systems
 zo --source sqlite algorithms
 chiyo config init zo --append
 zo --list-completions
+chiyo run zo convex optimization
+chiyo doc zo
 ```
 
 ## Options
@@ -67,3 +69,10 @@ directory that contains `zotero.sqlite` and `storage/`.
 
 `zo --list-completions` prints one item title per line. Completion uses the same
 data source selection as normal search.
+
+## Framework Entry
+
+`zo` is also available as a framework-backed built-in tool through
+`chiyo run zo ...` once `zo` is enabled in `[chiyo].enabled_tools`. This entry
+reads `[zo]` from `tools.toml` and supports generated wrappers through
+`chiyo install zo`.

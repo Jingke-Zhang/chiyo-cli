@@ -16,6 +16,8 @@ bm --browser "Google Chrome" github
 bm --confirm github
 chiyo config init bm --append
 bm --list-completions
+chiyo run bm github
+chiyo doc bm
 ```
 
 ## Options
@@ -62,3 +64,10 @@ bookmarks_path = "~/path/to/compatible/Bookmarks.plist"
 
 `bm --list-completions` prints one normalized bookmark path per line. Folder
 skip and rename rules are applied before candidates are printed.
+
+## Framework Entry
+
+`bm` is also available as a framework-backed built-in through
+`chiyo run bm ...` once `bm` is enabled in `[chiyo].enabled_tools`. This entry
+reads `[bm]` from `tools.toml` and supports generated wrappers through
+`chiyo install bm`.

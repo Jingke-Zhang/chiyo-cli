@@ -2,9 +2,11 @@
 
 import argparse
 import os
+import shlex
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 
 from chiyo_cli.fzf import (
     Field,
@@ -29,6 +31,60 @@ class ToolError(Exception):
 
 class ToolFlagError(ToolError):
     """Raised when a user tool defines flags reserved by the framework."""
+
+
+@dataclass(frozen=True)
+class ShellAction:
+    kind: str
+    value: str = ""
+
+    @classmethod
+    def cd(cls, path):
+        return cls("cd", str(path))
+
+    @classmethod
+    def open(cls, location):
+        return cls("open", str(location))
+
+    @classmethod
+    def print(cls, value):
+        return cls("print", str(value))
+
+    @classmethod
+    def none(cls):
+        return cls("none", "")
+
+    def render_shell(self):
+        if self.kind == "none":
+            return ""
+
+        if self.kind == "cd":
+            return f"cd {shlex.quote(self.value)}"
+
+        if self.kind == "open":
+            return f"open {shlex.quote(self.value)}"
+
+        if self.kind == "print":
+            return f"printf '%s\\n' {shlex.quote(self.value)}"
+
+        raise ToolError(f"unknown shell action: {self.kind}")
+
+    def execute(self):
+        if self.kind == "none":
+            return None
+
+        if self.kind == "cd":
+            raise ToolError("cd actions require `chiyo shell`.")
+
+        if self.kind == "open":
+            open_location(self.value)
+            return self.value
+
+        if self.kind == "print":
+            print(self.value)
+            return self.value
+
+        raise ToolError(f"unknown shell action: {self.kind}")
 
 
 def tool_argument_flags(tool):
@@ -175,7 +231,7 @@ class PickOpenTool:
             search_display_fields=self.search_display_fields,
         )
 
-    def run(self, argv=None, config=None):
+    def run(self, argv=None, config=None, execute_shell_actions=True):
         config = dict(self.default_config if config is None else config)
         args = self.parser().parse_args(argv if argv is not None else sys.argv[1:])
 
@@ -197,7 +253,12 @@ class PickOpenTool:
         if selected is None:
             return None
 
-        return self.open_item(selected, args, config)
+        result = self.open_item(selected, args, config)
+
+        if execute_shell_actions and isinstance(result, ShellAction):
+            return result.execute()
+
+        return result
 
     def open_path(self, path):
         open_location(path)
@@ -223,6 +284,7 @@ __all__ = [
     "COMMON_FLAGS",
     "Field",
     "PickOpenTool",
+    "ShellAction",
     "STYLE_PLAIN",
     "STYLE_PRIMARY",
     "STYLE_SECONDARY",

@@ -204,7 +204,8 @@ class GopTests(unittest.TestCase):
             popen.call_args_list[0].args[0],
             ["fd", "--absolute-path", "project", "/Users/me"],
         )
-        self.assertIn("--nth=2,3", popen.call_args_list[1].args[0])
+        self.assertIn("--with-nth=1", popen.call_args_list[1].args[0])
+        self.assertIn("--nth=1", popen.call_args_list[1].args[0])
         self.assertIn("/Users/me/project", fzf_process.stdin.write.call_args.args[0])
         self.assertIn(
             "\t\033[8m/Users/me/project\033[0m",

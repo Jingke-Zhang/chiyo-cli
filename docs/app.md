@@ -17,6 +17,8 @@ app --print-name safari
 app --confirm browser
 chiyo config init app --append
 app --list-completions
+chiyo run app Safari
+chiyo doc app
 ```
 
 ## Options
@@ -53,3 +55,10 @@ path as a separate selectable result.
 `app --list-completions` prints one discovered application name per line. The
 data comes from Spotlight metadata, so installed application changes are picked
 up without editing completion scripts.
+
+## Framework Entry
+
+`app` is also available as a framework-backed built-in tool through
+`chiyo run app ...` once `app` is enabled in `[chiyo].enabled_tools`. This entry
+reads `[app]` from `tools.toml` and supports generated wrappers through
+`chiyo install app`.

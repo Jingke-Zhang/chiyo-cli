@@ -13,6 +13,8 @@ proj --exclude node_modules cli
 proj --confirm cli
 chiyo config init proj --append
 proj-select --list-completions
+chiyo shell proj cli
+chiyo doc proj
 ```
 
 ## Options
@@ -47,3 +49,10 @@ only matches the project name column; paths are shown for disambiguation.
 
 `proj` is a shell function, so its completion script asks `proj-select` for
 project names. `proj-select --list-completions` prints one project name per line.
+
+## Framework Entry
+
+`proj` is also available as a framework-backed built-in through
+`chiyo shell proj ...` once `proj` is enabled in `[chiyo].enabled_tools`. This
+entry reads `[proj]` from `tools.toml` and prints shell-safe `cd ...` code for
+shell integration.
