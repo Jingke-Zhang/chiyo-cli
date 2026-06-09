@@ -125,13 +125,13 @@ class AppTests(unittest.TestCase):
         self.assertEqual(fields[1].style, "")
         self.assertEqual(fields[2].style, "\033[3;4m")
 
-    @mock.patch("app.choose_item")
-    def test_choose_app_preserves_duplicate_display_names(self, choose_item):
+    @mock.patch("app.choose_item_from")
+    def test_choose_app_preserves_duplicate_display_names(self, choose_item_from):
         apps = [
             {"name": "Safari", "path": "/Applications/Safari.app"},
             {"name": "Safari", "path": "/Users/me/Applications/Safari.app"},
         ]
-        choose_item.return_value = apps[1]
+        choose_item_from.return_value = apps[1]
         selected = APP.choose_app(
             apps,
             {
@@ -144,14 +144,17 @@ class AppTests(unittest.TestCase):
             selected,
             {"name": "Safari", "path": "/Users/me/Applications/Safari.app"},
         )
-        self.assertEqual(choose_item.call_args.args[0], apps)
+        self.assertEqual(choose_item_from.call_args.args[0], apps)
 
-    @mock.patch("app.choose_item")
-    def test_choose_app_searches_names_and_aliases_not_paths(self, choose_item):
+    @mock.patch("app.choose_item_from")
+    def test_choose_app_uses_python_display_and_searches_visible_name_fields(
+        self,
+        choose_item_from,
+    ):
         apps = [
             {"name": "Safari", "path": "/Applications/Safari.app"},
         ]
-        choose_item.return_value = apps[0]
+        choose_item_from.return_value = apps[0]
 
         APP.choose_app(
             apps,
@@ -162,10 +165,17 @@ class AppTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            choose_item.call_args.kwargs["search_display_fields"],
+            choose_item_from.call_args.kwargs["search_display_fields"],
             [1, 2],
         )
-        self.assertNotIn("filter_rows", choose_item.call_args.kwargs)
+        self.assertNotIn("filter_rows", choose_item_from.call_args.kwargs)
+        display_fields = choose_item_from.call_args.kwargs["display_fields"]
+        fields = display_fields(apps[0])
+
+        self.assertEqual(fields[0].value, "Safari")
+        self.assertEqual(fields[0].style, "")
+        self.assertEqual(fields[1].value, "browser")
+        self.assertEqual(fields[1].style, "\033[1;32m")
 
     def test_list_completions_prints_unique_app_names(self):
         apps = [

@@ -3,9 +3,9 @@
 Chiyo tools usually follow the same interaction shape:
 
 1. Collect candidate objects.
-2. Render each candidate as one or more human-readable display fields.
-3. Let fzf search either selected visible fields or a separate filter row.
-4. Map the selected row back to the original candidate object.
+2. Let Python filter, sort, and render candidate objects.
+3. Let fzf display the prepared rows and handle terminal selection.
+4. Map the selected row back to the original Python object.
 
 The important abstraction is that display text and filter text are separate
 interfaces. A path or URL can be shown to disambiguate a row without making it
@@ -162,6 +162,52 @@ def format_rows(rows, filter_rows=None):
     ]
 
 
+def prepare_items(items, rows=None, display_fields=None, filter_item=None, sort_key=None):
+    """Return ``(items, rows)`` after Python-side filtering, sorting, and display.
+
+    ``display_fields`` is a callable that receives an item and returns a list of
+    ``Field`` objects. ``filter_item`` and ``sort_key`` operate on the original
+    Python objects before rows are rendered, so callers can use data that is not
+    shown to fzf without adding hidden fzf columns.
+    """
+
+    if rows is not None and display_fields is not None:
+        raise ValueError("Use either rows or display_fields, not both.")
+
+    prepared_items = list(items)
+
+    if filter_item is not None:
+        prepared_items = [item for item in prepared_items if filter_item(item)]
+
+    if sort_key is not None:
+        prepared_items = sorted(prepared_items, key=sort_key)
+
+    if display_fields is not None:
+        return prepared_items, [display_fields(item) for item in prepared_items]
+
+    if rows is None:
+        raise ValueError("rows or display_fields is required.")
+
+    prepared_rows = list(rows)
+
+    if filter_item is not None or sort_key is not None:
+        pairs = list(zip(items, prepared_rows))
+
+        if filter_item is not None:
+            pairs = [
+                (item, row)
+                for item, row in pairs
+                if filter_item(item)
+            ]
+
+        if sort_key is not None:
+            pairs = sorted(pairs, key=lambda pair: sort_key(pair[0]))
+
+        return [item for item, _row in pairs], [row for _item, row in pairs]
+
+    return prepared_items, prepared_rows
+
+
 def field_range(count, start=1):
     return ",".join(str(index) for index in range(start, start + count))
 
@@ -191,14 +237,20 @@ def choose_item(
     search_field_numbers=None,
     search_display_fields=None,
     filter_rows=None,
+    display_fields=None,
+    filter_item=None,
+    sort_key=None,
 ):
     """Return the selected item using fzf.
 
-    ``rows`` defines the display row for each item. ``search_display_fields``
-    optionally limits matching to selected visible columns using 1-based field
-    numbers. ``filter_rows`` defines separate search-only fields for tools that
-    need to match text that is not visible, such as absolute paths behind a
-    compact display path.
+    ``rows`` defines prebuilt display rows. ``display_fields`` can build those
+    rows from each item instead. ``filter_item`` and ``sort_key`` run in Python
+    before fzf sees anything.
+
+    ``search_display_fields`` optionally limits fzf matching to selected visible
+    columns using 1-based field numbers. ``filter_rows`` defines separate
+    search-only fields for tools that need to match text that is not visible,
+    such as absolute paths behind a compact display path.
 
     ``search_field_numbers`` remains for older callers that want to pass raw
     fzf field numbers. It cannot be combined with the higher-level search
@@ -215,6 +267,17 @@ def choose_item(
         raise ValueError(
             "Use only one of search_display_fields, search_field_numbers, or filter_rows."
         )
+
+    if filter_rows is not None and (filter_item is not None or sort_key is not None):
+        raise ValueError("filter_rows cannot be combined with filter_item or sort_key.")
+
+    items, rows = prepare_items(
+        items,
+        rows=rows,
+        display_fields=display_fields,
+        filter_item=filter_item,
+        sort_key=sort_key,
+    )
 
     # fzf sees the hidden tab-delimited index, but --with-nth shows only the
     # formatted display columns to the user.
@@ -261,3 +324,32 @@ def choose_item(
 
     index = int(selected.rsplit("#", 1)[1])
     return items[index]
+
+
+def choose_item_from(
+    items,
+    prompt,
+    error_label,
+    fail,
+    display_fields,
+    search_display_fields=None,
+    filter_item=None,
+    sort_key=None,
+):
+    """Function-oriented wrapper around ``choose_item``.
+
+    This is the preferred API when Python owns item filtering, sorting, and
+    display rendering, and fzf is only the terminal picker.
+    """
+
+    return choose_item(
+        items,
+        None,
+        prompt,
+        error_label,
+        fail,
+        display_fields=display_fields,
+        search_display_fields=search_display_fields,
+        filter_item=filter_item,
+        sort_key=sort_key,
+    )

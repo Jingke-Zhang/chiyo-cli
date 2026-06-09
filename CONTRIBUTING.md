@@ -67,10 +67,17 @@ tool-local parsing, formatting, or setup code:
 
 ### fzf Display And Filtering
 
+Prefer doing data work in Python before invoking fzf: filter objects with
+`filter_item`, sort them with `sort_key`, and render them with
+`display_fields`. Use `choose_item_from` for this function-oriented path. fzf
+should mostly act as the terminal picker for rows Python has already prepared.
+
 Do not make every visible column searchable unless that is truly the desired
-behavior. `choose_item` has two search interfaces:
+behavior. `choose_item` has these display and search interfaces:
 
 - `rows`: display rows, shown to the user through `fzf --with-nth`
+- `display_fields`: a callable that renders one Python object into visible
+  `Field` cells
 - `search_display_fields`: 1-based visible columns to search
 - `filter_rows`: hidden search rows, matched by `fzf --nth`, for text that is
   not visible but should remain searchable
@@ -79,20 +86,15 @@ This lets a tool show context such as paths or URLs for disambiguation without
 making those fields searchable. For example:
 
 ```python
-rows = [
-    [
-        Field(app["name"], STYLE_PRIMARY),
-        Field(app["path"], STYLE_SECONDARY),
-    ]
-    for app in apps
-]
-
-selected = choose_item(
+selected = choose_item_from(
     apps,
-    rows,
     config["fzf_prompt"],
     "an application",
     fail,
+    display_fields=lambda app: [
+        Field(app["name"], STYLE_PRIMARY),
+        Field(app["path"], STYLE_SECONDARY),
+    ],
     search_display_fields=[1],
 )
 ```

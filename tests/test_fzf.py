@@ -7,9 +7,11 @@ from chiyo_cli.fzf import (
     STYLE_PRIMARY,
     STYLE_SECONDARY,
     choose_item,
+    choose_item_from,
     display_width,
     format_row,
     format_rows,
+    prepare_items,
 )
 
 
@@ -94,6 +96,23 @@ class FzfTests(unittest.TestCase):
             ],
         )
 
+    def test_prepare_items_can_filter_sort_and_render_with_functions(self):
+        items = [
+            {"name": "Safari", "rank": 2},
+            {"name": "Calendar", "rank": 1},
+            {"name": "Notes", "rank": 3},
+        ]
+
+        prepared_items, rows = prepare_items(
+            items,
+            display_fields=lambda item: [Field(item["name"])],
+            filter_item=lambda item: item["rank"] > 1,
+            sort_key=lambda item: -item["rank"],
+        )
+
+        self.assertEqual([item["name"] for item in prepared_items], ["Notes", "Safari"])
+        self.assertEqual([[field.value for field in row] for row in rows], [["Notes"], ["Safari"]])
+
     @mock.patch("chiyo_cli.fzf.shutil.which", return_value="/usr/bin/fzf")
     @mock.patch("chiyo_cli.fzf.subprocess.run")
     def test_choose_item_can_search_selected_display_fields(self, run, _which):
@@ -118,6 +137,57 @@ class FzfTests(unittest.TestCase):
         self.assertIn("--nth=1", run.call_args.args[0])
         self.assertIn("/Applications/Safari.app\t#0", run.call_args.kwargs["input"])
         self.assertNotIn("\033[8m", run.call_args.kwargs["input"])
+
+    @mock.patch("chiyo_cli.fzf.shutil.which", return_value="/usr/bin/fzf")
+    @mock.patch("chiyo_cli.fzf.subprocess.run")
+    def test_choose_item_can_build_rows_with_display_function(self, run, _which):
+        run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="Calendar\t#0\n",
+            stderr="",
+        )
+        items = [
+            {"name": "Safari", "rank": 2},
+            {"name": "Calendar", "rank": 1},
+        ]
+
+        selected = choose_item(
+            items,
+            None,
+            "x> ",
+            "an item",
+            lambda message: self.fail(message),
+            display_fields=lambda item: [Field(item["name"])],
+            filter_item=lambda item: item["rank"] == 1,
+            sort_key=lambda item: item["name"].lower(),
+            search_display_fields=[1],
+        )
+
+        self.assertEqual(selected, {"name": "Calendar", "rank": 1})
+        self.assertEqual(run.call_args.kwargs["input"], "Calendar\t#0")
+
+    @mock.patch("chiyo_cli.fzf.shutil.which", return_value="/usr/bin/fzf")
+    @mock.patch("chiyo_cli.fzf.subprocess.run")
+    def test_choose_item_from_uses_function_oriented_api(self, run, _which):
+        run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="Safari\t#0\n",
+            stderr="",
+        )
+
+        selected = choose_item_from(
+            [{"name": "Safari"}],
+            "x> ",
+            "an item",
+            lambda message: self.fail(message),
+            display_fields=lambda item: [Field(item["name"])],
+            search_display_fields=[1],
+        )
+
+        self.assertEqual(selected, {"name": "Safari"})
+        self.assertIn("--nth=1", run.call_args.args[0])
 
     @mock.patch("chiyo_cli.fzf.shutil.which", return_value="/usr/bin/fzf")
     @mock.patch("chiyo_cli.fzf.subprocess.run")
