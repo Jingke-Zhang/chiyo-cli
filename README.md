@@ -180,8 +180,9 @@ chiyo config init app --append
 
 `chiyo config init` requires either `--all` or at least one tool name. The
 default `--write` mode only writes when the config file is missing or empty.
-Use `--append` to add missing tool sections and `--force` to replace selected
-sections.
+Use `--append` to add missing tool sections and fill missing default keys in
+existing sections without replacing user values. Use `--force` to replace
+selected sections.
 
 Generated config is meant to be edited. If a command table exists, Chiyo treats
 it as explicit user config: missing keys fall back to code defaults with a

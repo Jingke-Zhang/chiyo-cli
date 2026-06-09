@@ -245,6 +245,113 @@ def is_configured(content, tool):
     return any(is_module_header(line, tool) for line in content.splitlines())
 
 
+def is_exact_header(line, tool):
+    return line.strip() == f"[{tool}]"
+
+
+def is_nested_header(line, tool):
+    stripped = line.strip()
+    return stripped.startswith(f"[{tool}.") and stripped.endswith("]")
+
+
+def config_key(line):
+    stripped = line.strip()
+
+    if not stripped or stripped.startswith("#") or "=" not in stripped:
+        return None
+
+    return stripped.split("=", 1)[0].strip()
+
+
+def main_table_lines(tool):
+    lines = []
+
+    for line in format_tool_config(tool).splitlines():
+        stripped = line.strip()
+
+        if not stripped:
+            continue
+
+        if stripped.startswith("[") and stripped.endswith("]"):
+            if lines:
+                break
+
+            lines.append(line)
+            continue
+
+        if lines:
+            lines.append(line)
+
+    return lines
+
+
+def append_missing_main_table_defaults(content, tool):
+    default_lines = main_table_lines(tool)
+
+    if not default_lines:
+        return content, False
+
+    default_key_lines = [
+        line
+        for line in default_lines[1:]
+        if config_key(line) is not None
+    ]
+
+    lines = content.splitlines()
+    table_start = None
+    first_nested = None
+    present_keys = set()
+    in_exact_table = False
+
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        is_header = stripped.startswith("[") and stripped.endswith("]")
+
+        if is_exact_header(line, tool):
+            table_start = index
+            in_exact_table = True
+            continue
+
+        if is_nested_header(line, tool) and first_nested is None:
+            first_nested = index
+
+        if is_header:
+            in_exact_table = False
+            continue
+
+        if in_exact_table:
+            key = config_key(line)
+
+            if key is not None:
+                present_keys.add(key)
+
+    missing_lines = [
+        line
+        for line in default_key_lines
+        if config_key(line) not in present_keys
+    ]
+
+    if not missing_lines:
+        return content, False
+
+    if table_start is None:
+        insert_index = first_nested if first_nested is not None else len(lines)
+        insertion = default_lines
+
+        if insert_index > 0 and lines[insert_index - 1].strip():
+            insertion = [""] + insertion
+
+        if insert_index < len(lines) and lines[insert_index].strip():
+            insertion = insertion + [""]
+
+        new_lines = lines[:insert_index] + insertion + lines[insert_index:]
+        return "\n".join(new_lines).strip() + "\n", True
+
+    insert_index = table_start + 1
+    new_lines = lines[:insert_index] + missing_lines + lines[insert_index:]
+    return "\n".join(new_lines).strip() + "\n", True
+
+
 def append_config_sections(content, tools):
     sections = [format_tool_config(tool) for tool in tools]
     sections = [section for section in sections if section]
@@ -285,6 +392,7 @@ def config_init_lines(tools, mode):
 
     selected = []
     skipped = []
+    defaulted = []
 
     if mode == "append":
         for tool in tools:
@@ -293,6 +401,15 @@ def config_init_lines(tools, mode):
             else:
                 selected.append(tool)
         new_content = append_config_sections(content, selected)
+
+        for tool in skipped:
+            new_content, changed = append_missing_main_table_defaults(new_content, tool)
+
+            if changed:
+                defaulted.append(tool)
+
+        if defaulted:
+            write_config_text(new_content)
     elif mode == "force":
         selected = list(tools)
         new_content = replace_config_sections(content, selected)
@@ -310,7 +427,10 @@ def config_init_lines(tools, mode):
         lines.append(f"{action} [{tool}] config in {path}")
 
     for tool in skipped:
-        lines.append(f"skip [{tool}] config: already exists")
+        if mode == "append" and tool in defaulted:
+            lines.append(f"append [{tool}] defaults in {path}")
+        else:
+            lines.append(f"skip [{tool}] config: already exists")
 
     if not selected and not skipped:
         lines.append("no config changes")

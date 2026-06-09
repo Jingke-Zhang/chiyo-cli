@@ -186,6 +186,56 @@ class ChiyoTests(unittest.TestCase):
         self.assertIn("[app.alias]", content)
         self.assertIn('fzf_prompt = "old> "', content)
 
+    def test_config_init_append_adds_missing_bm_defaults(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[bm]",
+                        'skip_folders = ["Bookmarks"]',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.config_init_lines(["bm"], "append")
+
+            content = Path(config_path).read_text(encoding="utf-8")
+
+        self.assertIn("append [bm] defaults", "\n".join(lines))
+        self.assertIn('bookmarks_path = "~/Library/Safari/Bookmarks.plist"', content)
+        self.assertIn('skip_folders = ["Bookmarks"]', content)
+        self.assertIn('fzf_prompt = "bm> "', content)
+        self.assertIn('browser = "Safari"', content)
+
+    def test_config_init_append_preserves_existing_bm_defaults(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[bm]",
+                        'bookmarks_path = "~/Bookmarks.plist"',
+                        'skip_folders = ["Bookmarks"]',
+                        'fzf_prompt = "bookmarks> "',
+                        'browser = "Google Chrome"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.config_init_lines(["bm"], "append")
+
+            content = Path(config_path).read_text(encoding="utf-8")
+
+        self.assertIn("skip [bm] config: already exists", lines)
+        self.assertIn('bookmarks_path = "~/Bookmarks.plist"', content)
+        self.assertIn('fzf_prompt = "bookmarks> "', content)
+        self.assertIn('browser = "Google Chrome"', content)
+
     def test_config_init_force_replaces_selected_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")

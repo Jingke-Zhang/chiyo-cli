@@ -20,7 +20,8 @@ chiyo doctor
 are:
 
 - `--write`: write only when the config file is missing or empty; this is the default
-- `--append`: add missing tool sections without replacing existing sections
+- `--append`: add missing tool sections and fill missing default keys in
+  existing sections without replacing user values
 - `--force`: replace selected tool sections
 
 `init zsh` does not add `~/.local/bin` to `PATH`. The development installer
