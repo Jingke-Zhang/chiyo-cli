@@ -4,6 +4,8 @@ from pathlib import Path
 
 from chiyo_cli.tool_config import (
     DEFAULT_CHIYO_CONFIG,
+    disable_tool,
+    enable_tool,
     format_chiyo_config,
     init_chiyo_config,
     init_tool_config,
@@ -112,6 +114,29 @@ class ToolConfigTests(unittest.TestCase):
         self.assertIn("[chiyo]", text)
         self.assertIn("enabled_tools", text)
         self.assertIn(DEFAULT_CHIYO_CONFIG["wrapper_dir"], text)
+
+    def test_enable_tool_adds_command_once(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "config.toml"
+
+            enable_tool("paper", config_path=str(config_path))
+            enable_tool("paper", config_path=str(config_path))
+
+            config = load_chiyo_config(config_path=str(config_path))
+
+        self.assertEqual(config["enabled_tools"], ["paper"])
+
+    def test_disable_tool_removes_command_and_reports_previous_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "config.toml"
+
+            enable_tool("paper", config_path=str(config_path))
+            self.assertTrue(disable_tool("paper", config_path=str(config_path)))
+            self.assertFalse(disable_tool("paper", config_path=str(config_path)))
+
+            config = load_chiyo_config(config_path=str(config_path))
+
+        self.assertEqual(config["enabled_tools"], [])
 
 
 if __name__ == "__main__":

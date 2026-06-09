@@ -45,6 +45,15 @@ def load_chiyo_config(config_path=CONFIG_PATH, warn=None):
     return config
 
 
+def load_raw_chiyo_config(config_path=CONFIG_PATH, warn=None):
+    return load_module_config(
+        CHIYO_CONFIG_MODULE,
+        DEFAULT_CHIYO_CONFIG,
+        config_path=config_path,
+        warn=warn,
+    )
+
+
 def init_chiyo_config(config_path=CONFIG_PATH):
     return init_module_config(
         CHIYO_CONFIG_MODULE,
@@ -80,3 +89,50 @@ def format_chiyo_config():
 
 def default_tool_config(defaults):
     return copy.deepcopy(defaults)
+
+
+def normalize_enabled_tools(tools):
+    seen = set()
+    normalized = []
+
+    for tool in tools:
+        if not tool or tool in seen:
+            continue
+
+        seen.add(tool)
+        normalized.append(tool)
+
+    return normalized
+
+
+def write_chiyo_config(config, config_path=CONFIG_PATH):
+    return init_module_config(
+        CHIYO_CONFIG_MODULE,
+        config,
+        config_path=config_path,
+    )
+
+
+def enable_tool(tool_command, config_path=CONFIG_PATH):
+    config = load_raw_chiyo_config(config_path=config_path)
+    enabled_tools = normalize_enabled_tools(config.get("enabled_tools", []))
+
+    if tool_command not in enabled_tools:
+        enabled_tools.append(tool_command)
+
+    config["enabled_tools"] = enabled_tools
+    write_chiyo_config(config, config_path=config_path)
+    return tool_command in enabled_tools
+
+
+def disable_tool(tool_command, config_path=CONFIG_PATH):
+    config = load_raw_chiyo_config(config_path=config_path)
+    enabled_tools = normalize_enabled_tools(config.get("enabled_tools", []))
+    was_enabled = tool_command in enabled_tools
+    config["enabled_tools"] = [
+        tool
+        for tool in enabled_tools
+        if tool != tool_command
+    ]
+    write_chiyo_config(config, config_path=config_path)
+    return was_enabled

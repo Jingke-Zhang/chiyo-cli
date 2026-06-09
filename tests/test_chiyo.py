@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from io import StringIO
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
@@ -8,6 +9,7 @@ from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHIYO = SourceFileLoader("chiyo", str(REPO_ROOT / "bin" / "chiyo")).load_module()
+FIXTURE_TOOL_DIR = REPO_ROOT / "tests" / "fixtures" / "user_tools"
 
 
 class ChiyoTests(unittest.TestCase):
@@ -280,6 +282,213 @@ class ChiyoTests(unittest.TestCase):
                         lines = CHIYO.doctor_lines()
 
         self.assertIn("ok      fzf: /usr/bin/fzf", lines)
+
+    def test_tool_enable_and_disable_update_chiyo_config(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                self.assertEqual(CHIYO.enable_tool_lines("paper"), ["enabled tool: paper"])
+                self.assertEqual(CHIYO.disable_tool_lines("paper"), ["disabled tool: paper"])
+                self.assertEqual(
+                    CHIYO.disable_tool_lines("paper"),
+                    ["tool already disabled: paper"],
+                )
+
+            content = Path(config_path).read_text(encoding="utf-8")
+
+        self.assertIn("[chiyo]", content)
+        self.assertIn("enabled_tools = []", content)
+
+    def test_tool_list_shows_discovered_tools_and_enabled_status(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["paper"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.tool_list_lines()
+
+        output = "\n".join(lines)
+        self.assertIn("enabled  paper", output)
+        self.assertIn("Paper Search by Fixture Author", output)
+        self.assertIn("disabled disabled-notes", output)
+        self.assertIn("warn", output)
+        self.assertIn("missing_author.py", output)
+        self.assertNotIn("# Paper Search", output)
+
+    def test_tool_list_can_include_docs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = []',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.tool_list_lines(include_docs=True)
+
+        self.assertIn("# Paper Search", "\n".join(lines))
+
+    def test_tool_doc_lines_returns_docs_for_discoverable_tool(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = []',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.tool_doc_lines("paper")
+
+        self.assertIn("# Paper Search", "\n".join(lines))
+
+    def test_tool_doc_lines_returns_none_for_unknown_tool(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = []',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.tool_doc_lines("missing")
+
+        self.assertIsNone(lines)
+
+    def test_main_doc_prints_docs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = []',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+                    CHIYO.main(["doc", "paper"])
+
+        self.assertIn("# Paper Search", stdout.getvalue())
+
+    def test_run_tool_runs_enabled_tool_with_tools_toml_config(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "papers"
+            root.mkdir()
+            alpha = root / "alpha.pdf"
+            beta = root / "beta.pdf"
+            alpha.write_text("alpha", encoding="utf-8")
+            beta.write_text("beta", encoding="utf-8")
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["paper"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                "\n".join(
+                    [
+                        "[paper]",
+                        f'root = "{root}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    result = CHIYO.run_tool("paper", ["alpha"])
+
+        self.assertEqual(result, str(alpha))
+
+    def test_run_tool_rejects_disabled_tool(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = []',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with self.assertRaises(CHIYO.ToolCommandError):
+                    CHIYO.run_tool("paper", [])
+
+    def test_run_tool_rejects_unknown_enabled_tool(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["missing"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with self.assertRaises(CHIYO.ToolCommandError):
+                    CHIYO.run_tool("missing", [])
 
 
 if __name__ == "__main__":

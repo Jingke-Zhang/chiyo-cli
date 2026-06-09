@@ -15,6 +15,7 @@ BIN_DIR = os.path.join(REPO_ROOT, "bin")
 SHELL_DIR = os.path.join(REPO_ROOT, "shell")
 COMPLETIONS_DIR = os.path.join(REPO_ROOT, "completions")
 CONFIG_PATH = "~/.config/chiyo-cli/config.toml"
+TOOLS_CONFIG_PATH = "~/.config/chiyo-cli/tools.toml"
 LOCAL_BIN_DIR = "~/.local/bin"
 ZSH_SITE_FUNCTIONS_DIR = "~/.local/share/zsh/site-functions"
 COMMANDS = ["bm", "app", "ws", "chiyo", "gop-select", "proj-select", "zo"]
@@ -31,6 +32,10 @@ CONFIG_TOOLS = {
 
 
 class ConfigInitRefused(Exception):
+    pass
+
+
+class ToolCommandError(Exception):
     pass
 
 
@@ -53,6 +58,23 @@ def parse_args(argv):
     subparsers.add_parser(
         "doctor",
         help="Check local Chiyo CLI setup.",
+    )
+
+    doc_parser = subparsers.add_parser(
+        "doc",
+        help="Print docs for a discoverable tool.",
+    )
+    doc_parser.add_argument("tool", help="Tool command to document.")
+
+    run_parser = subparsers.add_parser(
+        "run",
+        help="Run an enabled user tool.",
+    )
+    run_parser.add_argument("tool", help="Enabled tool command to run.")
+    run_parser.add_argument(
+        "tool_args",
+        nargs=argparse.REMAINDER,
+        help="Arguments forwarded to the selected tool.",
     )
 
     config_parser = subparsers.add_parser(
@@ -100,6 +122,34 @@ def parse_args(argv):
         help="Replace selected tool sections.",
     )
     config_init_parser.set_defaults(config_mode="write")
+
+    tool_parser = subparsers.add_parser(
+        "tool",
+        help="Manage Chiyo user-tool framework state.",
+    )
+    tool_subparsers = tool_parser.add_subparsers(
+        dest="tool_command",
+        required=True,
+    )
+    tool_list_parser = tool_subparsers.add_parser(
+        "list",
+        help="List discoverable user tools.",
+    )
+    tool_list_parser.add_argument(
+        "--docs",
+        action="store_true",
+        help="Include tool docs in the listing.",
+    )
+    tool_enable_parser = tool_subparsers.add_parser(
+        "enable",
+        help="Enable a tool command for chiyo run.",
+    )
+    tool_enable_parser.add_argument("tool", help="Tool command to enable.")
+    tool_disable_parser = tool_subparsers.add_parser(
+        "disable",
+        help="Disable a tool command for chiyo run.",
+    )
+    tool_disable_parser.add_argument("tool", help="Tool command to disable.")
 
     return parser.parse_args(argv)
 
@@ -559,6 +609,117 @@ def doctor():
     print("\n".join(doctor_lines()))
 
 
+def enable_tool_lines(tool):
+    from chiyo_cli.tool_config import enable_tool
+
+    enable_tool(tool, config_path=CONFIG_PATH)
+    return [f"enabled tool: {tool}"]
+
+
+def disable_tool_lines(tool):
+    from chiyo_cli.tool_config import disable_tool
+
+    was_enabled = disable_tool(tool, config_path=CONFIG_PATH)
+
+    if was_enabled:
+        return [f"disabled tool: {tool}"]
+
+    return [f"tool already disabled: {tool}"]
+
+
+def print_tool_lines(lines):
+    for line in lines:
+        print(line)
+
+
+def tool_list_lines(include_docs=False):
+    from chiyo_cli.tool_config import load_chiyo_config
+    from chiyo_cli.tool_loader import discover_user_tools
+
+    config = load_chiyo_config(config_path=CONFIG_PATH)
+    enabled_tools = set(config.get("enabled_tools", []))
+    discovery = discover_user_tools(config.get("tool_dirs", []))
+    lines = []
+
+    for tool in discovery.tools:
+        status = "enabled" if tool.command in enabled_tools else "disabled"
+        lines.append(
+            f"{status:8} {tool.command:16} {tool.name} "
+            f"by {tool.author} - {tool.description}"
+        )
+
+        if include_docs:
+            docs = tool.docs.strip()
+
+            if docs:
+                lines.append("")
+                lines.extend(f"  {line}" for line in docs.splitlines())
+                lines.append("")
+
+    for error in discovery.errors:
+        lines.append(f"warn     {error.path}: {error.message}")
+
+    if not lines:
+        lines.append("no tools found")
+
+    return lines
+
+
+def tool_metadata_by_command(tool_command):
+    from chiyo_cli.tool_config import load_chiyo_config
+    from chiyo_cli.tool_loader import discover_user_tools
+
+    config = load_chiyo_config(config_path=CONFIG_PATH)
+    discovery = discover_user_tools(config.get("tool_dirs", []))
+
+    for tool in discovery.tools:
+        if tool.command == tool_command:
+            return tool
+
+    return None
+
+
+def run_tool(tool_command, tool_args):
+    from chiyo_cli.tool_config import load_chiyo_config, load_tool_config
+    from chiyo_cli.tool_loader import load_tool_class
+
+    config = load_chiyo_config(config_path=CONFIG_PATH)
+
+    if tool_command not in config.get("enabled_tools", []):
+        raise ToolCommandError(
+            f"{tool_command} is not enabled; run `chiyo tool enable {tool_command}` "
+            "if you want it to appear in chiyo run"
+        )
+
+    metadata = tool_metadata_by_command(tool_command)
+
+    if metadata is None:
+        raise ToolCommandError(f"unknown tool: {tool_command}")
+
+    tool_class = load_tool_class(metadata.path)
+    tool = tool_class()
+    tool_config = load_tool_config(
+        tool.command,
+        tool.default_config,
+        config_path=TOOLS_CONFIG_PATH,
+    )
+    return tool.run(tool_args, config=tool_config)
+
+
+def tool_doc_lines(tool_command):
+    tool = tool_metadata_by_command(tool_command)
+
+    if tool is None:
+        return None
+
+    docs = tool.docs.strip()
+
+    if not docs:
+        return [f"{tool.command}: no docs available."]
+
+    return docs.splitlines()
+
+
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
 
@@ -568,6 +729,24 @@ def main(argv=None):
 
     if args.command == "doctor":
         doctor()
+        return
+
+    if args.command == "doc":
+        lines = tool_doc_lines(args.tool)
+
+        if lines is None:
+            print(f"chiyo doc: unknown tool: {args.tool}", file=sys.stderr)
+            sys.exit(1)
+
+        print_tool_lines(lines)
+        return
+
+    if args.command == "run":
+        try:
+            run_tool(args.tool, args.tool_args)
+        except ToolCommandError as error:
+            print(f"chiyo run: {error}", file=sys.stderr)
+            sys.exit(1)
         return
 
     if args.command == "config":
@@ -583,6 +762,19 @@ def main(argv=None):
             except ConfigInitRefused as error:
                 print(error, file=sys.stderr)
                 sys.exit(1)
+            return
+
+    if args.command == "tool":
+        if args.tool_command == "list":
+            print_tool_lines(tool_list_lines(include_docs=args.docs))
+            return
+
+        if args.tool_command == "enable":
+            print_tool_lines(enable_tool_lines(args.tool))
+            return
+
+        if args.tool_command == "disable":
+            print_tool_lines(disable_tool_lines(args.tool))
             return
 
 
