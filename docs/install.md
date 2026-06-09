@@ -88,7 +88,32 @@ After moving the checkout, run:
 
 from the new repository location.
 
+## Troubleshooting
+
+Run diagnostics first:
+
+```sh
+chiyo doctor
+```
+
+If `fzf` or `fd` is reported as missing, install it and make sure it is visible
+in `PATH`.
+
+If `bm` cannot read bookmarks, grant Full Disk Access to the terminal app you
+use with Chiyo CLI. Also check that Safari bookmarks exist, or configure `bm`
+to read another compatible bookmarks plist.
+
+If `app` cannot find installed applications, confirm that Spotlight indexing is
+available and that your terminal app has Full Disk Access.
+
+If `gop` or `proj` returns no results, check the configured search roots in
+`~/.config/chiyo-cli/config.toml`. Missing roots are skipped with warnings.
+
+If commands stop working after moving the repository, rerun `./install.sh` from
+the new checkout path so symlinks point to the current repository.
+
 ## Non-goals
 
 v0.x does not provide Homebrew, PyPI, Cargo, system-wide installation, automatic
-`.zshrc` edits, or a copied `~/.local/share/chiyo-cli` install tree.
+`.zshrc` edits, or a copied `~/.local/share/chiyo-cli` install tree. Homebrew is
+the preferred future distribution path.

@@ -135,6 +135,8 @@ Path-like tools follow a small file palette:
 - [`gop`](docs/gop.md): search files/directories, then `cd` or `open`
 - [`proj`](docs/proj.md): search git projects, then `cd` into one
 - [Installation details](docs/install.md): development install and shell setup
+- [Troubleshooting](docs/install.md#troubleshooting): common setup and
+  permission issues
 
 ## Future Work
 
@@ -211,6 +213,7 @@ make test
 This repository uses GitHub Actions to run the same test command on macOS.
 Contributions should keep tool behavior focused, documented, and covered by
 tests where practical. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+See [docs/release.md](docs/release.md) for the release checklist.
 
 ## Security
 

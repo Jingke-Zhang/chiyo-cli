@@ -9,6 +9,7 @@
 - Expanded README project status, development, and security guidance.
 - Expanded `.gitignore` for Python and macOS local artifacts.
 - Clarified post-install config setup and macOS Full Disk Access requirements.
+- Added install troubleshooting and release process documentation.
 
 ## v0.1.2
 

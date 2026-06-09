@@ -13,6 +13,11 @@ Depending on the command, Chiyo CLI may read:
 - Configured filesystem roots for `gop` and `proj`.
 - `~/.config/chiyo-cli/config.toml` for shared configuration.
 
+On macOS, grant Full Disk Access to the terminal app you use with Chiyo CLI.
+Without that permission, commands such as `bm` and `app` may be unable to read
+Safari bookmarks or application metadata even when the command is installed and
+configured correctly.
+
 ## External Actions
 
 Some commands use macOS `open` to launch URLs, files, directories, or
