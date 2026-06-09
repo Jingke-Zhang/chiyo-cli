@@ -128,7 +128,8 @@ class GopTests(unittest.TestCase):
             os.chmod(exec_path, 0o755)
 
             self.assertIn("\033[1;34m", GOP.format_path_choice(temp_dir))
-            self.assertNotIn("\033[", GOP.format_path_choice(file_path))
+            self.assertNotIn("\033[1;34m", GOP.format_path_choice(file_path))
+            self.assertNotIn("\033[1;32m", GOP.format_path_choice(file_path))
             self.assertIn("\033[1;32m", GOP.format_path_choice(exec_path))
             self.assertNotIn("  dir\t", GOP.format_path_choice(temp_dir))
             self.assertNotIn("  file\t", GOP.format_path_choice(file_path))
@@ -203,8 +204,22 @@ class GopTests(unittest.TestCase):
             popen.call_args_list[0].args[0],
             ["fd", "--absolute-path", "project", "/Users/me"],
         )
+        self.assertIn("--nth=2,3", popen.call_args_list[1].args[0])
         self.assertIn("/Users/me/project", fzf_process.stdin.write.call_args.args[0])
-        self.assertIn("\t/Users/me/project", fzf_process.stdin.write.call_args.args[0])
+        self.assertIn(
+            "\t\033[8m/Users/me/project\033[0m",
+            fzf_process.stdin.write.call_args.args[0],
+        )
+
+    def test_parse_choice_strips_concealed_filter_style(self):
+        self.assertEqual(
+            GOP.parse_choice(
+                "/Users/me/project\t"
+                "\033[8m~/project\033[0m\t"
+                "\033[8m/Users/me/project\033[0m\t#0"
+            ),
+            "/Users/me/project",
+        )
 
     @mock.patch("builtins.print")
     @mock.patch("gop_select.run_fd", return_value=["/tmp/project"])

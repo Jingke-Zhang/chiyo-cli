@@ -110,24 +110,20 @@ class ProjTests(unittest.TestCase):
             [4],
         )
 
-    def test_format_project_choice_hides_exact_path_in_last_column(self):
-        choice = PROJ.format_project_choice(
-            "/Users/me/Documents/chiyo-cli",
+    def test_project_fields_separates_name_and_path(self):
+        path = os.path.join(os.path.expanduser("~"), "Documents", "chiyo-cli")
+
+        fields = PROJ.project_fields(
+            path,
             [9],
         )
 
-        self.assertIn("chiyo-cli", choice)
-        self.assertTrue(choice.endswith("\tchiyo-cli\t/Users/me/Documents/chiyo-cli"))
+        self.assertEqual(fields[0].value, "chiyo-cli  ")
+        self.assertEqual(fields[1].value, "~/Documents/chiyo-cli")
 
-    @mock.patch("proj_select.shutil.which", return_value="/usr/bin/fzf")
-    @mock.patch("proj_select.subprocess.run")
-    def test_choose_project_searches_only_hidden_project_name_column(self, run, _which):
-        run.return_value = subprocess.CompletedProcess(
-            args=[],
-            returncode=0,
-            stdout="chiyo-cli  ~/Documents/chiyo-cli\tchiyo-cli\t/Users/me/Documents/chiyo-cli\n",
-            stderr="",
-        )
+    @mock.patch("proj_select.choose_item")
+    def test_choose_project_searches_only_project_name_column(self, choose_item):
+        choose_item.return_value = "/Users/me/Documents/chiyo-cli"
 
         selected = PROJ.choose_project(
             ["/Users/me/Documents/chiyo-cli"],
@@ -135,8 +131,11 @@ class ProjTests(unittest.TestCase):
         )
 
         self.assertEqual(selected, "/Users/me/Documents/chiyo-cli")
-        self.assertIn("--with-nth=1", run.call_args.args[0])
-        self.assertIn("--nth=2", run.call_args.args[0])
+        self.assertEqual(choose_item.call_args.args[0], ["/Users/me/Documents/chiyo-cli"])
+        self.assertEqual(
+            choose_item.call_args.kwargs["filter_rows"],
+            [["chiyo-cli"]],
+        )
 
     @mock.patch("proj_select.choose_project")
     def test_select_project_returns_single_match_directly_when_allowed(self, choose):

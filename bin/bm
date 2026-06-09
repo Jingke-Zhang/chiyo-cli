@@ -204,11 +204,13 @@ def filter_bookmarks(bookmarks, query):
     return [
         (display_name, url)
         for display_name, url in bookmarks
-        if query in display_name.lower() or query in url.lower()
+        if query in display_name.lower()
     ]
 
 
 def choose_bookmark(bookmarks, config):
+    # Display rows show the URL for disambiguation, but filter rows keep fuzzy
+    # search focused on the normalized bookmark path.
     rows = [
         [
             Field(display_name, STYLE_PRIMARY),
@@ -216,12 +218,14 @@ def choose_bookmark(bookmarks, config):
         ]
         for display_name, url in bookmarks
     ]
+    filter_rows = [[display_name] for display_name, _url in bookmarks]
     selected = choose_item(
         bookmarks,
         rows,
         config["fzf_prompt"],
         "a bookmark",
         fail,
+        filter_rows=filter_rows,
     )
 
     if selected is None:

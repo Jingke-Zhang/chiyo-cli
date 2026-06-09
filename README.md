@@ -216,6 +216,12 @@ Contributions should keep tool behavior focused, documented, and covered by
 tests where practical. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 See [docs/release.md](docs/release.md) for the release checklist.
 
+Shared implementation interfaces live in `chiyo_cli/`. New tools should reuse
+`chiyo_cli.config` for shared TOML loading/initialization and
+`chiyo_cli.fzf.choose_item` for interactive selection. The fzf helper separates
+visible display rows from hidden filter rows, so tools can show paths, URLs, or
+other context without automatically making those fields searchable.
+
 ## Security
 
 Chiyo CLI runs locally but may read local bookmarks, application metadata,

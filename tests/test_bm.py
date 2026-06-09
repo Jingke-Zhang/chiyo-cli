@@ -138,6 +138,22 @@ class BookmarkTests(unittest.TestCase):
 
         self.assertEqual(selected, "https://second.example")
         self.assertEqual(choose_item.call_args.args[0], bookmarks)
+        self.assertEqual(
+            choose_item.call_args.kwargs["filter_rows"],
+            [["Example"], ["Example"]],
+        )
+
+    def test_filter_bookmarks_matches_display_name_only(self):
+        bookmarks = [
+            ("Personal/Example", "https://docs.example.com"),
+            ("Work/Other", "https://example.com"),
+        ]
+
+        self.assertEqual(
+            BM.filter_bookmarks(bookmarks, "Personal"),
+            [("Personal/Example", "https://docs.example.com")],
+        )
+        self.assertEqual(BM.filter_bookmarks(bookmarks, "docs.example"), [])
 
     def test_list_completions_prints_bookmark_paths(self):
         bookmarks = [

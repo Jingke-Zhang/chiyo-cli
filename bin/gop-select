@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import re
 import sys
 import shutil
 import subprocess
@@ -12,14 +13,15 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from chiyo_cli.config import init_module_config, load_module_config
+from chiyo_cli.fzf import Field, choose_item, field_widths, format_row
 from chiyo_cli.output import print_warning
 
 
 CONFIG_MODULE = "gop"
-STYLE_RESET = "\033[0m"
 STYLE_DIR = "\033[1;34m"
 STYLE_FILE = ""
 STYLE_EXECUTABLE = "\033[1;32m"
+ANSI_PATTERN = re.compile(r"\033\[[0-9;]*m")
 DEFAULT_CONFIG = {
     "roots": ["~/Documents", "~/Downloads", "~/Desktop"],
     "exclude": ["Library", "node_modules", "OrbStack"],
@@ -196,19 +198,23 @@ def style_for_kind(kind):
     return STYLE_FILE
 
 
-def style_text(value, style):
-    if not style:
-        return value
+def path_fields(path):
+    kind = path_kind(path)
+    return [Field(compact_path(path), style_for_kind(kind))]
 
-    return f"{style}{value}{STYLE_RESET}"
+
+def path_filter_fields(path):
+    # Search the compact path users usually type and keep the exact absolute
+    # path hidden so selection can return an unambiguous filesystem target.
+    return [compact_path(path), path]
 
 
 def format_path_choice(path):
-    # The first column is for humans; the second tab-delimited column is the
-    # exact path returned after fzf selection.
-    kind = path_kind(path)
-    visible_path = style_text(compact_path(path), style_for_kind(kind))
-    return f"{visible_path}\t{path}"
+    # Streamed gop selection cannot use choose_item because fd output arrives
+    # incrementally, but it still uses the shared row format: display fields,
+    # hidden filter fields, and a hidden index suffix.
+    fields = path_fields(path)
+    return format_row(0, fields, field_widths([fields]), path_filter_fields(path))
 
 
 def parse_choice(choice):
@@ -217,7 +223,8 @@ def parse_choice(choice):
     if "\t" not in choice:
         return choice
 
-    return choice.rsplit("\t", 1)[1]
+    without_index = choice.rsplit("\t#", 1)[0]
+    return ANSI_PATTERN.sub("", without_index.rsplit("\t", 1)[1])
 
 
 def unique_paths(paths):
@@ -235,33 +242,16 @@ def unique_paths(paths):
 
 
 def choose_path(paths, config):
-    require_fzf()
-    result = subprocess.run(
-        [
-            "fzf",
-            f"--prompt={config['fzf_prompt']}",
-            "--ansi",
-            "--with-nth=1",
-            "--delimiter=\t",
-        ],
-        input="\n".join(format_path_choice(path) for path in paths),
-        text=True,
-        capture_output=True,
-        check=False,
+    rows = [path_fields(path) for path in paths]
+    filter_rows = [path_filter_fields(path) for path in paths]
+    return choose_item(
+        paths,
+        rows,
+        config["fzf_prompt"],
+        "a path",
+        fail,
+        filter_rows=filter_rows,
     )
-
-    if result.returncode == 130:
-        return None
-
-    if result.returncode != 0:
-        fail("fzf failed while selecting a path.")
-
-    selected = result.stdout.strip()
-
-    if not selected:
-        return None
-
-    return parse_choice(selected)
 
 
 def choose_path_stream(query, roots, exclude, config):
@@ -281,6 +271,7 @@ def choose_path_stream(query, roots, exclude, config):
             f"--prompt={config['fzf_prompt']}",
             "--ansi",
             "--with-nth=1",
+            "--nth=2,3",
             "--delimiter=\t",
         ],
         stdin=subprocess.PIPE,

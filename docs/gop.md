@@ -28,6 +28,9 @@ gop-select --list-completions
 - regular files: plain
 - executables: bold green
 
+In `fzf`, `gop` displays compact paths, searches both compact and absolute path
+forms, and returns the exact absolute path to the shell function.
+
 ## Config
 
 Default generated config:

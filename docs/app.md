@@ -6,6 +6,8 @@ aliases, and paths in `fzf`, and opens the selected application path.
 
 When a query matches exactly one application, `app` opens it directly. An exact
 alias match launches the configured application without opening `fzf`.
+Filtering uses application names and configured aliases; displayed paths are not
+searched, including during interactive `fzf` filtering.
 
 ```sh
 app

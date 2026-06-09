@@ -12,14 +12,17 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from chiyo_cli.config import init_module_config, load_module_config
-from chiyo_cli.fzf import display_width
+from chiyo_cli.fzf import (
+    Field,
+    STYLE_PRIMARY,
+    STYLE_SECONDARY,
+    choose_item,
+    display_width,
+)
 from chiyo_cli.output import print_warning
 
 
 CONFIG_MODULE = "proj"
-STYLE_RESET = "\033[0m"
-STYLE_PRIMARY = "\033[1;32m"
-STYLE_SECONDARY = "\033[3;4m"
 DEFAULT_CONFIG = {
     "roots": ["~/Documents", "~/Projects", "~/Developer"],
     "markers": [".project", ".git"],
@@ -135,11 +138,6 @@ def require_fd():
         fail("fd is not installed or not in PATH.")
 
 
-def require_fzf():
-    if shutil.which("fzf") is None:
-        fail("fzf is not installed or not in PATH.")
-
-
 def escape_fd_alternative(value):
     escaped = []
 
@@ -210,13 +208,6 @@ def project_name(path):
     return os.path.basename(path.rstrip(os.sep))
 
 
-def style_text(value, style):
-    if not style:
-        return value
-
-    return f"{style}{value}{STYLE_RESET}"
-
-
 def unique_paths(paths):
     seen = set()
     unique = []
@@ -256,50 +247,26 @@ def project_widths(projects):
     ]
 
 
-def format_project_choice(path, widths):
-    name = style_text(project_name(path), STYLE_PRIMARY)
-    compact = style_text(compact_path(path), STYLE_SECONDARY)
+def project_fields(path, widths):
     name_padding = " " * (widths[0] - display_width(project_name(path)) + 2)
-    return f"{name}{name_padding}{compact}\t{project_name(path)}\t{path}"
-
-
-def parse_choice(choice):
-    if "\t" not in choice:
-        return choice
-
-    return choice.rsplit("\t", 1)[1]
+    return [
+        Field(project_name(path) + name_padding, STYLE_PRIMARY),
+        Field(compact_path(path), STYLE_SECONDARY),
+    ]
 
 
 def choose_project(projects, config):
-    require_fzf()
     widths = project_widths(projects)
-    result = subprocess.run(
-        [
-            "fzf",
-            f"--prompt={config['fzf_prompt']}",
-            "--ansi",
-            "--with-nth=1",
-            "--nth=2",
-            "--delimiter=\t",
-        ],
-        input="\n".join(format_project_choice(path, widths) for path in projects),
-        text=True,
-        capture_output=True,
-        check=False,
+    rows = [project_fields(path, widths) for path in projects]
+    filter_rows = [[project_name(path)] for path in projects]
+    return choose_item(
+        projects,
+        rows,
+        config["fzf_prompt"],
+        "a project",
+        fail,
+        filter_rows=filter_rows,
     )
-
-    if result.returncode == 130:
-        return None
-
-    if result.returncode != 0:
-        fail("fzf failed while selecting a project.")
-
-    selected = result.stdout.strip()
-
-    if not selected:
-        return None
-
-    return parse_choice(selected)
 
 
 def select_project(projects, config, allow_direct):

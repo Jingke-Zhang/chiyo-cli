@@ -90,6 +90,21 @@ class AppTests(unittest.TestCase):
             [{"name": "Safari", "path": "/Applications/Safari.app"}],
         )
 
+    def test_filter_apps_does_not_match_path_directories(self):
+        self.assertEqual(
+            APP.filter_apps(
+                [
+                    {"name": "Safari", "path": "/Applications/Safari.app"},
+                    {
+                        "name": "Calendar",
+                        "path": "/System/Applications/Calendar.app",
+                    },
+                ],
+                "Applications",
+            ),
+            [],
+        )
+
     def test_app_fields_styles_alias_when_present(self):
         fields = APP.app_fields(
             {"name": "Safari", "path": "/Applications/Safari.app"},
@@ -130,6 +145,26 @@ class AppTests(unittest.TestCase):
             {"name": "Safari", "path": "/Users/me/Applications/Safari.app"},
         )
         self.assertEqual(choose_item.call_args.args[0], apps)
+
+    @mock.patch("app.choose_item")
+    def test_choose_app_searches_names_and_aliases_not_paths(self, choose_item):
+        apps = [
+            {"name": "Safari", "path": "/Applications/Safari.app"},
+        ]
+        choose_item.return_value = apps[0]
+
+        APP.choose_app(
+            apps,
+            {
+                "fzf_prompt": "app> ",
+                "alias": {"browser": "Safari"},
+            },
+        )
+
+        self.assertEqual(
+            choose_item.call_args.kwargs["filter_rows"],
+            [["Safari", "browser"]],
+        )
 
     def test_list_completions_prints_unique_app_names(self):
         apps = [

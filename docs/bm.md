@@ -5,6 +5,8 @@
 the selected URL in your configured browser.
 
 When a query matches exactly one bookmark, `bm` opens it directly.
+Filtering uses normalized bookmark display paths only; URLs are displayed but
+not searched, including during interactive `fzf` filtering.
 
 ```sh
 bm

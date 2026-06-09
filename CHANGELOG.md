@@ -10,6 +10,12 @@
 - Expanded `.gitignore` for Python and macOS local artifacts.
 - Clarified post-install config setup and macOS Full Disk Access requirements.
 - Added install troubleshooting and release process documentation.
+- Fixed `app`, `bm`, and `proj` filtering so command-line queries and
+  interactive `fzf` input match names only, not paths or URLs.
+- Added a reusable fzf selection interface that separates visible display rows
+  from hidden filter rows for future tools and plugin-style extensions.
+- Changed `chiyo config init --append` to fill missing default keys in existing
+  tool sections without replacing user values.
 
 ## v0.1.2
 
