@@ -490,6 +490,248 @@ class ChiyoTests(unittest.TestCase):
                 with self.assertRaises(CHIYO.ToolCommandError):
                     CHIYO.run_tool("missing", [])
 
+    def test_install_tool_writes_wrapper_for_enabled_tool(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            completion_dir = Path(temp_dir) / "zsh"
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["paper"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.install_tool_lines("paper")
+
+            wrapper = wrapper_dir / "paper"
+            self.assertIn(f"installed paper: {wrapper}", lines)
+            self.assertEqual(wrapper.read_text(encoding="utf-8"), CHIYO.wrapper_script("paper"))
+            self.assertTrue(os.access(wrapper, os.X_OK))
+            completion = completion_dir / "_paper"
+            self.assertIn(f"installed _paper: {completion}", lines)
+            self.assertEqual(
+                completion.read_text(encoding="utf-8"),
+                CHIYO.completion_script("paper"),
+            )
+
+    def test_install_tool_warns_when_tool_is_disabled(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            completion_dir = Path(temp_dir) / "zsh"
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = []',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.install_tool_lines("paper")
+
+        self.assertIn("warn    paper installed but disabled for chiyo run", lines)
+
+    def test_install_tool_refuses_to_replace_existing_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            wrapper_dir.mkdir()
+            (wrapper_dir / "paper").write_text("user file\n", encoding="utf-8")
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["paper"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with self.assertRaisesRegex(CHIYO.ToolCommandError, "refusing"):
+                    CHIYO.install_tool_lines("paper")
+
+    def test_install_tool_refuses_to_replace_existing_completion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            completion_dir = Path(temp_dir) / "zsh"
+            completion_dir.mkdir()
+            (completion_dir / "_paper").write_text("user completion\n", encoding="utf-8")
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["paper"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with self.assertRaisesRegex(CHIYO.ToolCommandError, "refusing"):
+                    CHIYO.install_tool_lines("paper")
+
+    def test_uninstall_tool_removes_generated_wrapper(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            wrapper_dir.mkdir()
+            wrapper = wrapper_dir / "paper"
+            wrapper.write_text(CHIYO.wrapper_script("paper"), encoding="utf-8")
+            completion_dir = Path(temp_dir) / "zsh"
+            completion_dir.mkdir()
+            completion = completion_dir / "_paper"
+            completion.write_text(CHIYO.completion_script("paper"), encoding="utf-8")
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["paper"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.uninstall_tool_lines("paper")
+
+        self.assertEqual(
+            lines,
+            [
+                f"uninstalled paper: {wrapper}",
+                f"uninstalled _paper: {completion}",
+            ],
+        )
+        self.assertFalse(wrapper.exists())
+        self.assertFalse(completion.exists())
+
+    def test_uninstall_tool_refuses_non_generated_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            wrapper_dir.mkdir()
+            (wrapper_dir / "paper").write_text("user file\n", encoding="utf-8")
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["paper"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with self.assertRaisesRegex(CHIYO.ToolCommandError, "refusing"):
+                    CHIYO.uninstall_tool_lines("paper")
+
+    def test_user_tool_doctor_checks_report_metadata_and_install_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            wrapper_dir.mkdir()
+            completion_dir = Path(temp_dir) / "zsh"
+            completion_dir.mkdir()
+            (wrapper_dir / "paper").write_text(
+                CHIYO.wrapper_script("paper"),
+                encoding="utf-8",
+            )
+            (completion_dir / "_paper").write_text(
+                CHIYO.completion_script("paper"),
+                encoding="utf-8",
+            )
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["missing"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = [
+                    f"{status:7} {label}: {detail}"
+                    for status, detail, label in CHIYO.user_tool_doctor_checks()
+                ]
+
+        output = "\n".join(lines)
+        self.assertIn("ok      user tool paper metadata:", output)
+        self.assertIn("warn    user tool missing: enabled but not discoverable", output)
+        self.assertIn("ok      user tool paper wrapper:", output)
+        self.assertIn("ok      user tool paper zsh:", output)
+        self.assertIn(
+            "warn    user tool paper: paper installed but disabled for chiyo run",
+            output,
+        )
+        self.assertIn("warn    user tool missing_author.py:", output)
+        self.assertIn("warn    user tool conflicting_flags.py:", output)
+
+    def test_user_tool_doctor_checks_warn_when_installed_completion_is_missing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            wrapper_dir.mkdir()
+            completion_dir = Path(temp_dir) / "zsh"
+            (wrapper_dir / "paper").write_text(
+                CHIYO.wrapper_script("paper"),
+                encoding="utf-8",
+            )
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["paper"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = [
+                    f"{status:7} {label}: {detail}"
+                    for status, detail, label in CHIYO.user_tool_doctor_checks()
+                ]
+
+        self.assertIn(
+            f"warn    user tool paper zsh: {completion_dir / '_paper'} not found",
+            "\n".join(lines),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

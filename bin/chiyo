@@ -3,6 +3,7 @@
 import argparse
 from importlib.machinery import SourceFileLoader
 import os
+from pathlib import Path
 import shutil
 import sys
 
@@ -76,6 +77,18 @@ def parse_args(argv):
         nargs=argparse.REMAINDER,
         help="Arguments forwarded to the selected tool.",
     )
+
+    install_parser = subparsers.add_parser(
+        "install",
+        help="Install a direct wrapper for a discoverable tool.",
+    )
+    install_parser.add_argument("tool", help="Tool command to install.")
+
+    uninstall_parser = subparsers.add_parser(
+        "uninstall",
+        help="Uninstall a direct wrapper for a discoverable tool.",
+    )
+    uninstall_parser.add_argument("tool", help="Tool command to uninstall.")
 
     config_parser = subparsers.add_parser(
         "config",
@@ -561,6 +574,74 @@ def completion_symlink_checks():
     ]
 
 
+def user_tool_doctor_checks():
+    from chiyo_cli.tool_loader import discover_user_tools
+
+    config = chiyo_config()
+    discovery = discover_user_tools(config.get("tool_dirs", []))
+    tools_by_command = {tool.command: tool for tool in discovery.tools}
+    checks = []
+
+    for error in discovery.errors:
+        checks.append(("warn", error.message, f"user tool {Path(error.path).name}"))
+
+    for tool in discovery.tools:
+        checks.append(("ok", tool.path, f"user tool {tool.command} metadata"))
+
+    for command in config.get("enabled_tools", []):
+        if command in tools_by_command:
+            checks.append(("ok", "loadable", f"user tool {command} enabled"))
+        else:
+            checks.append(("warn", "enabled but not discoverable", f"user tool {command}"))
+
+    for tool in discovery.tools:
+        wrapper = os.path.expanduser(wrapper_path(tool.command, config))
+        completion = os.path.expanduser(completion_path(tool.command, config))
+        wrapper_installed = os.path.exists(wrapper)
+
+        if wrapper_installed and is_generated_wrapper(wrapper, tool.command):
+            checks.append(("ok", wrapper, f"user tool {tool.command} wrapper"))
+
+            if tool.command not in config.get("enabled_tools", []):
+                checks.append(
+                    (
+                        "warn",
+                        f"{tool.command} installed but disabled for chiyo run",
+                        f"user tool {tool.command}",
+                    )
+                )
+        elif wrapper_installed:
+            checks.append(
+                (
+                    "warn",
+                    f"{wrapper} is not a generated chiyo wrapper",
+                    f"user tool {tool.command} wrapper",
+                )
+            )
+
+        if wrapper_installed:
+            if os.path.exists(completion) and is_generated_completion(completion, tool.command):
+                checks.append(("ok", completion, f"user tool {tool.command} zsh"))
+            elif os.path.exists(completion):
+                checks.append(
+                    (
+                        "warn",
+                        f"{completion} is not a generated chiyo completion",
+                        f"user tool {tool.command} zsh",
+                    )
+                )
+            else:
+                checks.append(
+                    (
+                        "warn",
+                        f"{completion} not found",
+                        f"user tool {tool.command} zsh",
+                    )
+                )
+
+    return checks
+
+
 def doctor_lines():
     checks = [
         (*check_command("python3"), "python3"),
@@ -585,6 +666,7 @@ def doctor_lines():
     checks.extend(command_symlink_checks())
     checks.extend(completion_symlink_checks())
     checks.extend(config_module_checks())
+    checks.extend(user_tool_doctor_checks())
 
     lines = []
 
@@ -679,6 +761,165 @@ def tool_metadata_by_command(tool_command):
     return None
 
 
+def chiyo_config():
+    from chiyo_cli.tool_config import load_chiyo_config
+
+    return load_chiyo_config(config_path=CONFIG_PATH)
+
+
+def wrapper_path(tool_command, config):
+    return os.path.join(config["wrapper_dir"], tool_command)
+
+
+def completion_path(tool_command, config):
+    return os.path.join(config["completion_dir"], f"_{tool_command}")
+
+
+def wrapper_script(tool_command):
+    return "\n".join(
+        [
+            "#!/bin/sh",
+            f'exec chiyo run {tool_command} "$@"',
+            "",
+        ]
+    )
+
+
+def completion_script(tool_command):
+    return "\n".join(
+        [
+            "#compdef " + tool_command,
+            "",
+            "local -a candidates",
+            f'candidates=("${{(@f)$(chiyo run {tool_command} --list-completions 2>/dev/null)}}")',
+            '_describe "candidates" candidates',
+            "",
+        ]
+    )
+
+
+def is_generated_wrapper(path, tool_command):
+    expanded = os.path.expanduser(path)
+
+    if not os.path.exists(expanded) or os.path.islink(expanded):
+        return False
+
+    try:
+        content = Path(expanded).read_text(encoding="utf-8")
+    except OSError:
+        return False
+
+    return content == wrapper_script(tool_command)
+
+
+def is_generated_completion(path, tool_command):
+    expanded = os.path.expanduser(path)
+
+    if not os.path.exists(expanded) or os.path.islink(expanded):
+        return False
+
+    try:
+        content = Path(expanded).read_text(encoding="utf-8")
+    except OSError:
+        return False
+
+    return content == completion_script(tool_command)
+
+
+def write_wrapper(path, tool_command):
+    expanded = os.path.expanduser(path)
+    existing_is_safe = (
+        not os.path.exists(expanded)
+        or is_generated_wrapper(expanded, tool_command)
+    )
+
+    if not existing_is_safe:
+        raise ToolCommandError(f"refusing to replace existing file: {expanded}")
+
+    os.makedirs(os.path.dirname(expanded), exist_ok=True)
+    temporary = f"{expanded}.tmp"
+    Path(temporary).write_text(wrapper_script(tool_command), encoding="utf-8")
+    os.chmod(temporary, 0o755)
+    os.replace(temporary, expanded)
+    return expanded
+
+
+def write_completion(path, tool_command):
+    expanded = os.path.expanduser(path)
+    existing_is_safe = (
+        not os.path.exists(expanded)
+        or is_generated_completion(expanded, tool_command)
+    )
+
+    if not existing_is_safe:
+        raise ToolCommandError(f"refusing to replace existing file: {expanded}")
+
+    os.makedirs(os.path.dirname(expanded), exist_ok=True)
+    temporary = f"{expanded}.tmp"
+    Path(temporary).write_text(completion_script(tool_command), encoding="utf-8")
+    os.replace(temporary, expanded)
+    return expanded
+
+
+def assert_install_targets_are_safe(tool_command, config):
+    wrapper = os.path.expanduser(wrapper_path(tool_command, config))
+    completion = os.path.expanduser(completion_path(tool_command, config))
+
+    if os.path.exists(wrapper) and not is_generated_wrapper(wrapper, tool_command):
+        raise ToolCommandError(f"refusing to replace existing file: {wrapper}")
+
+    if os.path.exists(completion) and not is_generated_completion(completion, tool_command):
+        raise ToolCommandError(f"refusing to replace existing file: {completion}")
+
+
+def install_tool_lines(tool_command):
+    config = chiyo_config()
+    metadata = tool_metadata_by_command(tool_command)
+
+    if metadata is None:
+        raise ToolCommandError(f"unknown tool: {tool_command}")
+
+    assert_install_targets_are_safe(tool_command, config)
+    installed_path = write_wrapper(wrapper_path(tool_command, config), tool_command)
+    installed_completion = write_completion(completion_path(tool_command, config), tool_command)
+    lines = [
+        f"installed {tool_command}: {installed_path}",
+        f"installed _{tool_command}: {installed_completion}",
+    ]
+
+    if tool_command not in config.get("enabled_tools", []):
+        lines.append(f"warn    {tool_command} installed but disabled for chiyo run")
+
+    return lines
+
+
+def uninstall_tool_lines(tool_command):
+    config = chiyo_config()
+    path = os.path.expanduser(wrapper_path(tool_command, config))
+    completion = os.path.expanduser(completion_path(tool_command, config))
+    lines = []
+
+    if os.path.exists(path):
+        if not is_generated_wrapper(path, tool_command):
+            raise ToolCommandError(f"refusing to remove non-chiyo wrapper: {path}")
+
+        os.unlink(path)
+        lines.append(f"uninstalled {tool_command}: {path}")
+    else:
+        lines.append(f"not installed: {tool_command}")
+
+    if os.path.exists(completion):
+        if not is_generated_completion(completion, tool_command):
+            raise ToolCommandError(
+                f"refusing to remove non-chiyo completion: {completion}"
+            )
+
+        os.unlink(completion)
+        lines.append(f"uninstalled _{tool_command}: {completion}")
+
+    return lines
+
+
 def run_tool(tool_command, tool_args):
     from chiyo_cli.tool_config import load_chiyo_config, load_tool_config
     from chiyo_cli.tool_loader import load_tool_class
@@ -746,6 +987,22 @@ def main(argv=None):
             run_tool(args.tool, args.tool_args)
         except ToolCommandError as error:
             print(f"chiyo run: {error}", file=sys.stderr)
+            sys.exit(1)
+        return
+
+    if args.command == "install":
+        try:
+            print_tool_lines(install_tool_lines(args.tool))
+        except ToolCommandError as error:
+            print(f"chiyo install: {error}", file=sys.stderr)
+            sys.exit(1)
+        return
+
+    if args.command == "uninstall":
+        try:
+            print_tool_lines(uninstall_tool_lines(args.tool))
+        except ToolCommandError as error:
+            print(f"chiyo uninstall: {error}", file=sys.stderr)
             sys.exit(1)
         return
 
