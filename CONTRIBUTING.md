@@ -67,11 +67,13 @@ tool-local parsing, formatting, or setup code:
 
 ### fzf Display And Filtering
 
-Do not make visible columns double as filtering rules unless that is truly the
-desired behavior. `choose_item` has two separate row interfaces:
+Do not make every visible column searchable unless that is truly the desired
+behavior. `choose_item` has two search interfaces:
 
 - `rows`: display rows, shown to the user through `fzf --with-nth`
-- `filter_rows`: hidden search rows, matched by `fzf --nth`
+- `search_display_fields`: 1-based visible columns to search
+- `filter_rows`: hidden search rows, matched by `fzf --nth`, for text that is
+  not visible but should remain searchable
 
 This lets a tool show context such as paths or URLs for disambiguation without
 making those fields searchable. For example:
@@ -84,7 +86,6 @@ rows = [
     ]
     for app in apps
 ]
-filter_rows = [[app["name"]] for app in apps]
 
 selected = choose_item(
     apps,
@@ -92,14 +93,14 @@ selected = choose_item(
     config["fzf_prompt"],
     "an application",
     fail,
-    filter_rows=filter_rows,
+    search_display_fields=[1],
 )
 ```
 
-Use the older `search_field_numbers` argument only when maintaining existing
-code that deliberately searches visible columns by fzf field number. New code
-should prefer `filter_rows`, because it survives display-column reordering and
-supports normalized or synthetic search fields.
+Use `filter_rows` when the searchable text is not already visible, such as an
+absolute path behind a compact displayed path. Use the older
+`search_field_numbers` argument only when maintaining existing code that
+deliberately passes raw fzf field numbers.
 
 For very large data sets, streaming tools may write fzf input incrementally.
 They should still reuse `format_row`, `field_widths`, and the same row layout:

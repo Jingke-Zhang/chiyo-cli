@@ -132,10 +132,8 @@ class ProjTests(unittest.TestCase):
 
         self.assertEqual(selected, "/Users/me/Documents/chiyo-cli")
         self.assertEqual(choose_item.call_args.args[0], ["/Users/me/Documents/chiyo-cli"])
-        self.assertEqual(
-            choose_item.call_args.kwargs["filter_rows"],
-            [["chiyo-cli"]],
-        )
+        self.assertEqual(choose_item.call_args.kwargs["search_display_fields"], [1])
+        self.assertNotIn("filter_rows", choose_item.call_args.kwargs)
 
     @mock.patch("proj_select.choose_project")
     def test_select_project_returns_single_match_directly_when_allowed(self, choose):

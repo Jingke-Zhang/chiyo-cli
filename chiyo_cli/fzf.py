@@ -4,7 +4,7 @@ Chiyo tools usually follow the same interaction shape:
 
 1. Collect candidate objects.
 2. Render each candidate as one or more human-readable display fields.
-3. Let fzf search a separate, intentionally chosen set of filter fields.
+3. Let fzf search either selected visible fields or a separate filter row.
 4. Map the selected row back to the original candidate object.
 
 The important abstraction is that display text and filter text are separate
@@ -33,8 +33,9 @@ class Field:
 
     ``value`` is the text shown to the user. ``style`` may contain ANSI escape
     codes from this module or a tool-specific palette. Search text should be
-    passed separately through ``filter_rows`` instead of embedding hidden text
-    in the visible value.
+    passed separately through ``filter_rows`` when a tool needs searchable text
+    that is not already visible, or selected with ``search_display_fields`` when
+    a tool wants to search only some visible columns.
     """
 
     value: str
@@ -188,22 +189,32 @@ def choose_item(
     error_label,
     fail,
     search_field_numbers=None,
+    search_display_fields=None,
     filter_rows=None,
 ):
     """Return the selected item using fzf.
 
-    ``rows`` defines the display row for each item. ``filter_rows`` optionally
-    defines a separate search row for each item; these fields are hidden from
-    the user but used by fzf's ``--nth``. New tools should prefer
-    ``filter_rows`` over ``search_field_numbers`` because it is independent of
-    display column order.
+    ``rows`` defines the display row for each item. ``search_display_fields``
+    optionally limits matching to selected visible columns using 1-based field
+    numbers. ``filter_rows`` defines separate search-only fields for tools that
+    need to match text that is not visible, such as absolute paths behind a
+    compact display path.
 
-    ``search_field_numbers`` remains for older callers that want fzf to search
-    selected visible columns. It cannot be combined with ``filter_rows``.
+    ``search_field_numbers`` remains for older callers that want to pass raw
+    fzf field numbers. It cannot be combined with the higher-level search
+    interfaces.
     """
 
-    if search_field_numbers is not None and filter_rows is not None:
-        raise ValueError("Use either search_field_numbers or filter_rows, not both.")
+    search_interfaces = [
+        search_field_numbers is not None,
+        search_display_fields is not None,
+        filter_rows is not None,
+    ]
+
+    if sum(search_interfaces) > 1:
+        raise ValueError(
+            "Use only one of search_display_fields, search_field_numbers, or filter_rows."
+        )
 
     # fzf sees the hidden tab-delimited index, but --with-nth shows only the
     # formatted display columns to the user.
@@ -216,6 +227,9 @@ def choose_item(
 
     if search_field_numbers is not None:
         search_fields = ",".join(str(number) for number in search_field_numbers)
+
+    if search_display_fields is not None:
+        search_fields = ",".join(str(number) for number in search_display_fields)
 
     command = [
         "fzf",

@@ -17,8 +17,8 @@ COMPLETIONS_DIR = os.path.join(REPO_ROOT, "completions")
 CONFIG_PATH = "~/.config/chiyo-cli/config.toml"
 LOCAL_BIN_DIR = "~/.local/bin"
 ZSH_SITE_FUNCTIONS_DIR = "~/.local/share/zsh/site-functions"
-COMMANDS = ["bm", "app", "ws", "chiyo", "gop-select", "proj-select"]
-COMPLETIONS = ["_bm", "_app", "_ws", "_gop", "_proj"]
+COMMANDS = ["bm", "app", "ws", "chiyo", "gop-select", "proj-select", "zo"]
+COMPLETIONS = ["_bm", "_app", "_ws", "_gop", "_proj", "_zo"]
 SHELL_INTEGRATION = 'eval "$(chiyo init zsh)"'
 CONFIG_TOOLS = {
     "bm": "bm",
@@ -26,6 +26,7 @@ CONFIG_TOOLS = {
     "gop": "gop-select",
     "proj": "proj-select",
     "ws": "ws",
+    "zo": "zo",
 }
 
 

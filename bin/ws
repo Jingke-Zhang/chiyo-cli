@@ -184,14 +184,13 @@ def engine_fields(key, engine):
 def choose_engine(engines, config):
     items = sorted(engines.items(), key=lambda item: item[0])
     rows = [engine_fields(key, engine) for key, engine in items]
-    filter_rows = [[key, engine["name"]] for key, engine in items]
     selected = choose_item(
         items,
         rows,
         config["fzf_prompt"],
         "a search engine",
         fail,
-        filter_rows=filter_rows,
+        search_display_fields=[1, 2],
     )
 
     if selected is None:

@@ -11,6 +11,7 @@ Depending on the command, Chiyo CLI may read:
 - Safari bookmarks or another configured bookmarks plist for `bm`.
 - Spotlight application metadata for `app`.
 - Configured filesystem roots for `gop` and `proj`.
+- Zotero item metadata and local attachment paths for `zo`.
 - `~/.config/chiyo-cli/config.toml` for shared configuration.
 
 On macOS, grant Full Disk Access to the terminal app you use with Chiyo CLI.

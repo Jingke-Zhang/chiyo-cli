@@ -1,0 +1,11 @@
+#compdef zo
+
+local -a items
+
+items=("${(@f)$(zo --list-completions 2>/dev/null)}")
+
+if (( ${#items} == 0 )); then
+  return 0
+fi
+
+_describe 'Zotero items' items

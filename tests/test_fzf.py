@@ -96,7 +96,32 @@ class FzfTests(unittest.TestCase):
 
     @mock.patch("chiyo_cli.fzf.shutil.which", return_value="/usr/bin/fzf")
     @mock.patch("chiyo_cli.fzf.subprocess.run")
-    def test_choose_item_can_limit_search_to_selected_fields(self, run, _which):
+    def test_choose_item_can_search_selected_display_fields(self, run, _which):
+        run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="Safari\t/Applications/Safari.app\t#0\n",
+            stderr="",
+        )
+
+        selected = choose_item(
+            ["Safari"],
+            [[Field("Safari"), Field("/Applications/Safari.app")]],
+            "x> ",
+            "an item",
+            lambda message: self.fail(message),
+            search_display_fields=[1],
+        )
+
+        self.assertEqual(selected, "Safari")
+        self.assertIn("--with-nth=1,2", run.call_args.args[0])
+        self.assertIn("--nth=1", run.call_args.args[0])
+        self.assertIn("/Applications/Safari.app\t#0", run.call_args.kwargs["input"])
+        self.assertNotIn("\033[8m", run.call_args.kwargs["input"])
+
+    @mock.patch("chiyo_cli.fzf.shutil.which", return_value="/usr/bin/fzf")
+    @mock.patch("chiyo_cli.fzf.subprocess.run")
+    def test_choose_item_accepts_legacy_raw_search_field_numbers(self, run, _which):
         run.return_value = subprocess.CompletedProcess(
             args=[],
             returncode=0,
@@ -114,9 +139,7 @@ class FzfTests(unittest.TestCase):
         )
 
         self.assertEqual(selected, "Safari")
-        self.assertIn("--with-nth=1,2", run.call_args.args[0])
         self.assertIn("--nth=1", run.call_args.args[0])
-        self.assertIn("/Applications/Safari.app\t#0", run.call_args.kwargs["input"])
 
     @mock.patch("chiyo_cli.fzf.shutil.which", return_value="/usr/bin/fzf")
     @mock.patch("chiyo_cli.fzf.subprocess.run")
@@ -155,6 +178,17 @@ class FzfTests(unittest.TestCase):
                 "an item",
                 lambda message: self.fail(message),
                 search_field_numbers=[1],
+                filter_rows=[["Safari"]],
+            )
+
+        with self.assertRaises(ValueError):
+            choose_item(
+                ["Safari"],
+                [[Field("Safari")]],
+                "x> ",
+                "an item",
+                lambda message: self.fail(message),
+                search_display_fields=[1],
                 filter_rows=[["Safari"]],
             )
 

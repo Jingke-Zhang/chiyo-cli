@@ -198,17 +198,13 @@ def choose_app(apps, config):
     ]
     # Search names and aliases only. Paths remain visible for duplicate app
     # names but should not cause directory-name matches.
-    filter_rows = [
-        [app["name"], app_aliases[index]]
-        for index, app in enumerate(apps)
-    ]
     return choose_item(
         apps,
         rows,
         config["fzf_prompt"],
         "an application",
         fail,
-        filter_rows=filter_rows,
+        search_display_fields=[1, 2],
     )
 
 

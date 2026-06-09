@@ -45,6 +45,8 @@ class WsTests(unittest.TestCase):
         choose_item.return_value = ("gh", engines["gh"])
 
         self.assertEqual(WS.choose_engine(engines, {"fzf_prompt": "ws> "}), "gh")
+        self.assertEqual(choose_item.call_args.kwargs["search_display_fields"], [1, 2])
+        self.assertNotIn("filter_rows", choose_item.call_args.kwargs)
 
     def test_list_completions_prints_engine_keys(self):
         config = {

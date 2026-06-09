@@ -258,14 +258,13 @@ def project_fields(path, widths):
 def choose_project(projects, config):
     widths = project_widths(projects)
     rows = [project_fields(path, widths) for path in projects]
-    filter_rows = [[project_name(path)] for path in projects]
     return choose_item(
         projects,
         rows,
         config["fzf_prompt"],
         "a project",
         fail,
-        filter_rows=filter_rows,
+        search_display_fields=[1],
     )
 
 

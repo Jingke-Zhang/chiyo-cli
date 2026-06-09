@@ -21,6 +21,7 @@ Try a few commands:
 ws gh chiyo-cli
 app safari
 bm github
+zo convex optimization
 proj cli-tools
 gop docs
 ```
@@ -132,6 +133,7 @@ Path-like tools follow a small file palette:
 - [`bm`](docs/bm.md): search Safari bookmarks and open URLs
 - [`app`](docs/app.md): search installed macOS applications and launch one
 - [`ws`](docs/ws.md): build web search URLs and open them
+- [`zo`](docs/zo.md): search Zotero items and open entries or PDFs
 - [`gop`](docs/gop.md): search files/directories, then `cd` or `open`
 - [`proj`](docs/proj.md): search git projects, then `cd` into one
 - [Installation details](docs/install.md): development install and shell setup
@@ -156,6 +158,7 @@ may still change before a stable release.
 - `fd`
 - `fzf`
 - Safari bookmarks, unless `bm` uses another compatible plist
+- Zotero data, unless `zo` uses only the Zotero Local API
 - Full Disk Access for your terminal app on macOS, so Chiyo can read bookmarks,
   application metadata, and configured filesystem roots
 

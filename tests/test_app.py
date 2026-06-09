@@ -162,9 +162,10 @@ class AppTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            choose_item.call_args.kwargs["filter_rows"],
-            [["Safari", "browser"]],
+            choose_item.call_args.kwargs["search_display_fields"],
+            [1, 2],
         )
+        self.assertNotIn("filter_rows", choose_item.call_args.kwargs)
 
     def test_list_completions_prints_unique_app_names(self):
         apps = [

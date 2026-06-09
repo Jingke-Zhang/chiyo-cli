@@ -209,8 +209,8 @@ def filter_bookmarks(bookmarks, query):
 
 
 def choose_bookmark(bookmarks, config):
-    # Display rows show the URL for disambiguation, but filter rows keep fuzzy
-    # search focused on the normalized bookmark path.
+    # Display the URL for disambiguation, while keeping fuzzy search focused on
+    # the normalized bookmark path in the first visible column.
     rows = [
         [
             Field(display_name, STYLE_PRIMARY),
@@ -218,14 +218,13 @@ def choose_bookmark(bookmarks, config):
         ]
         for display_name, url in bookmarks
     ]
-    filter_rows = [[display_name] for display_name, _url in bookmarks]
     selected = choose_item(
         bookmarks,
         rows,
         config["fzf_prompt"],
         "a bookmark",
         fail,
-        filter_rows=filter_rows,
+        search_display_fields=[1],
     )
 
     if selected is None:

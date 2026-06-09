@@ -138,10 +138,8 @@ class BookmarkTests(unittest.TestCase):
 
         self.assertEqual(selected, "https://second.example")
         self.assertEqual(choose_item.call_args.args[0], bookmarks)
-        self.assertEqual(
-            choose_item.call_args.kwargs["filter_rows"],
-            [["Example"], ["Example"]],
-        )
+        self.assertEqual(choose_item.call_args.kwargs["search_display_fields"], [1])
+        self.assertNotIn("filter_rows", choose_item.call_args.kwargs)
 
     def test_filter_bookmarks_matches_display_name_only(self):
         bookmarks = [
