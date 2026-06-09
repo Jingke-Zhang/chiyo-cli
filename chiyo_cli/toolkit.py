@@ -27,6 +27,34 @@ class ToolError(Exception):
     """User-facing tool execution error."""
 
 
+class ToolFlagError(ToolError):
+    """Raised when a user tool defines flags reserved by the framework."""
+
+
+def tool_argument_flags(tool):
+    parser = argparse.ArgumentParser(
+        prog=tool.command,
+        add_help=False,
+    )
+    tool.add_arguments(parser)
+    flags = []
+
+    for action in parser._actions:
+        flags.extend(action.option_strings)
+
+    return set(flags)
+
+
+def validate_tool_flags(tool):
+    conflicts = sorted(COMMON_FLAGS & tool_argument_flags(tool))
+
+    if conflicts:
+        flags = ", ".join(conflicts)
+        raise ToolFlagError(
+            f"{tool.command} defines framework-reserved flag(s): {flags}"
+        )
+
+
 class PickOpenTool:
     """Base class for small search-pick-open tools.
 
@@ -79,6 +107,7 @@ class PickOpenTool:
         return " ".join(args.query)
 
     def parser(self):
+        validate_tool_flags(self)
         parser = argparse.ArgumentParser(
             prog=self.command,
             description=self.description,
@@ -197,6 +226,9 @@ __all__ = [
     "STYLE_PLAIN",
     "STYLE_PRIMARY",
     "STYLE_SECONDARY",
+    "ToolFlagError",
     "ToolError",
     "open_location",
+    "tool_argument_flags",
+    "validate_tool_flags",
 ]

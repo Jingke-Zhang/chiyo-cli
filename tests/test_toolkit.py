@@ -2,7 +2,14 @@ import unittest
 from io import StringIO
 from unittest import mock
 
-from chiyo_cli.toolkit import Field, PickOpenTool, STYLE_PRIMARY
+from chiyo_cli.toolkit import (
+    Field,
+    PickOpenTool,
+    STYLE_PRIMARY,
+    ToolFlagError,
+    tool_argument_flags,
+    validate_tool_flags,
+)
 
 
 class MemoryTool(PickOpenTool):
@@ -41,6 +48,13 @@ class MemoryTool(PickOpenTool):
             return None
 
         return item
+
+
+class ConflictingFlagTool(MemoryTool):
+    command = "conflicting-memory"
+
+    def add_arguments(self, parser):
+        parser.add_argument("--confirm", action="store_true")
 
 
 class ToolkitTests(unittest.TestCase):
@@ -107,6 +121,17 @@ class ToolkitTests(unittest.TestCase):
 
         self.assertIsNone(result)
         self.assertEqual(stdout.getvalue(), "Apple\n")
+
+    def test_tool_argument_flags_collects_tool_specific_flags(self):
+        self.assertEqual(tool_argument_flags(MemoryTool()), {"--print-title"})
+
+    def test_validate_tool_flags_rejects_framework_reserved_flags(self):
+        with self.assertRaisesRegex(ToolFlagError, "--confirm"):
+            validate_tool_flags(ConflictingFlagTool())
+
+    def test_parser_rejects_framework_reserved_tool_flags(self):
+        with self.assertRaisesRegex(ToolFlagError, "--confirm"):
+            ConflictingFlagTool().parser()
 
 
 if __name__ == "__main__":
