@@ -16,7 +16,7 @@ TOOLS_CONFIG_PATH = "~/.config/chiyo-cli/tools.toml"
 CHIYO_CONFIG_MODULE = "chiyo"
 DEFAULT_CHIYO_CONFIG = {
     "tool_dirs": ["~/.config/chiyo-cli/tools"],
-    "enabled_tools": [],
+    "enabled_tools": ["gop", "ws"],
     "wrapper_dir": "~/.local/bin",
     "completion_dir": "~/.local/share/zsh/site-functions",
 }

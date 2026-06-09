@@ -512,12 +512,11 @@ browser = "Safari"
 editor = "Emacs"
 ```
 
-Built-in tool config should move to `tools.toml` as part of the framework
-migration. Since this project is still early and has no broad external user
-base, the implementation can directly switch to the new layout instead of
-adding a migration command. After the switch, `config.toml` should contain Chiyo
-infrastructure settings and `tools.toml` should contain built-in and user tool
-settings.
+Built-in tool config lives in `tools.toml` as part of the framework migration.
+Since this project is still early and has no broad external user base, the
+implementation switches directly to the new layout instead of adding a
+migration command. `config.toml` contains Chiyo infrastructure settings and
+`tools.toml` contains built-in and user tool settings.
 
 ## Tool Discovery And Enablement
 
@@ -592,7 +591,6 @@ The framework should reserve common flags such as:
 ```text
 --help
 --confirm
---config-init
 --list-completions
 ```
 
@@ -855,7 +853,7 @@ Resolved design choices:
 - Installed wrappers should call `chiyo run TOOL "$@"`.
 - Dynamic `chiyo TOOL ...` dispatch should not be part of the design.
 - The tool config file should be named `tools.toml`.
-- Built-in tool config should eventually move to `tools.toml`.
+- Built-in tool config lives in `tools.toml`.
 - Disabled tools should not run through `chiyo run`.
 - `chiyo` with no arguments should execute the selected tool directly after the
   tool is selected in `fzf`.
@@ -878,7 +876,7 @@ Resolved design choices:
 - Tool commands should have minimal restrictions because execution uses
   `chiyo run`; users are responsible for choosing sensible names.
 - Tool-specific flags must not conflict with common framework flags such as
-  `--help`, `--confirm`, `--config-init`, and `--list-completions`.
+  `--help`, `--confirm`, and `--list-completions`.
 
 Remaining questions:
 
@@ -920,8 +918,7 @@ feature list so the work can be divided into safe commits or pull requests.
 8. Add `chiyo doc TOOL`.
 9. Add explicit execution through `chiyo run TOOL ...`.
 10. Add framework flag validation so user flags cannot conflict with common
-    framework flags such as `--help`, `--confirm`, `--config-init`, and
-    `--list-completions`.
+    framework flags such as `--help`, `--confirm`, and `--list-completions`.
 11. Add wrapper install/uninstall:
     - `chiyo install TOOL`
     - `chiyo uninstall TOOL`

@@ -7,6 +7,8 @@ from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
 
+from chiyo_cli.tool_config import load_tool_config
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROJ = SourceFileLoader("proj_select", str(REPO_ROOT / "bin" / "proj-select")).load_module()
@@ -29,7 +31,7 @@ class ProjTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            config = PROJ.load_module_config(
+            config = load_tool_config(
                 "proj",
                 PROJ.DEFAULT_CONFIG,
                 config_path=str(config_path),

@@ -12,7 +12,8 @@ Depending on the command, Chiyo CLI may read:
 - Spotlight application metadata for `app`.
 - Configured filesystem roots for `gop` and `proj`.
 - Zotero item metadata and local attachment paths for `zo`.
-- `~/.config/chiyo-cli/config.toml` for shared configuration.
+- `~/.config/chiyo-cli/config.toml` for Chiyo infrastructure configuration.
+- `~/.config/chiyo-cli/tools.toml` for tool-specific configuration.
 
 On macOS, grant Full Disk Access to the terminal app you use with Chiyo CLI.
 Without that permission, commands such as `bm` and `app` may be unable to read

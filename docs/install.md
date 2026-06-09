@@ -107,7 +107,7 @@ If `app` cannot find installed applications, confirm that Spotlight indexing is
 available and that your terminal app has Full Disk Access.
 
 If `gop` or `proj` returns no results, check the configured search roots in
-`~/.config/chiyo-cli/config.toml`. Missing roots are skipped with warnings.
+`~/.config/chiyo-cli/tools.toml`. Missing roots are skipped with warnings.
 
 If commands stop working after moving the repository, rerun `./install.sh` from
 the new checkout path so symlinks point to the current repository.

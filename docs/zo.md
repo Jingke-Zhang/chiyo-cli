@@ -50,7 +50,7 @@ copy of `zotero.sqlite` and reads that copy only.
 `chiyo config init zo --append` creates this tool's config section in:
 
 ```text
-~/.config/chiyo-cli/config.toml
+~/.config/chiyo-cli/tools.toml
 ```
 
 Default generated config:

@@ -32,7 +32,7 @@ chiyo doc bm
 `chiyo config init bm --append` creates this tool's config section in:
 
 ```text
-~/.config/chiyo-cli/config.toml
+~/.config/chiyo-cli/tools.toml
 ```
 
 Default generated config:

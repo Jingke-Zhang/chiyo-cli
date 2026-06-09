@@ -17,7 +17,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from chiyo_cli.config import CONFIG_PATH, init_module_config, load_module_config
+from chiyo_cli.tool_config import TOOLS_CONFIG_PATH, load_tool_config
 from chiyo_cli.fzf import Field, STYLE_PRIMARY, STYLE_SECONDARY, choose_item
 from chiyo_cli.output import print_warning
 
@@ -38,11 +38,6 @@ def parse_args(argv):
         "query",
         nargs="*",
         help="Optional text used to search Zotero title, creator, year, and metadata.",
-    )
-    parser.add_argument(
-        "--config-init",
-        action="store_true",
-        help="Write the default [zo] config to the shared Chiyo CLI config file.",
     )
     parser.add_argument(
         "--source",
@@ -94,10 +89,10 @@ def warn(message):
 
 def load_config():
     try:
-        config = load_module_config(
+        config = load_tool_config(
             CONFIG_MODULE,
             DEFAULT_CONFIG,
-            config_path=CONFIG_PATH,
+            config_path=TOOLS_CONFIG_PATH,
             warn=warn,
         )
     except ValueError as error:
@@ -106,15 +101,6 @@ def load_config():
     config["zotero_data_dir"] = os.path.expanduser(config["zotero_data_dir"])
     config["local_api_url"] = config["local_api_url"].rstrip("/") + "/"
     return config
-
-
-def init_config():
-    config_path = init_module_config(
-        CONFIG_MODULE,
-        DEFAULT_CONFIG,
-        config_path=CONFIG_PATH,
-    )
-    print(f"Wrote {CONFIG_MODULE} config to {config_path}")
 
 
 def item_title(item):
@@ -241,7 +227,7 @@ def sqlite_snapshot(path):
         fail(
             f"Zotero database not found: {path}\n"
             f"Run 'chiyo config init zo --append' and edit zotero_data_dir in "
-            f"{os.path.expanduser(CONFIG_PATH)} if your Zotero data lives somewhere else."
+            f"{os.path.expanduser(TOOLS_CONFIG_PATH)} if your Zotero data lives somewhere else."
         )
 
     temp = tempfile.NamedTemporaryFile(prefix="chiyo-zotero-", suffix=".sqlite", delete=False)
@@ -516,10 +502,6 @@ def open_location(location):
 
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
-
-    if args.config_init:
-        init_config()
-        return
 
     config = load_config()
     query = " ".join(args.query)

@@ -20,7 +20,6 @@ from chiyo_cli.fzf import (
 COMMON_FLAGS = {
     "--help",
     "--confirm",
-    "--config-init",
     "--list-completions",
 }
 

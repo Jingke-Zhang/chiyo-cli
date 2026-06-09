@@ -44,7 +44,9 @@ New tools should stay small and follow the existing shape:
 - Search or collect candidates.
 - Pick one candidate directly or through `fzf`.
 - Perform one clear action.
-- Keep configuration in `~/.config/chiyo-cli/config.toml`.
+- Keep Chiyo infrastructure configuration in
+  `~/.config/chiyo-cli/config.toml`, and tool-specific configuration in
+  `~/.config/chiyo-cli/tools.toml`.
 - Expose `--list-completions` when dynamic shell completion is useful.
 
 Prefer readable standard-library Python and small shell integrations over larger

@@ -11,7 +11,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from chiyo_cli.config import init_module_config, load_module_config
+from chiyo_cli.tool_config import TOOLS_CONFIG_PATH, load_tool_config
 from chiyo_cli.fzf import (
     Field,
     STYLE_PRIMARY,
@@ -53,11 +53,6 @@ def parse_args(argv):
         help="Exclude a glob pattern from fd search. Can be used more than once.",
     )
     parser.add_argument(
-        "--config-init",
-        action="store_true",
-        help="Write the default [proj] config to the shared Chiyo CLI config file.",
-    )
-    parser.add_argument(
         "--confirm",
         action="store_true",
         help="Always confirm the selected project in fzf.",
@@ -81,7 +76,12 @@ def warn(message):
 
 def load_config():
     try:
-        config = load_module_config(CONFIG_MODULE, DEFAULT_CONFIG, warn=warn)
+        config = load_tool_config(
+            CONFIG_MODULE,
+            DEFAULT_CONFIG,
+            config_path=TOOLS_CONFIG_PATH,
+            warn=warn,
+        )
     except ValueError as error:
         fail(str(error))
 
@@ -108,11 +108,6 @@ def load_config():
     config["markers"] = markers
     config["exclude"] = exclude
     return config
-
-
-def init_config():
-    config_path = init_module_config(CONFIG_MODULE, DEFAULT_CONFIG)
-    print(f"Wrote {CONFIG_MODULE} config to {config_path}")
 
 
 def normalize_roots(roots):
@@ -282,10 +277,6 @@ def list_completions(projects):
 
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
-
-    if args.config_init:
-        init_config()
-        return
 
     config = load_config()
     query = " ".join(args.query)

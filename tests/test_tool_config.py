@@ -22,7 +22,7 @@ class ToolConfigTests(unittest.TestCase):
 
             config = load_chiyo_config(config_path=str(config_path))
 
-        self.assertEqual(config["enabled_tools"], [])
+        self.assertEqual(config["enabled_tools"], ["gop", "ws"])
         self.assertTrue(config["tool_dirs"][0].endswith(".config/chiyo-cli/tools"))
         self.assertTrue(config["wrapper_dir"].endswith(".local/bin"))
 
@@ -124,7 +124,7 @@ class ToolConfigTests(unittest.TestCase):
 
             config = load_chiyo_config(config_path=str(config_path))
 
-        self.assertEqual(config["enabled_tools"], ["paper"])
+        self.assertEqual(config["enabled_tools"], ["gop", "ws", "paper"])
 
     def test_disable_tool_removes_command_and_reports_previous_state(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -136,7 +136,7 @@ class ToolConfigTests(unittest.TestCase):
 
             config = load_chiyo_config(config_path=str(config_path))
 
-        self.assertEqual(config["enabled_tools"], [])
+        self.assertEqual(config["enabled_tools"], ["gop", "ws"])
 
 
 if __name__ == "__main__":

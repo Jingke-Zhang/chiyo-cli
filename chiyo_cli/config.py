@@ -203,8 +203,8 @@ def remove_module_config(content, module_name):
 
 
 def init_module_config(module_name, defaults, config_path=CONFIG_PATH):
-    # --config-init writes only this command's module so the shared config file
-    # can also hold settings for other Chiyo CLI commands.
+    # Legacy helper for writing one module table while preserving unrelated
+    # tables in the same TOML file.
     config_path = os.path.expanduser(config_path)
     config_dir = os.path.dirname(config_path)
     os.makedirs(config_dir, exist_ok=True)

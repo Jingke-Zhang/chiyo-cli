@@ -12,7 +12,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from chiyo_cli.config import CONFIG_PATH, load_module_config, remove_module_config
+from chiyo_cli.tool_config import TOOLS_CONFIG_PATH, load_tool_config
 from chiyo_cli.fzf import Field, STYLE_PRIMARY, choose_item
 from chiyo_cli.output import print_warning
 
@@ -59,11 +59,6 @@ def parse_args(argv):
         help="Search engine key and query, or just a query for interactive engine selection.",
     )
     parser.add_argument(
-        "--config-init",
-        action="store_true",
-        help="Write the default [ws] config to the shared Chiyo CLI config file.",
-    )
-    parser.add_argument(
         "--list-completions",
         action="store_true",
         help="Print completion candidates, one per line.",
@@ -98,10 +93,10 @@ def validate_engine(key, engine):
 
 def load_config():
     try:
-        config = load_module_config(
+        config = load_tool_config(
             CONFIG_MODULE,
             DEFAULT_CONFIG,
-            config_path=CONFIG_PATH,
+            config_path=TOOLS_CONFIG_PATH,
             warn=warn,
         )
     except ValueError as error:
@@ -135,31 +130,6 @@ def format_default_config():
         )
 
     return "\n".join(lines)
-
-
-def init_config():
-    config_path = os.path.expanduser(CONFIG_PATH)
-    config_dir = os.path.dirname(config_path)
-    os.makedirs(config_dir, exist_ok=True)
-
-    if os.path.exists(config_path):
-        with open(config_path, "r", encoding="utf-8") as file:
-            existing_config = file.read()
-    else:
-        existing_config = ""
-
-    remaining_config = remove_module_config(existing_config, CONFIG_MODULE)
-    module_config = format_default_config()
-
-    if remaining_config:
-        new_config = remaining_config + "\n\n" + module_config
-    else:
-        new_config = module_config
-
-    with open(config_path, "w", encoding="utf-8") as file:
-        file.write(new_config)
-
-    print(f"Wrote {CONFIG_MODULE} config to {config_path}")
 
 
 def parse_search(terms, engines, force_interactive=False):
@@ -237,10 +207,6 @@ def open_url(url):
 def main(argv=None):
     argv = argv if argv is not None else sys.argv[1:]
     args = parse_args(argv)
-
-    if args.config_init:
-        init_config()
-        return
 
     config = load_config()
 

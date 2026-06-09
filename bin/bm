@@ -12,7 +12,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from chiyo_cli.config import CONFIG_PATH, init_module_config, load_module_config
+from chiyo_cli.tool_config import TOOLS_CONFIG_PATH, load_tool_config
 from chiyo_cli.fzf import Field, STYLE_PRIMARY, STYLE_SECONDARY, choose_item
 from chiyo_cli.output import print_warning
 
@@ -20,7 +20,7 @@ from chiyo_cli.output import print_warning
 CONFIG_MODULE = "bm"
 
 # Keep universal defaults in code. User-specific preferences can live in
-# ~/.config/chiyo-cli/config.toml under the [bm] table.
+# ~/.config/chiyo-cli/tools.toml under the [bm] table.
 DEFAULT_CONFIG = {
     "bookmarks_path": "~/Library/Safari/Bookmarks.plist",
     "skip_folders": [
@@ -43,11 +43,6 @@ def parse_args(argv):
         "query",
         nargs="*",
         help="Optional text used to pre-filter bookmark display names.",
-    )
-    parser.add_argument(
-        "--config-init",
-        action="store_true",
-        help="Write the default [bm] config to the shared Chiyo CLI config file.",
     )
     parser.add_argument(
         "--print-url",
@@ -82,10 +77,10 @@ def warn(message):
 
 def load_config():
     try:
-        config = load_module_config(
+        config = load_tool_config(
             CONFIG_MODULE,
             DEFAULT_CONFIG,
-            config_path=CONFIG_PATH,
+            config_path=TOOLS_CONFIG_PATH,
             warn=warn,
         )
     except ValueError as error:
@@ -96,15 +91,6 @@ def load_config():
     config["rename_folders"] = config.get("rename_folders", {})
 
     return config
-
-
-def init_config():
-    config_path = init_module_config(
-        CONFIG_MODULE,
-        DEFAULT_CONFIG,
-        config_path=CONFIG_PATH,
-    )
-    print(f"Wrote {CONFIG_MODULE} config to {config_path}")
 
 
 def get_node_name(node):
@@ -168,7 +154,7 @@ def load_bookmarks(config):
         fail(
             f"bookmark file not found: {bookmarks_path}\n"
             f"Run 'chiyo config init bm --append' and edit bookmarks_path in "
-            f"{os.path.expanduser(CONFIG_PATH)} "
+            f"{os.path.expanduser(TOOLS_CONFIG_PATH)} "
             "if your bookmarks live somewhere else."
         )
 
@@ -265,10 +251,6 @@ def open_url(url, browser):
 
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
-
-    if args.config_init:
-        init_config()
-        return
 
     config = load_config()
 

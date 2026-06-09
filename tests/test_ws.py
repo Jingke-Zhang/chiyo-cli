@@ -6,6 +6,8 @@ from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
 
+from chiyo_cli.tool_config import load_tool_config
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WS = SourceFileLoader("ws", str(REPO_ROOT / "bin" / "ws")).load_module()
@@ -107,7 +109,7 @@ class WsTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            config = WS.load_module_config(
+            config = load_tool_config(
                 "ws",
                 WS.DEFAULT_CONFIG,
                 config_path=str(config_path),
@@ -132,7 +134,7 @@ class WsTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            with mock.patch.object(WS, "CONFIG_PATH", str(path)):
+            with mock.patch.object(WS, "TOOLS_CONFIG_PATH", str(path)):
                 config = WS.load_config()
 
             self.assertEqual(list(config["engines"]), ["custom"])
@@ -142,40 +144,18 @@ class WsTests(unittest.TestCase):
             path = Path(temp_dir) / "config.toml"
             path.write_text("[ws]\nfzf_prompt = \"ws> \"\n", encoding="utf-8")
 
-            with mock.patch.object(WS, "CONFIG_PATH", str(path)):
+            with mock.patch.object(WS, "TOOLS_CONFIG_PATH", str(path)):
                 with mock.patch("ws.warn") as warn:
                     config = WS.load_config()
 
             self.assertIn("g", config["engines"])
             warn.assert_called_once_with("config [ws] missing engines; using default.")
 
-    def test_init_config_replaces_ws_tables_and_preserves_other_modules(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "config.toml"
-            path.write_text(
-                "\n".join(
-                    [
-                        "[other]",
-                        'name = "kept"',
-                        "",
-                        "[ws]",
-                        'fzf_prompt = "old> "',
-                        "",
-                        "[ws.engines.old]",
-                        'name = "Old"',
-                        'url = "https://old.test?q={query}"',
-                    ]
-                ),
-                encoding="utf-8",
-            )
-            with mock.patch.object(WS, "CONFIG_PATH", str(path)):
-                WS.init_config()
+    def test_format_default_config_includes_default_engines(self):
+        content = WS.format_default_config()
 
-            content = path.read_text(encoding="utf-8")
-            self.assertIn("[other]", content)
-            self.assertIn('name = "kept"', content)
-            self.assertIn("[ws.engines.g]", content)
-            self.assertNotIn("[ws.engines.old]", content)
+        self.assertIn("[ws]", content)
+        self.assertIn("[ws.engines.g]", content)
 
 
 if __name__ == "__main__":

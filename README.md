@@ -164,14 +164,16 @@ may still change before a stable release.
 
 ## Config
 
-All tools in this repository share one config file:
+Chiyo uses two config files:
 
 ```text
 ~/.config/chiyo-cli/config.toml
+~/.config/chiyo-cli/tools.toml
 ```
 
-Each command owns its own TOML table. For example, `bm` uses `[bm]`. Future tools
-can add their own sections without interfering with existing ones.
+`config.toml` stores Chiyo infrastructure settings, such as enabled tools.
+`tools.toml` stores tool-specific settings. For example, `bm` uses `[bm]` in
+`tools.toml`.
 
 Use `chiyo config init` to write explicit default config:
 
@@ -186,6 +188,9 @@ default `--write` mode only writes when the config file is missing or empty.
 Use `--append` to add missing tool sections and fill missing default keys in
 existing sections without replacing user values. Use `--force` to replace
 selected sections.
+
+`chiyo config init --all` initializes Chiyo plus the currently enabled tools.
+Fresh config enables `gop` and `ws` by default.
 
 Generated config is meant to be edited. If a command table exists, Chiyo treats
 it as explicit user config: missing keys fall back to code defaults with a

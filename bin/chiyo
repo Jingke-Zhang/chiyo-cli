@@ -30,6 +30,7 @@ CONFIG_TOOLS = {
     "ws": "ws",
     "zo": "zo",
 }
+CHIYO_CONFIG_TARGET = "chiyo"
 
 
 class ConfigInitRefused(Exception):
@@ -276,8 +277,12 @@ def expanded_config_path():
     return os.path.expanduser(CONFIG_PATH)
 
 
-def read_config_text():
-    path = expanded_config_path()
+def expanded_tools_config_path():
+    return os.path.expanduser(TOOLS_CONFIG_PATH)
+
+
+def read_text(path):
+    path = os.path.expanduser(path)
 
     if not os.path.exists(path):
         return ""
@@ -286,14 +291,30 @@ def read_config_text():
         return file.read()
 
 
-def write_config_text(content):
-    path = expanded_config_path()
+def write_text(path, content):
+    path = os.path.expanduser(path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
     with open(path, "w", encoding="utf-8") as file:
         file.write(content)
 
     return path
+
+
+def read_config_text():
+    return read_text(CONFIG_PATH)
+
+
+def read_tools_config_text():
+    return read_text(TOOLS_CONFIG_PATH)
+
+
+def write_config_text(content):
+    return write_text(CONFIG_PATH, content)
+
+
+def write_tools_config_text(content):
+    return write_text(TOOLS_CONFIG_PATH, content)
 
 
 def load_tool_module(tool):
@@ -312,6 +333,15 @@ def format_tool_config(tool):
     from chiyo_cli.config import format_module_config
 
     return format_module_config(module.CONFIG_MODULE, module.DEFAULT_CONFIG).strip()
+
+
+def format_config_section(target):
+    if target == CHIYO_CONFIG_TARGET:
+        from chiyo_cli.tool_config import format_chiyo_config
+
+        return format_chiyo_config().strip()
+
+    return format_tool_config(target)
 
 
 def is_configured(content, tool):
@@ -341,7 +371,7 @@ def config_key(line):
 def main_table_lines(tool):
     lines = []
 
-    for line in format_tool_config(tool).splitlines():
+    for line in format_config_section(tool).splitlines():
         stripped = line.strip()
 
         if not stripped:
@@ -428,7 +458,7 @@ def append_missing_main_table_defaults(content, tool):
 
 
 def append_config_sections(content, tools):
-    sections = [format_tool_config(tool) for tool in tools]
+    sections = [format_config_section(tool) for tool in tools]
     sections = [section for section in sections if section]
 
     if not sections:
@@ -452,62 +482,110 @@ def replace_config_sections(content, tools):
 
 
 def config_init_lines(tools, mode):
-    content = read_config_text()
-    path = expanded_config_path()
+    targets = list(dict.fromkeys(tools))
+    config_targets = [
+        target
+        for target in targets
+        if target == CHIYO_CONFIG_TARGET
+    ]
+    tool_targets = [
+        target
+        for target in targets
+        if target != CHIYO_CONFIG_TARGET
+    ]
+    config_content = read_config_text()
+    tools_content = read_tools_config_text()
+    config_path = expanded_config_path()
+    tools_path = expanded_tools_config_path()
 
-    if mode == "write" and content.strip():
-        raise ConfigInitRefused(
-            "\n".join(
-                [
-                    f"refused config init: {path} is not empty.",
-                    "Use --append to add missing sections or --force to replace selected sections.",
-                ]
+    if mode == "write":
+        non_empty_paths = []
+
+        if config_targets and config_content.strip():
+            non_empty_paths.append(config_path)
+
+        if tool_targets and tools_content.strip():
+            non_empty_paths.append(tools_path)
+
+        if non_empty_paths:
+            paths = ", ".join(non_empty_paths)
+            raise ConfigInitRefused(
+                "\n".join(
+                    [
+                        f"refused config init: {paths} not empty.",
+                        "Use --append to add missing sections or --force to replace selected sections.",
+                    ]
+                )
             )
-        )
 
-    selected = []
-    skipped = []
-    defaulted = []
+    def update_content(content, selected_targets, path):
+        selected = []
+        skipped = []
+        defaulted = []
 
-    if mode == "append":
-        for tool in tools:
-            if is_configured(content, tool):
-                skipped.append(tool)
+        if mode == "append":
+            for target in selected_targets:
+                if is_configured(content, target):
+                    skipped.append(target)
+                else:
+                    selected.append(target)
+            new_content = append_config_sections(content, selected)
+
+            for target in skipped:
+                new_content, changed = append_missing_main_table_defaults(
+                    new_content,
+                    target,
+                )
+
+                if changed:
+                    defaulted.append(target)
+        elif mode == "force":
+            selected = list(selected_targets)
+            new_content = replace_config_sections(content, selected)
+        else:
+            selected = list(selected_targets)
+            new_content = append_config_sections("", selected)
+
+        lines = []
+
+        for target in selected:
+            action = "wrote" if mode == "write" else mode
+            lines.append(f"{action} [{target}] config in {path}")
+
+        for target in skipped:
+            if mode == "append" and target in defaulted:
+                lines.append(f"append [{target}] defaults in {path}")
             else:
-                selected.append(tool)
-        new_content = append_config_sections(content, selected)
+                lines.append(f"skip [{target}] config: already exists")
 
-        for tool in skipped:
-            new_content, changed = append_missing_main_table_defaults(new_content, tool)
-
-            if changed:
-                defaulted.append(tool)
-
-        if defaulted:
-            write_config_text(new_content)
-    elif mode == "force":
-        selected = list(tools)
-        new_content = replace_config_sections(content, selected)
-    else:
-        selected = list(tools)
-        new_content = append_config_sections("", selected)
-
-    if selected:
-        write_config_text(new_content)
+        should_write = bool(selected) or bool(defaulted)
+        return new_content, should_write, lines
 
     lines = []
 
-    for tool in selected:
-        action = "wrote" if mode == "write" else mode
-        lines.append(f"{action} [{tool}] config in {path}")
+    if config_targets:
+        new_content, should_write, section_lines = update_content(
+            config_content,
+            config_targets,
+            config_path,
+        )
+        lines.extend(section_lines)
 
-    for tool in skipped:
-        if mode == "append" and tool in defaulted:
-            lines.append(f"append [{tool}] defaults in {path}")
-        else:
-            lines.append(f"skip [{tool}] config: already exists")
+        if should_write:
+            write_config_text(new_content)
 
-    if not selected and not skipped:
+    if tool_targets:
+        new_content, should_write, section_lines = update_content(
+            tools_content,
+            tool_targets,
+            tools_path,
+        )
+        lines.extend(section_lines)
+
+        if should_write:
+            write_tools_config_text(new_content)
+
+    if not lines:
         lines.append("no config changes")
 
     return lines
@@ -526,9 +604,18 @@ def validate_config_init_args(args, parser=None):
         raise ValueError("Specify --all or at least one tool.")
 
     if args.all:
-        return sorted(CONFIG_TOOLS)
+        from chiyo_cli.tool_config import load_chiyo_config
 
-    unknown_tools = sorted(set(args.tools) - set(CONFIG_TOOLS))
+        config = load_chiyo_config(config_path=CONFIG_PATH)
+        enabled_tools = [
+            tool
+            for tool in config.get("enabled_tools", [])
+            if tool in CONFIG_TOOLS
+        ]
+        return [CHIYO_CONFIG_TARGET, *enabled_tools]
+
+    known_targets = set(CONFIG_TOOLS) | {CHIYO_CONFIG_TARGET}
+    unknown_tools = sorted(set(args.tools) - known_targets)
 
     if unknown_tools:
         raise ValueError(f"Unknown tool config: {', '.join(unknown_tools)}")
@@ -538,14 +625,30 @@ def validate_config_init_args(args, parser=None):
 
 def config_module_checks():
     content = read_config_text()
-
-    if not content.strip():
-        return [("todo", "run chiyo config init --all --write", "config init")]
+    tools_content = read_tools_config_text()
 
     checks = []
 
-    for tool in sorted(CONFIG_TOOLS):
-        if is_configured(content, tool):
+    if is_configured(content, CHIYO_CONFIG_TARGET):
+        checks.append(("ok", "[chiyo] exists", "chiyo config"))
+    else:
+        checks.append(
+            (
+                "todo",
+                "run chiyo config init chiyo --append",
+                "chiyo config",
+            )
+        )
+
+    from chiyo_cli.tool_config import load_chiyo_config
+
+    config = load_chiyo_config(config_path=CONFIG_PATH)
+
+    for tool in config.get("enabled_tools", []):
+        if tool not in CONFIG_TOOLS:
+            continue
+
+        if is_configured(tools_content, tool):
             checks.append(("ok", f"[{tool}] exists", f"{tool} config"))
         else:
             checks.append(

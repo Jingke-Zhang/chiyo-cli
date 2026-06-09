@@ -154,36 +154,77 @@ class ChiyoTests(unittest.TestCase):
     def test_config_init_all_write_writes_every_tool_when_config_is_empty(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
+            tools_path = os.path.join(temp_dir, "tools.toml")
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
-                lines = CHIYO.config_init_lines(sorted(CHIYO.CONFIG_TOOLS), "write")
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_path):
+                    targets = CHIYO.validate_config_init_args(
+                        mock.Mock(all=True, tools=[])
+                    )
+                    lines = CHIYO.config_init_lines(targets, "write")
 
-            content = Path(config_path).read_text(encoding="utf-8")
+            config_content = Path(config_path).read_text(encoding="utf-8")
+            tools_content = Path(tools_path).read_text(encoding="utf-8")
 
+        self.assertIn("wrote [chiyo] config", "\n".join(lines))
+        self.assertIn("wrote [gop] config", "\n".join(lines))
         self.assertIn("wrote [ws] config", "\n".join(lines))
-        self.assertIn("[bm]", content)
-        self.assertIn("[app.alias]", content)
-        self.assertIn("[ws.engines.g]", content)
-        self.assertIn("[proj]", content)
+        self.assertIn("[chiyo]", config_content)
+        self.assertIn('enabled_tools = ["gop", "ws"]', config_content)
+        self.assertNotIn("[ws]", config_content)
+        self.assertIn("[gop]", tools_content)
+        self.assertIn("[ws.engines.g]", tools_content)
+        self.assertNotIn("[bm]", tools_content)
+
+    def test_config_init_all_uses_current_enabled_tools(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                '[chiyo]\nenabled_tools = ["bm", "zo"]\n',
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_path):
+                    targets = CHIYO.validate_config_init_args(
+                        mock.Mock(all=True, tools=[])
+                    )
+                    lines = CHIYO.config_init_lines(targets, "append")
+
+            tools_content = Path(tools_path).read_text(encoding="utf-8")
+
+        self.assertEqual(["chiyo", "bm", "zo"], targets)
+        self.assertIn("append [chiyo] defaults", "\n".join(lines))
+        self.assertIn("append [bm] config", "\n".join(lines))
+        self.assertIn("append [zo] config", "\n".join(lines))
+        self.assertIn("[bm]", tools_content)
+        self.assertIn("[zo]", tools_content)
+        self.assertNotIn("[gop]", tools_content)
+        self.assertNotIn("[ws]", tools_content)
 
     def test_config_init_write_refuses_non_empty_config(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
-            Path(config_path).write_text("[other]\n", encoding="utf-8")
+            tools_path = os.path.join(temp_dir, "tools.toml")
+            Path(tools_path).write_text("[other]\n", encoding="utf-8")
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
-                with self.assertRaises(CHIYO.ConfigInitRefused):
-                    CHIYO.config_init_lines(["ws"], "write")
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_path):
+                    with self.assertRaises(CHIYO.ConfigInitRefused):
+                        CHIYO.config_init_lines(["ws"], "write")
 
     def test_config_init_append_skips_existing_and_adds_missing(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
-            Path(config_path).write_text("[ws]\nfzf_prompt = \"old> \"\n", encoding="utf-8")
+            tools_path = os.path.join(temp_dir, "tools.toml")
+            Path(tools_path).write_text("[ws]\nfzf_prompt = \"old> \"\n", encoding="utf-8")
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
-                lines = CHIYO.config_init_lines(["ws", "app"], "append")
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_path):
+                    lines = CHIYO.config_init_lines(["ws", "app"], "append")
 
-            content = Path(config_path).read_text(encoding="utf-8")
+            content = Path(tools_path).read_text(encoding="utf-8")
 
         self.assertIn("skip [ws] config: already exists", lines)
         self.assertIn("append [app] config", "\n".join(lines))
@@ -193,7 +234,8 @@ class ChiyoTests(unittest.TestCase):
     def test_config_init_append_adds_missing_bm_defaults(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
-            Path(config_path).write_text(
+            tools_path = os.path.join(temp_dir, "tools.toml")
+            Path(tools_path).write_text(
                 "\n".join(
                     [
                         "[bm]",
@@ -204,9 +246,10 @@ class ChiyoTests(unittest.TestCase):
             )
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
-                lines = CHIYO.config_init_lines(["bm"], "append")
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_path):
+                    lines = CHIYO.config_init_lines(["bm"], "append")
 
-            content = Path(config_path).read_text(encoding="utf-8")
+            content = Path(tools_path).read_text(encoding="utf-8")
 
         self.assertIn("append [bm] defaults", "\n".join(lines))
         self.assertIn('bookmarks_path = "~/Library/Safari/Bookmarks.plist"', content)
@@ -217,7 +260,8 @@ class ChiyoTests(unittest.TestCase):
     def test_config_init_append_preserves_existing_bm_defaults(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
-            Path(config_path).write_text(
+            tools_path = os.path.join(temp_dir, "tools.toml")
+            Path(tools_path).write_text(
                 "\n".join(
                     [
                         "[bm]",
@@ -231,9 +275,10 @@ class ChiyoTests(unittest.TestCase):
             )
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
-                lines = CHIYO.config_init_lines(["bm"], "append")
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_path):
+                    lines = CHIYO.config_init_lines(["bm"], "append")
 
-            content = Path(config_path).read_text(encoding="utf-8")
+            content = Path(tools_path).read_text(encoding="utf-8")
 
         self.assertIn("skip [bm] config: already exists", lines)
         self.assertIn('bookmarks_path = "~/Bookmarks.plist"', content)
@@ -243,7 +288,8 @@ class ChiyoTests(unittest.TestCase):
     def test_config_init_force_replaces_selected_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
-            Path(config_path).write_text(
+            tools_path = os.path.join(temp_dir, "tools.toml")
+            Path(tools_path).write_text(
                 "\n".join(
                     [
                         "[other]",
@@ -261,9 +307,10 @@ class ChiyoTests(unittest.TestCase):
             )
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
-                CHIYO.config_init_lines(["ws"], "force")
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_path):
+                    CHIYO.config_init_lines(["ws"], "force")
 
-            content = Path(config_path).read_text(encoding="utf-8")
+            content = Path(tools_path).read_text(encoding="utf-8")
 
         self.assertIn("[other]", content)
         self.assertIn("[ws.engines.g]", content)
@@ -300,7 +347,7 @@ class ChiyoTests(unittest.TestCase):
             content = Path(config_path).read_text(encoding="utf-8")
 
         self.assertIn("[chiyo]", content)
-        self.assertIn("enabled_tools = []", content)
+        self.assertIn('enabled_tools = ["gop", "ws"]', content)
 
     def test_tool_list_shows_discovered_tools_and_enabled_status(self):
         with tempfile.TemporaryDirectory() as temp_dir:

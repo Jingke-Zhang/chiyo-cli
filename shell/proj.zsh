@@ -1,6 +1,6 @@
 proj() {
   case "$1" in
-    -h|--help|--config-init)
+    -h|--help)
       proj-select "$@"
       return
       ;;

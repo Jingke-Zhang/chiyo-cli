@@ -1,6 +1,6 @@
 gop() {
   case "$1" in
-    -h|--help|--config-init)
+    -h|--help)
       gop-select "$@"
       return
       ;;

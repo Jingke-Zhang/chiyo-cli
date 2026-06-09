@@ -114,17 +114,27 @@ class BookmarkTests(unittest.TestCase):
         finally:
             os.unlink(path)
 
-    def test_init_config_writes_bookmarks_path_default(self):
+    def test_load_config_reads_tools_toml(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "config.toml"
-
-            with mock.patch.object(BM, "CONFIG_PATH", str(path)):
-                BM.init_config()
-
-            self.assertIn(
-                'bookmarks_path = "~/Library/Safari/Bookmarks.plist"',
-                path.read_text(encoding="utf-8"),
+            path = Path(temp_dir) / "tools.toml"
+            path.write_text(
+                "\n".join(
+                    [
+                        "[bm]",
+                        'bookmarks_path = "~/Bookmarks.plist"',
+                        'skip_folders = ["Bookmarks"]',
+                        'fzf_prompt = "bookmarks> "',
+                        'browser = "Google Chrome"',
+                    ]
+                ),
+                encoding="utf-8",
             )
+
+            with mock.patch.object(BM, "TOOLS_CONFIG_PATH", str(path)):
+                config = BM.load_config()
+
+        self.assertTrue(config["bookmarks_path"].endswith("Bookmarks.plist"))
+        self.assertEqual(config["browser"], "Google Chrome")
 
     @mock.patch("bm.choose_item")
     def test_choose_bookmark_preserves_duplicate_display_names(self, choose_item):

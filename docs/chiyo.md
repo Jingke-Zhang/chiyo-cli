@@ -13,11 +13,16 @@ chiyo doctor
 ## Commands
 
 - `init zsh`: print zsh integration code for completions and shell functions
-- `config init`: write explicit default config for selected tools
+- `config init`: write explicit default config for Chiyo or selected tools
 - `doctor`: check common dependencies and setup paths
 
-`config init` requires either `--all` or at least one tool name. Its write modes
-are:
+`config init` requires either `--all` or at least one target name. `chiyo`
+writes infrastructure defaults to `~/.config/chiyo-cli/config.toml`; tool names
+write tool defaults to `~/.config/chiyo-cli/tools.toml`. `--all` initializes
+Chiyo plus the currently enabled tools. Fresh config enables `gop` and `ws` by
+default.
+
+Its write modes are:
 
 - `--write`: write only when the config file is missing or empty; this is the default
 - `--append`: add missing tool sections and fill missing default keys in
@@ -29,5 +34,5 @@ creates symlinks there, but users should manage PATH in their own shell config.
 
 `doctor` checks external dependencies, shell integration files,
 development-install symlinks in `~/.local/bin`, zsh completion links, `PATH`,
-`~/.zshrc` integration, and the optional shared config file. It reports
+`~/.zshrc` integration, and the config files. It reports
 actionable setup work as `todo` and stale or unsafe install state as `warn`.
