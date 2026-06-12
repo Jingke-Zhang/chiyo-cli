@@ -5,6 +5,7 @@ import importlib
 from dataclasses import dataclass
 from pathlib import Path
 
+from chiyo_cli.paths import expand_path
 from chiyo_cli.toolkit import PickOpenTool, ToolFlagError, validate_tool_flags
 
 
@@ -131,7 +132,7 @@ def discover_tool_paths(tool_dirs):
     paths = []
 
     for tool_dir in tool_dirs:
-        directory = Path(tool_dir).expanduser()
+        directory = Path(expand_path(tool_dir))
 
         if not directory.is_dir():
             continue

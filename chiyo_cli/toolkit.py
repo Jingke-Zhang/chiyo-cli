@@ -1,7 +1,6 @@
 """Framework primitives for Chiyo search-pick-open tools."""
 
 import argparse
-import os
 import shlex
 import shutil
 import subprocess
@@ -15,6 +14,7 @@ from chiyo_cli.fzf import (
     STYLE_PLAIN,
     choose_item_from,
 )
+from chiyo_cli.paths import expand_path
 
 
 COMMON_FLAGS = {
@@ -268,7 +268,7 @@ def open_location(location):
         raise ToolError("macOS 'open' command is not available.")
 
     result = subprocess.run(
-        ["open", os.path.expanduser(location)],
+        ["open", expand_path(location)],
         capture_output=True,
         text=True,
         check=False,

@@ -1,13 +1,207 @@
 """Framework-backed gop built-in."""
 
 import os
+import re
+import shutil
+import subprocess
 import sys
 
-from chiyo_cli.builtin_tools.legacy import load_legacy_command
+from chiyo_cli.fzf import Field, choose_item, field_widths, format_row
+from chiyo_cli.output import print_warning
+from chiyo_cli.paths import compact_path, existing_dirs
 from chiyo_cli.toolkit import PickOpenTool, ShellAction
 
 
-LEGACY = load_legacy_command("gop-select")
+STYLE_DIR = "\033[1;34m"
+STYLE_FILE = ""
+STYLE_EXECUTABLE = "\033[1;32m"
+ANSI_PATTERN = re.compile(r"\033\[[0-9;]*m")
+DEFAULT_CONFIG = {
+    "roots": ["~/Documents", "~/Downloads", "~/Desktop"],
+    "exclude": ["Library", "node_modules", "OrbStack"],
+    "fzf_prompt": "gop> ",
+}
+
+
+def warn(message):
+    print_warning("gop", message)
+
+
+def normalize_roots(roots, fail=None):
+    return existing_dirs(roots, "search root", warn, fail)
+
+
+def fd_command(query, roots, exclude=None, max_results=None):
+    pattern = query or "."
+    command = ["fd", "--absolute-path"]
+    exclude = exclude or []
+
+    for pattern_to_exclude in exclude:
+        command.extend(["--exclude", pattern_to_exclude])
+
+    if max_results is not None:
+        command.append(f"--max-results={max_results}")
+
+    return [*command, pattern, *roots]
+
+
+def require_fd(fail):
+    if shutil.which("fd") is None:
+        fail("fd is not installed or not in PATH.")
+
+
+def require_fzf(fail):
+    if shutil.which("fzf") is None:
+        fail("fzf is not installed or not in PATH.")
+
+
+def run_fd(query, roots, exclude=None, max_results=None, fail=None):
+    fail = fail or (lambda message: (_ for _ in ()).throw(RuntimeError(message)))
+    require_fd(fail)
+    result = subprocess.run(
+        fd_command(query, roots, exclude, max_results),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        detail = result.stderr.strip() or "unknown error"
+        fail(f"fd failed while searching paths: {detail}")
+
+    return result.stdout.splitlines()
+
+
+def path_kind(path):
+    if os.path.isdir(path):
+        return "dir"
+
+    if os.access(path, os.X_OK):
+        return "exec"
+
+    return "file"
+
+
+def style_for_kind(kind):
+    if kind == "dir":
+        return STYLE_DIR
+
+    if kind == "exec":
+        return STYLE_EXECUTABLE
+
+    return STYLE_FILE
+
+
+def path_fields(path):
+    return [Field(compact_path(path), style_for_kind(path_kind(path)))]
+
+
+def path_filter_fields(path):
+    return [compact_path(path), path]
+
+
+def format_path_choice(path):
+    fields = path_fields(path)
+    return format_row(0, fields, field_widths([fields]), path_filter_fields(path))
+
+
+def parse_choice(choice):
+    if "\t" not in choice:
+        return choice
+
+    without_index = choice.rsplit("\t#", 1)[0]
+    return ANSI_PATTERN.sub("", without_index.rsplit("\t", 1)[1])
+
+
+def unique_paths(paths):
+    seen = set()
+    unique = []
+
+    for path in paths:
+        if not path or path in seen:
+            continue
+
+        seen.add(path)
+        unique.append(path)
+
+    return unique
+
+
+def choose_path(paths, config, fail):
+    rows = [path_fields(path) for path in paths]
+    filter_rows = [path_filter_fields(path) for path in paths]
+    return choose_item(
+        paths,
+        rows,
+        config["fzf_prompt"],
+        "a path",
+        fail,
+        filter_rows=filter_rows,
+    )
+
+
+def choose_path_stream(query, roots, exclude, config, fail):
+    require_fd(fail)
+    require_fzf(fail)
+    fd_process = subprocess.Popen(
+        fd_command(query, roots, exclude),
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+
+    fzf_process = subprocess.Popen(
+        [
+            "fzf",
+            f"--prompt={config['fzf_prompt']}",
+            "--ansi",
+            "--with-nth=1",
+            "--nth=1",
+            "--delimiter=\t",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    try:
+        if fd_process.stdout is not None and fzf_process.stdin is not None:
+            for path in fd_process.stdout:
+                path = path.rstrip("\n")
+
+                if not path:
+                    continue
+
+                try:
+                    fzf_process.stdin.write(format_path_choice(path) + "\n")
+                except BrokenPipeError:
+                    break
+
+        if fzf_process.stdin is not None:
+            fzf_process.stdin.close()
+
+        stdout = fzf_process.stdout.read() if fzf_process.stdout is not None else ""
+        if fzf_process.stderr is not None:
+            fzf_process.stderr.read()
+        returncode = fzf_process.wait()
+    finally:
+        if fd_process.stdout is not None:
+            fd_process.stdout.close()
+
+        fd_process.wait()
+
+    if returncode == 130:
+        return None
+
+    if returncode != 0:
+        fail("fzf failed while selecting a path.")
+
+    selected = stdout.strip()
+
+    if not selected:
+        return None
+
+    return parse_choice(selected)
 
 
 class Tool(PickOpenTool):
@@ -22,7 +216,7 @@ class Tool(PickOpenTool):
     the parent shell's current directory; files emit an open action.
     """
     prompt = "gop> "
-    default_config = LEGACY.DEFAULT_CONFIG
+    default_config = DEFAULT_CONFIG
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -47,23 +241,27 @@ class Tool(PickOpenTool):
         return []
 
     def display_fields(self, item, config):
-        return LEGACY.path_fields(item)
+        return path_fields(item)
 
     def query_from_args(self, args):
         return " ".join(args.query)
 
     def roots_from_args(self, args, config):
-        return LEGACY.normalize_roots(args.root) if args.root else config["roots"]
+        roots = args.root if args.root else config["roots"]
+        return normalize_roots(roots, self.fail)
 
     def exclude_from_args(self, args, config):
         return config["exclude"] + (args.exclude or [])
 
     def print_completions_for_args(self, args, config):
-        LEGACY.list_completions(
-            self.query_from_args(args),
-            self.roots_from_args(args, config),
-            self.exclude_from_args(args, config),
-        )
+        query = self.query_from_args(args)
+        roots = self.roots_from_args(args, config)
+        exclude = self.exclude_from_args(args, config)
+
+        for path in unique_paths(
+            run_fd(query, roots, exclude, max_results=200, fail=self.fail)
+        ):
+            print(compact_path(path))
 
     def select_path(self, args, config):
         query = self.query_from_args(args)
@@ -71,8 +269,8 @@ class Tool(PickOpenTool):
         exclude = self.exclude_from_args(args, config)
 
         if query and not args.confirm:
-            paths = LEGACY.unique_paths(
-                LEGACY.run_fd(query, roots, exclude, max_results=2)
+            paths = unique_paths(
+                run_fd(query, roots, exclude, max_results=2, fail=self.fail)
             )
 
             if not paths:
@@ -81,9 +279,9 @@ class Tool(PickOpenTool):
             if len(paths) == 1:
                 return paths[0]
 
-            return LEGACY.choose_path_stream(query, roots, exclude, config)
+            return choose_path_stream(query, roots, exclude, config, self.fail)
 
-        return LEGACY.choose_path_stream(query, roots, exclude, config)
+        return choose_path_stream(query, roots, exclude, config, self.fail)
 
     def run(self, argv=None, config=None, execute_shell_actions=True):
         config = dict(self.default_config if config is None else config)

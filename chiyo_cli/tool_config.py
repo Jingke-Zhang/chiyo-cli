@@ -1,8 +1,6 @@
 """Config helpers for the user-tool framework."""
 
 import copy
-import os
-
 from chiyo_cli.config import (
     CONFIG_PATH,
     format_module_config,
@@ -10,6 +8,7 @@ from chiyo_cli.config import (
     load_config_file,
     load_module_config,
 )
+from chiyo_cli.paths import expand_path, expand_paths
 
 
 TOOLS_CONFIG_PATH = "~/.config/chiyo-cli/tools.toml"
@@ -21,14 +20,6 @@ DEFAULT_CHIYO_CONFIG = {
     "completion_dir": "~/.local/share/zsh/site-functions",
     "shell_dir": "~/.local/share/chiyo-cli/shell",
 }
-
-
-def expand_path(value):
-    return os.path.expanduser(value)
-
-
-def expand_paths(values):
-    return [expand_path(value) for value in values]
 
 
 def load_chiyo_config(config_path=CONFIG_PATH, warn=None):

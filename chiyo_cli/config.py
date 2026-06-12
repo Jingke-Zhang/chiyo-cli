@@ -6,6 +6,8 @@ import json
 import os
 import re
 
+from chiyo_cli.paths import expand_path
+
 try:
     import tomllib
 except ModuleNotFoundError:
@@ -99,7 +101,7 @@ def load_minimal_toml(path):
 
 
 def load_config_file(config_path=CONFIG_PATH):
-    config_path = os.path.expanduser(config_path)
+    config_path = expand_path(config_path)
 
     if not os.path.exists(config_path):
         return {}
@@ -205,7 +207,7 @@ def remove_module_config(content, module_name):
 def init_module_config(module_name, defaults, config_path=CONFIG_PATH):
     # Legacy helper for writing one module table while preserving unrelated
     # tables in the same TOML file.
-    config_path = os.path.expanduser(config_path)
+    config_path = expand_path(config_path)
     config_dir = os.path.dirname(config_path)
     os.makedirs(config_dir, exist_ok=True)
 

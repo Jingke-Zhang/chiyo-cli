@@ -608,11 +608,12 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.app.LEGACY.open_app") as open_app:
+                    with mock.patch("chiyo_cli.builtin_tools.app.open_app") as open_app:
                         result = CHIYO.run_tool("app", ["browser"])
 
         self.assertEqual(result, {"name": "Safari", "path": None})
-        open_app.assert_called_once_with({"name": "Safari", "path": None})
+        open_app.assert_called_once()
+        self.assertEqual(open_app.call_args.args[0], {"name": "Safari", "path": None})
 
     def test_run_tool_runs_builtin_bm_print_url(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -633,7 +634,7 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.bm.LEGACY.load_bookmarks") as load_bookmarks:
+                    with mock.patch("chiyo_cli.builtin_tools.bm.load_bookmarks") as load_bookmarks:
                         load_bookmarks.return_value = [
                             ("Docs/Example", "https://example.test"),
                         ]
@@ -674,13 +675,17 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.zo.LEGACY.load_items") as load_items:
-                        with mock.patch("chiyo_cli.builtin_tools.zo.LEGACY.open_location") as open_location:
+                    with mock.patch("chiyo_cli.builtin_tools.zo.load_items") as load_items:
+                        with mock.patch("chiyo_cli.builtin_tools.zo.open_location") as open_location:
                             load_items.return_value = [item]
                             result = CHIYO.run_tool("zo", ["linear"])
 
         self.assertEqual(result, "zotero://select/library/items/ITEMKEY1")
-        open_location.assert_called_once_with("zotero://select/library/items/ITEMKEY1")
+        open_location.assert_called_once()
+        self.assertEqual(
+            open_location.call_args.args[0],
+            "zotero://select/library/items/ITEMKEY1",
+        )
 
     def test_shell_tool_lines_runs_builtin_proj(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -703,8 +708,8 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.proj.LEGACY.all_projects") as all_projects:
-                        with mock.patch("chiyo_cli.builtin_tools.proj.LEGACY.normalize_roots") as normalize_roots:
+                    with mock.patch("chiyo_cli.builtin_tools.proj.all_projects") as all_projects:
+                        with mock.patch("chiyo_cli.builtin_tools.proj.normalize_roots") as normalize_roots:
                             normalize_roots.return_value = [temp_dir]
                             all_projects.return_value = [str(project)]
                             lines = CHIYO.shell_tool_lines("proj", ["Project"])
@@ -729,14 +734,54 @@ class ChiyoTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            Path(tools_config_path).write_text(
+                f'[gop]\nroots = ["{temp_dir}"]\nexclude = []\nfzf_prompt = "gop> "\n',
+                encoding="utf-8",
+            )
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.gop.LEGACY.run_fd") as run_fd:
+                    with mock.patch("chiyo_cli.builtin_tools.gop.run_fd") as run_fd:
                         run_fd.return_value = [str(target)]
                         lines = CHIYO.shell_tool_lines("gop", ["Target"])
 
         self.assertEqual(lines, [ShellAction.cd(str(target)).render_shell()])
+
+    def test_shell_tool_lines_expands_gop_config_roots(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir)
+            root = home / "Documents"
+            root.mkdir()
+            target = root / "Target Dir"
+            target.mkdir()
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        'tool_dirs = []',
+                        'enabled_tools = ["gop"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                '[gop]\nroots = ["~/Documents"]\nexclude = []\nfzf_prompt = "gop> "\n',
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with mock.patch.dict(os.environ, {"HOME": str(home)}):
+                        with mock.patch("chiyo_cli.builtin_tools.gop.run_fd") as run_fd:
+                            run_fd.return_value = [str(target)]
+                            lines = CHIYO.shell_tool_lines("gop", ["Target"])
+
+        self.assertEqual(lines, [ShellAction.cd(str(target)).render_shell()])
+        self.assertEqual(run_fd.call_args.args[1], [str(root)])
 
     def test_shell_tool_lines_runs_builtin_gop_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -756,10 +801,14 @@ class ChiyoTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            Path(tools_config_path).write_text(
+                f'[gop]\nroots = ["{temp_dir}"]\nexclude = []\nfzf_prompt = "gop> "\n',
+                encoding="utf-8",
+            )
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.gop.LEGACY.run_fd") as run_fd:
+                    with mock.patch("chiyo_cli.builtin_tools.gop.run_fd") as run_fd:
                         run_fd.return_value = [str(target)]
                         lines = CHIYO.shell_tool_lines("gop", ["paper"])
 
