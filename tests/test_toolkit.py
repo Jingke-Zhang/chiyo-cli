@@ -6,9 +6,14 @@ from chiyo_cli.toolkit import (
     Field,
     PickOpenTool,
     ShellAction,
+    STYLE_PLAIN,
     STYLE_PRIMARY,
+    STYLE_SECONDARY,
     ToolFlagError,
     ToolError,
+    open_with_app,
+    require_command,
+    run_command,
     tool_argument_flags,
     validate_tool_flags,
 )
@@ -167,6 +172,45 @@ class ToolkitTests(unittest.TestCase):
         with self.assertRaisesRegex(ToolError, "chiyo shell"):
             ShellAction.cd("/tmp/project").execute()
 
+    @mock.patch("chiyo_cli.toolkit.shutil.which", return_value="/usr/bin/open")
+    @mock.patch("chiyo_cli.toolkit.subprocess.run")
+    def test_open_with_app_can_open_location_or_app_only(self, run, _which):
+        run.return_value.returncode = 0
+        run.return_value.stderr = ""
+
+        self.assertEqual(open_with_app("https://example.test", "Safari"), None)
+        self.assertEqual(
+            run.call_args.args[0],
+            ["open", "-a", "Safari", "https://example.test"],
+        )
+
+        open_with_app("", "Safari")
+        self.assertEqual(run.call_args.args[0], ["open", "-a", "Safari"])
+
+    @mock.patch("chiyo_cli.toolkit.shutil.which", return_value="/usr/bin/fd")
+    def test_require_command_returns_resolved_path(self, _which):
+        self.assertEqual(require_command("fd"), "/usr/bin/fd")
+
+    @mock.patch("chiyo_cli.toolkit.shutil.which", return_value=None)
+    def test_require_command_reports_missing_command(self, _which):
+        with self.assertRaisesRegex(ToolError, "fd is not installed"):
+            require_command("fd")
+
+    @mock.patch("chiyo_cli.toolkit.shutil.which", return_value="/usr/bin/fd")
+    @mock.patch("chiyo_cli.toolkit.subprocess.run")
+    def test_run_command_returns_completed_process_or_raises(self, run, _which):
+        run.return_value.returncode = 0
+        run.return_value.stderr = ""
+
+        self.assertEqual(run_command(["fd", "."], "fd failed"), run.return_value)
+        self.assertEqual(run.call_args.args[0], ["fd", "."])
+
+        run.return_value.returncode = 1
+        run.return_value.stderr = "bad pattern"
+
+        with self.assertRaisesRegex(ToolError, "fd failed: bad pattern"):
+            run_command(["fd", "("], "fd failed")
+
     def test_run_can_return_raw_shell_action(self):
         tool = ShellMemoryTool()
         config = {"items": [{"title": "Project", "rank": 1, "path": "/tmp/project"}]}
@@ -174,6 +218,17 @@ class ToolkitTests(unittest.TestCase):
         result = tool.run(["project"], config, execute_shell_actions=False)
 
         self.assertEqual(result, ShellAction.cd("/tmp/project"))
+
+    def test_tool_convenience_methods_build_fields_and_actions(self):
+        tool = MemoryTool()
+
+        self.assertEqual(tool.field("plain"), Field("plain", STYLE_PLAIN))
+        self.assertEqual(tool.primary("title"), Field("title", STYLE_PRIMARY))
+        self.assertEqual(tool.secondary("path"), Field("path", STYLE_SECONDARY))
+        self.assertEqual(tool.cd("/tmp/project"), ShellAction.cd("/tmp/project"))
+        self.assertEqual(tool.open("/tmp/file"), ShellAction.open("/tmp/file"))
+        self.assertEqual(tool.print("value"), ShellAction.print("value"))
+        self.assertEqual(tool.no_action(), ShellAction.none())
 
 
 if __name__ == "__main__":

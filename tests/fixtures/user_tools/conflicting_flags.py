@@ -1,7 +1,7 @@
-from chiyo_cli.toolkit import Field, PickOpenTool, STYLE_PRIMARY
+from chiyo_cli.api import ChiyoTool
 
 
-class Tool(PickOpenTool):
+class Tool(ChiyoTool):
     name = "Conflicting Flags"
     command = "conflicting-flags"
     author = "Fixture Author"
@@ -12,7 +12,7 @@ class Tool(PickOpenTool):
         return [{"title": "Conflict"}]
 
     def display_fields(self, item, config):
-        return [Field(item["title"], STYLE_PRIMARY)]
+        return [self.primary(item["title"])]
 
     def add_arguments(self, parser):
         parser.add_argument("--confirm", action="store_true")

@@ -1,15 +1,14 @@
 """Framework-backed gop built-in."""
 
-import os
 import re
-import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 from chiyo_cli.fzf import Field, choose_item, field_widths, format_row
 from chiyo_cli.output import print_warning
 from chiyo_cli.paths import compact_path, existing_dirs
-from chiyo_cli.toolkit import PickOpenTool, ShellAction
+from chiyo_cli.toolkit import PickOpenTool, ToolError, require_command, run_command
 
 
 STYLE_DIR = "\033[1;34m"
@@ -46,37 +45,39 @@ def fd_command(query, roots, exclude=None, max_results=None):
 
 
 def require_fd(fail):
-    if shutil.which("fd") is None:
-        fail("fd is not installed or not in PATH.")
+    try:
+        require_command("fd")
+    except ToolError as error:
+        fail(str(error))
 
 
 def require_fzf(fail):
-    if shutil.which("fzf") is None:
-        fail("fzf is not installed or not in PATH.")
+    try:
+        require_command("fzf")
+    except ToolError as error:
+        fail(str(error))
 
 
 def run_fd(query, roots, exclude=None, max_results=None, fail=None):
     fail = fail or (lambda message: (_ for _ in ()).throw(RuntimeError(message)))
-    require_fd(fail)
-    result = subprocess.run(
-        fd_command(query, roots, exclude, max_results),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        detail = result.stderr.strip() or "unknown error"
-        fail(f"fd failed while searching paths: {detail}")
+    try:
+        result = run_command(
+            fd_command(query, roots, exclude, max_results),
+            "fd failed while searching paths",
+        )
+    except ToolError as error:
+        fail(str(error))
 
     return result.stdout.splitlines()
 
 
 def path_kind(path):
-    if os.path.isdir(path):
+    path = Path(path)
+
+    if path.is_dir():
         return "dir"
 
-    if os.access(path, os.X_OK):
+    if path.exists() and path.stat().st_mode & 0o111:
         return "exec"
 
     return "file"
@@ -248,7 +249,7 @@ class Tool(PickOpenTool):
 
     def roots_from_args(self, args, config):
         roots = args.root if args.root else config["roots"]
-        return normalize_roots(roots, self.fail)
+        return self.existing_dirs(roots, "search root")
 
     def exclude_from_args(self, args, config):
         return config["exclude"] + (args.exclude or [])
@@ -304,7 +305,7 @@ class Tool(PickOpenTool):
         return result
 
     def open_item(self, item, args, config):
-        if os.path.isdir(item):
-            return ShellAction.cd(item)
+        if Path(item).is_dir():
+            return self.cd(item)
 
-        return ShellAction.open(item)
+        return self.open(item)

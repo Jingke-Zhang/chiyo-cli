@@ -1,14 +1,10 @@
 """Framework-backed bm built-in."""
 
-import os
 import plistlib
-import shutil
-import subprocess
 
-from chiyo_cli.fzf import STYLE_PRIMARY, STYLE_SECONDARY
 from chiyo_cli.paths import expand_path
 from chiyo_cli.tool_config import TOOLS_CONFIG_PATH
-from chiyo_cli.toolkit import Field, PickOpenTool, ShellAction
+from chiyo_cli.toolkit import PickOpenTool
 
 
 DEFAULT_CONFIG = {
@@ -74,7 +70,7 @@ def walk_bookmarks(node, path, results, config):
 def load_bookmarks(config, fail):
     bookmarks_path = config["bookmarks_path"]
 
-    if not os.path.exists(bookmarks_path):
+    if not bookmarks_path.exists():
         fail(
             f"bookmark file not found: {bookmarks_path}\n"
             f"Run 'chiyo config init bm --append' and edit bookmarks_path in "
@@ -82,7 +78,7 @@ def load_bookmarks(config, fail):
             "if your bookmarks live somewhere else."
         )
 
-    with open(bookmarks_path, "rb") as file:
+    with bookmarks_path.open("rb") as file:
         data = plistlib.load(file)
 
     results = []
@@ -103,22 +99,6 @@ def load_bookmarks(config, fail):
     return unique_results
 
 
-def open_url(url, browser, fail):
-    if shutil.which("open") is None:
-        fail("macOS 'open' command is not available.")
-
-    result = subprocess.run(
-        ["open", "-a", browser, url],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        detail = result.stderr.strip() or "unknown error"
-        fail(f"could not open URL with browser '{browser}': {detail}")
-
-
 class Tool(PickOpenTool):
     name = "Bookmarks"
     command = "bm"
@@ -136,7 +116,7 @@ class Tool(PickOpenTool):
 
     def normalize_config(self, config):
         normalized = dict(config)
-        normalized["bookmarks_path"] = expand_path(normalized["bookmarks_path"])
+        normalized["bookmarks_path"] = self.path(normalized["bookmarks_path"])
         normalized["skip_folders"] = set(normalized.get("skip_folders", []))
         normalized["rename_folders"] = normalized.get("rename_folders", {})
         return normalized
@@ -165,8 +145,8 @@ class Tool(PickOpenTool):
     def display_fields(self, item, config):
         display_name, url = item
         return [
-            Field(display_name, STYLE_PRIMARY),
-            Field(url, STYLE_SECONDARY),
+            self.primary(display_name),
+            self.secondary(url),
         ]
 
     def completion_label(self, item, config):
@@ -177,8 +157,7 @@ class Tool(PickOpenTool):
         _display_name, url = item
 
         if args.print_url:
-            return ShellAction.print(url)
+            return self.print(url)
 
         browser = args.browser or config["browser"]
-        open_url(url, browser, self.fail)
-        return url
+        return self.open_with_app(url, browser)

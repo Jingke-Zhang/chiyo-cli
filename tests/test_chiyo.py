@@ -572,7 +572,7 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.ws.open_location") as open_location:
+                    with mock.patch("chiyo_cli.toolkit.open_location") as open_location:
                         result = CHIYO.run_tool("ws", ["g", "wavelet", "tree"])
 
         self.assertEqual(result, "https://www.google.com/search?q=wavelet%20tree")

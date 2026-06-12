@@ -23,6 +23,17 @@ class UserToolFixtureTests(unittest.TestCase):
         self.assertEqual(module.Tool.name, "Paper Search")
         self.assertEqual(module.Tool.author, "Fixture Author")
 
+    def test_valid_paper_fixture_uses_convenience_api(self):
+        module = load_fixture("paper")
+        tool = module.Tool()
+
+        fields = tool.display_fields(
+            {"title": "Paper", "path": "/tmp/Paper.pdf"},
+            {},
+        )
+
+        self.assertEqual([field.value for field in fields], ["Paper", "/tmp/Paper.pdf"])
+
     def test_invalid_metadata_fixture_is_available_for_validation_tests(self):
         module = load_fixture("missing_author")
 

@@ -1,14 +1,20 @@
 """Framework-backed proj built-in."""
 
-import os
 import re
-import shutil
-import subprocess
+from pathlib import Path
 
 from chiyo_cli.fzf import display_width
 from chiyo_cli.output import print_warning
 from chiyo_cli.paths import compact_path, existing_dirs
-from chiyo_cli.toolkit import Field, PickOpenTool, ShellAction, STYLE_PRIMARY, STYLE_SECONDARY
+from chiyo_cli.toolkit import (
+    Field,
+    PickOpenTool,
+    STYLE_PRIMARY,
+    STYLE_SECONDARY,
+    ToolError,
+    require_command,
+    run_command,
+)
 
 
 DEFAULT_CONFIG = {
@@ -24,8 +30,10 @@ def warn(message):
 
 
 def require_fd(fail):
-    if shutil.which("fd") is None:
-        fail("fd is not installed or not in PATH.")
+    try:
+        require_command("fd")
+    except ToolError as error:
+        fail(str(error))
 
 
 def normalize_roots(roots, fail=None):
@@ -60,27 +68,23 @@ def fd_command(roots, markers, exclude=None, max_results=None):
 
 def run_fd(roots, markers, exclude=None, max_results=None, fail=None):
     fail = fail or (lambda message: (_ for _ in ()).throw(RuntimeError(message)))
-    require_fd(fail)
-    result = subprocess.run(
-        fd_command(roots, markers, exclude, max_results),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        detail = result.stderr.strip() or "unknown error"
-        fail(f"fd failed while searching projects: {detail}")
+    try:
+        result = run_command(
+            fd_command(roots, markers, exclude, max_results),
+            "fd failed while searching projects",
+        )
+    except ToolError as error:
+        fail(str(error))
 
     return result.stdout.splitlines()
 
 
 def project_from_marker(path):
-    return os.path.dirname(path.rstrip(os.sep))
+    return str(Path(path.rstrip("/")).parent)
 
 
 def project_name(path):
-    return os.path.basename(path.rstrip(os.sep))
+    return Path(path.rstrip("/")).name
 
 
 def unique_paths(paths):
@@ -185,8 +189,8 @@ class Tool(PickOpenTool):
 
     def display_fields(self, item, config):
         return [
-            Field(project_name(item), STYLE_PRIMARY),
-            Field(compact_path(item), STYLE_SECONDARY),
+            self.primary(project_name(item)),
+            self.secondary(compact_path(item)),
         ]
 
     def completion_label(self, item, config):
@@ -213,4 +217,4 @@ class Tool(PickOpenTool):
         )
 
     def open_item(self, item, args, config):
-        return ShellAction.cd(item)
+        return self.cd(item)

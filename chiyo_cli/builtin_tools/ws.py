@@ -2,7 +2,7 @@
 
 from urllib.parse import quote
 
-from chiyo_cli.toolkit import Field, PickOpenTool, STYLE_PRIMARY, open_location
+from chiyo_cli.toolkit import PickOpenTool
 
 
 DEFAULT_ENGINES = {
@@ -96,8 +96,8 @@ class Tool(PickOpenTool):
 
     def display_fields(self, item, config):
         return [
-            Field(item["key"], STYLE_PRIMARY),
-            Field(item["name"]),
+            self.primary(item["key"]),
+            self.plain(item["name"]),
         ]
 
     def completion_items(self, config):
@@ -124,5 +124,4 @@ class Tool(PickOpenTool):
         return self.open_url(build_search_url(item, query))
 
     def open_url(self, url):
-        open_location(url)
-        return url
+        return self.open_location(url)

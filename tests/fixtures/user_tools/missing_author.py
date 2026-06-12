@@ -1,7 +1,7 @@
-from chiyo_cli.toolkit import Field, PickOpenTool, STYLE_PRIMARY
+from chiyo_cli.api import ChiyoTool
 
 
-class Tool(PickOpenTool):
+class Tool(ChiyoTool):
     name = "Missing Author"
     command = "missing-author"
     description = "Fixture tool with incomplete metadata."
@@ -11,7 +11,7 @@ class Tool(PickOpenTool):
         return [{"title": "Incomplete"}]
 
     def display_fields(self, item, config):
-        return [Field(item["title"], STYLE_PRIMARY)]
+        return [self.primary(item["title"])]
 
     def open_item(self, item, args, config):
         return item

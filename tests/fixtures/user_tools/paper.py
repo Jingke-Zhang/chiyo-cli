@@ -1,9 +1,7 @@
-from pathlib import Path
-
-from chiyo_cli.toolkit import Field, PickOpenTool, STYLE_PRIMARY, STYLE_SECONDARY
+from chiyo_cli.api import ChiyoTool
 
 
-class Tool(PickOpenTool):
+class Tool(ChiyoTool):
     name = "Paper Search"
     command = "paper"
     author = "Fixture Author"
@@ -18,13 +16,12 @@ class Tool(PickOpenTool):
     }
 
     def items(self, config):
-        root = Path(config["root"])
         return [
             {
                 "title": path.stem,
                 "path": str(path),
             }
-            for path in sorted(root.glob("*.pdf"))
+            for path in self.glob_paths(config["root"], "*.pdf")
         ]
 
     def match(self, item, query, config):
@@ -38,8 +35,8 @@ class Tool(PickOpenTool):
 
     def display_fields(self, item, config):
         return [
-            Field(item["title"], STYLE_PRIMARY),
-            Field(item["path"], STYLE_SECONDARY),
+            self.primary(item["title"]),
+            self.secondary(item["path"]),
         ]
 
     def completion_label(self, item, config):

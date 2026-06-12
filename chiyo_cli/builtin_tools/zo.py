@@ -2,9 +2,7 @@
 
 import json
 import os
-import shutil
 import sqlite3
-import subprocess
 import tempfile
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, unquote, urlparse
@@ -13,7 +11,7 @@ from urllib.request import urlopen
 from chiyo_cli.output import print_warning
 from chiyo_cli.paths import expand_path
 from chiyo_cli.tool_config import TOOLS_CONFIG_PATH
-from chiyo_cli.toolkit import Field, PickOpenTool, STYLE_PRIMARY, STYLE_SECONDARY
+from chiyo_cli.toolkit import PickOpenTool, ToolError, open_location as toolkit_open_location
 
 
 DEFAULT_CONFIG = {
@@ -389,19 +387,10 @@ def attachment_path(config, item):
 
 
 def open_location(location, fail):
-    if shutil.which("open") is None:
-        fail("macOS 'open' command is not available.")
-
-    result = subprocess.run(
-        ["open", expand_path(location)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        detail = result.stderr.strip() or "unknown error"
-        fail(f"could not open {location}: {detail}")
+    try:
+        toolkit_open_location(location)
+    except ToolError as error:
+        fail(str(error))
 
 
 class Tool(PickOpenTool):
@@ -465,9 +454,9 @@ class Tool(PickOpenTool):
 
     def display_fields(self, item, config):
         return [
-            Field(item_title(item), STYLE_PRIMARY),
-            Field(item.get("creators", ""), STYLE_SECONDARY),
-            Field(item_year(item)),
+            self.primary(item_title(item)),
+            self.secondary(item.get("creators", "")),
+            self.plain(item_year(item)),
         ]
 
     def completion_items(self, config):

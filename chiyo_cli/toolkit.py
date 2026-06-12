@@ -6,6 +6,8 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 from chiyo_cli.fzf import (
     Field,
@@ -14,7 +16,8 @@ from chiyo_cli.fzf import (
     STYLE_PLAIN,
     choose_item_from,
 )
-from chiyo_cli.paths import expand_path
+from chiyo_cli.output import print_warning
+from chiyo_cli.paths import absolute_path, compact_path, existing_dirs, expand_path
 
 
 COMMON_FLAGS = {
@@ -130,7 +133,7 @@ class PickOpenTool:
     def items(self, config):
         raise NotImplementedError
 
-    def match(self, item, query, config):
+    def match(self, item: Any, query: str, config: dict) -> bool:
         return True
 
     def sort_key(self, item, config):
@@ -154,6 +157,68 @@ class PickOpenTool:
     def fail(self, message, exit_code=1):
         print(f"{self.command}: {message}", file=sys.stderr)
         raise SystemExit(exit_code)
+
+    def warn(self, message):
+        print_warning(self.command, message)
+
+    def path(self, value):
+        return Path(expand_path(value))
+
+    def absolute_path(self, value):
+        return absolute_path(value)
+
+    def compact_path(self, value):
+        return compact_path(value)
+
+    def existing_dirs(self, paths, label="directory"):
+        return existing_dirs(paths, label, self.warn, self.fail)
+
+    def require_command(self, command):
+        try:
+            return require_command(command)
+        except ToolError as error:
+            self.fail(str(error))
+
+    def run_command(self, command, error_message):
+        try:
+            return run_command(command, error_message)
+        except ToolError as error:
+            self.fail(str(error))
+
+    def glob_paths(self, root, pattern):
+        return sorted(self.path(root).glob(pattern))
+
+    def field(self, value, style=STYLE_PLAIN):
+        return Field(str(value), style)
+
+    def primary(self, value):
+        return self.field(value, STYLE_PRIMARY)
+
+    def secondary(self, value):
+        return self.field(value, STYLE_SECONDARY)
+
+    def plain(self, value):
+        return self.field(value, STYLE_PLAIN)
+
+    def cd(self, path):
+        return ShellAction.cd(path)
+
+    def open(self, location):
+        return ShellAction.open(location)
+
+    def open_location(self, location):
+        open_location(location)
+        return location
+
+    def open_with_app(self, location, app):
+        open_with_app(location, app)
+        return location
+
+    def print(self, value):
+        return ShellAction.print(value)
+
+    def no_action(self):
+        return ShellAction.none()
 
     def prompt_value(self, config):
         return config.get("fzf_prompt") or self.prompt or f"{self.command}> "
@@ -264,11 +329,24 @@ class PickOpenTool:
 
 
 def open_location(location):
+    _run_open_command([expand_path(location)], str(location))
+
+
+def open_with_app(location, app):
+    arguments = ["-a", str(app)]
+
+    if location:
+        arguments.append(expand_path(location))
+
+    _run_open_command(arguments, str(location or app))
+
+
+def _run_open_command(arguments, location_label):
     if shutil.which("open") is None:
         raise ToolError("macOS 'open' command is not available.")
 
     result = subprocess.run(
-        ["open", expand_path(location)],
+        ["open", *arguments],
         capture_output=True,
         text=True,
         check=False,
@@ -276,7 +354,32 @@ def open_location(location):
 
     if result.returncode != 0:
         detail = result.stderr.strip() or "unknown error"
-        raise ToolError(f"could not open {location}: {detail}")
+        raise ToolError(f"could not open {location_label}: {detail}")
+
+
+def require_command(command):
+    path = shutil.which(command)
+
+    if path is None:
+        raise ToolError(f"{command} is not installed or not in PATH.")
+
+    return path
+
+
+def run_command(command, error_message):
+    require_command(command[0])
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        detail = result.stderr.strip() or "unknown error"
+        raise ToolError(f"{error_message}: {detail}")
+
+    return result
 
 
 __all__ = [
@@ -289,7 +392,14 @@ __all__ = [
     "STYLE_SECONDARY",
     "ToolFlagError",
     "ToolError",
+    "absolute_path",
+    "compact_path",
+    "existing_dirs",
+    "expand_path",
     "open_location",
+    "open_with_app",
+    "require_command",
+    "run_command",
     "tool_argument_flags",
     "validate_tool_flags",
 ]

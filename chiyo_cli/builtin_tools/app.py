@@ -1,12 +1,14 @@
 """Framework-backed app built-in."""
 
-import os
-import shutil
-import subprocess
-import sys
+from pathlib import Path
 
-from chiyo_cli.fzf import STYLE_PRIMARY, STYLE_SECONDARY
-from chiyo_cli.toolkit import Field, PickOpenTool
+from chiyo_cli.toolkit import (
+    PickOpenTool,
+    ToolError,
+    open_location,
+    open_with_app,
+    run_command,
+)
 
 
 DEFAULT_CONFIG = {
@@ -16,7 +18,7 @@ DEFAULT_CONFIG = {
 
 
 def app_name_from_path(path):
-    name = os.path.basename(path)
+    name = Path(path).name
 
     if name.endswith(".app"):
         name = name[:-4]
@@ -25,19 +27,14 @@ def app_name_from_path(path):
 
 
 def discover_apps(fail):
-    if shutil.which("mdfind") is None:
-        fail("macOS 'mdfind' command is not available.")
-
-    result = subprocess.run(
-        ["mdfind", 'kMDItemContentType == "com.apple.application-bundle"'],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        detail = result.stderr.strip() or "unknown error"
-        fail(f"could not discover applications: {detail}")
+    try:
+        result = run_command(
+            ["mdfind", 'kMDItemContentType == "com.apple.application-bundle"'],
+            "could not discover applications",
+        )
+    except ToolError as error:
+        fail(str(error))
+        raise
 
     apps = []
     seen_paths = set()
@@ -78,24 +75,13 @@ def alias_for_app(name, aliases):
 
 
 def open_app(app, fail):
-    if shutil.which("open") is None:
-        fail("macOS 'open' command is not available.")
-
-    if app.get("path"):
-        command = ["open", app["path"]]
-    else:
-        command = ["open", "-a", app["name"]]
-
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        detail = result.stderr.strip() or "unknown error"
-        fail(f"could not open application '{app['name']}': {detail}")
+    try:
+        if app.get("path"):
+            open_location(app["path"])
+        else:
+            open_with_app("", app["name"])
+    except ToolError as error:
+        fail(f"could not open application '{app['name']}': {error}")
 
 
 class Tool(PickOpenTool):
@@ -121,6 +107,7 @@ class Tool(PickOpenTool):
         )
 
     def items(self, config):
+        _ = config
         return discover_apps(self.fail)
 
     def match(self, item, query, config):
@@ -138,27 +125,28 @@ class Tool(PickOpenTool):
         alias = alias_for_app(item["name"], config.get("alias", {}))
 
         if alias:
-            name_style = ""
-            alias_style = STYLE_PRIMARY
+            name_field = self.plain(item["name"])
+            alias_field = self.primary(alias)
         else:
-            name_style = STYLE_PRIMARY
-            alias_style = ""
+            name_field = self.primary(item["name"])
+            alias_field = self.plain(alias)
 
         return [
-            Field(item["name"], name_style),
-            Field(alias, alias_style),
-            Field(item["path"], STYLE_SECONDARY),
+            name_field,
+            alias_field,
+            self.secondary(item["path"]),
         ]
 
     def completion_items(self, config):
         return self.items(config)
 
     def completion_label(self, item, config):
+        _ = config
         return item["name"]
 
-    def run(self, argv=None, config=None):
+    def run(self, argv=None, config=None, execute_shell_actions=True):
         config = dict(self.default_config if config is None else config)
-        args = self.parser().parse_args(argv if argv is not None else sys.argv[1:])
+        args = self.parser().parse_args(argv)
 
         if args.list_completions:
             self.print_completions(config)
@@ -171,9 +159,15 @@ class Tool(PickOpenTool):
             selected = {"name": alias_target, "path": None}
             return self.open_item(selected, args, config)
 
-        return super().run(argv=argv, config=config)
+        return super().run(
+            argv=argv,
+            config=config,
+            execute_shell_actions=execute_shell_actions,
+        )
 
     def open_item(self, item, args, config):
+        _ = config
+
         if args.print_name:
             print(item["name"])
             return item["name"]
