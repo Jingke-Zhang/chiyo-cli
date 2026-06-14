@@ -101,7 +101,12 @@ def parse_args(argv):
         "install",
         help="Install a direct wrapper for a discoverable tool.",
     )
-    install_parser.add_argument("tool", help="Tool command to install.")
+    install_parser.add_argument(
+        "tools",
+        nargs="+",
+        metavar="TOOL",
+        help="Tool commands to install.",
+    )
 
     uninstall_parser = subparsers.add_parser(
         "uninstall",
@@ -1179,8 +1184,7 @@ def assert_install_targets_are_safe(tool_command, config):
         raise ToolCommandError(f"refusing to replace existing file: {completion}")
 
 
-def install_tool_lines(tool_command):
-    config = chiyo_config()
+def resolve_install_target(tool_command):
     resolved = resolve_tool_command(tool_command, enabled_only=False)
     metadata = None if resolved is None else resolved[0]
 
@@ -1188,8 +1192,10 @@ def install_tool_lines(tool_command):
         raise ToolCommandError(f"unknown tool: {tool_command}")
 
     install_command = metadata.cmd if "/" in tool_command else tool_command
-    assert_install_targets_are_safe(install_command, config)
+    return metadata, install_command
 
+
+def install_resolved_tool_lines(metadata, install_command, config):
     if metadata.cmd in SHELL_TOOLS:
         installed_shell = write_shell_artifact(shell_path(install_command, config), install_command)
         installed_completion = write_completion(completion_path(install_command, config), install_command)
@@ -1212,6 +1218,33 @@ def install_tool_lines(tool_command):
 
     if metadata.key not in enabled_tool_keys(config):
         lines.append(f"warn    {metadata.key} installed but disabled for chiyo run")
+
+    return lines
+
+
+def install_tool_lines(tool_command):
+    config = chiyo_config()
+    metadata, install_command = resolve_install_target(tool_command)
+    assert_install_targets_are_safe(install_command, config)
+    return install_resolved_tool_lines(metadata, install_command, config)
+
+
+def install_tools_lines(tool_commands):
+    config = chiyo_config()
+    targets = [resolve_install_target(tool_command) for tool_command in tool_commands]
+    seen = set()
+
+    for _metadata, install_command in targets:
+        if install_command in seen:
+            raise ToolCommandError(f"duplicate install target: {install_command}")
+
+        seen.add(install_command)
+        assert_install_targets_are_safe(install_command, config)
+
+    lines = []
+
+    for metadata, install_command in targets:
+        lines.extend(install_resolved_tool_lines(metadata, install_command, config))
 
     return lines
 
@@ -1382,7 +1415,7 @@ def main(argv=None):
 
     if args.command == "install":
         try:
-            print_tool_lines(install_tool_lines(args.tool))
+            print_tool_lines(install_tools_lines(args.tools))
         except ToolCommandError as error:
             print(f"chiyo install: {error}", file=sys.stderr)
             sys.exit(1)

@@ -4,7 +4,7 @@ Chiyo CLI uses development installation during the v0.x series.
 
 The repository remains the source of truth. `install.sh` only bootstraps the
 `chiyo` command into `~/.local/bin`. Tool wrappers, zsh completions, and shell
-functions are installed later through `chiyo install TOOL`.
+functions are installed later through `chiyo install TOOLS...`.
 
 ## Install
 
@@ -41,10 +41,7 @@ chiyo
 Tool installation is delegated to Chiyo:
 
 ```sh
-chiyo install s
-chiyo install ws
-chiyo install gop
-chiyo install proj
+chiyo install s ws gop proj
 ```
 
 For ordinary tools, `chiyo install TOOL` creates a direct wrapper and generated

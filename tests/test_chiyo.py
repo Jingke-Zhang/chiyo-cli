@@ -997,6 +997,66 @@ class ChiyoTests(unittest.TestCase):
             self.assertFalse((wrapper_dir / "gop-select").exists())
             self.assertFalse(wrapper.exists())
 
+    def test_install_tools_lines_installs_multiple_tools(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            completion_dir = Path(temp_dir) / "zsh"
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        "enabled_tools = ["
+                        '"jingke-zhang/application", '
+                        '"jingke-zhang/zotero", '
+                        '"jingke-zhang/web-search", '
+                        '"jingke-zhang/workspace"'
+                        "]",
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.install_tools_lines(["app", "zo", "s", "ws"])
+
+            for command in ["app", "zo", "s", "ws"]:
+                wrapper = wrapper_dir / command
+                completion = completion_dir / f"_{command}"
+                self.assertIn(f"installed {command}: {wrapper}", lines)
+                self.assertIn(f"installed _{command}: {completion}", lines)
+                self.assertEqual(
+                    wrapper.read_text(encoding="utf-8"),
+                    CHIYO.wrapper_script(command),
+                )
+                self.assertEqual(
+                    completion.read_text(encoding="utf-8"),
+                    CHIYO.completion_script(command),
+                )
+
+    def test_install_tools_lines_rejects_duplicate_install_targets(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        'enabled_tools = ["jingke-zhang/application"]',
+                        f'wrapper_dir = "{temp_dir}/bin"',
+                        f'completion_dir = "{temp_dir}/zsh"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with self.assertRaisesRegex(CHIYO.ToolCommandError, "duplicate install target: app"):
+                    CHIYO.install_tools_lines(["app", "jingke-zhang/application"])
+
     def test_install_tool_warns_when_tool_is_disabled(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             wrapper_dir = Path(temp_dir) / "bin"

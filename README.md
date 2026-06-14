@@ -85,7 +85,7 @@ for behavior, design, and maintainability stays with me.
 
 Chiyo CLI currently uses development installation. `install.sh` only bootstraps
 the `chiyo` command into `~/.local/bin`; tools, completions, and shell functions
-are installed later through `chiyo install TOOL`.
+are installed later through `chiyo install TOOLS...`.
 
 ```sh
 ./install.sh
@@ -107,9 +107,7 @@ Initialize config and install tools as needed:
 
 ```sh
 chiyo config init --all --append
-chiyo install s
-chiyo install ws
-chiyo install gop
+chiyo install s ws gop
 ```
 
 Check local setup:
@@ -118,7 +116,7 @@ Check local setup:
 chiyo doctor
 ```
 
-The zsh integration loads shell functions installed by `chiyo install TOOL` and
+The zsh integration loads shell functions installed by `chiyo install TOOLS...` and
 registers zsh completions. It does not manage `PATH`; keep that in your shell
 config.
 

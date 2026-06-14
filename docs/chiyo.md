@@ -11,8 +11,7 @@ chiyo tool list
 chiyo run s gh chiyo-cli
 chiyo run ws cli-tools
 chiyo shell gop docs
-chiyo install s
-chiyo install ws
+chiyo install s ws
 chiyo doc s
 chiyo doctor
 ```
@@ -25,7 +24,7 @@ chiyo doctor
   `chiyo run`
 - `run TOOL`: run an enabled tool through the framework
 - `shell TOOL`: run an enabled shell-action tool and print shell-safe code
-- `install TOOL`: install a generated wrapper or shell function plus completion
+- `install TOOLS...`: install generated wrappers or shell functions plus completions
 - `doc TOOL`: print docs embedded in the tool module
 - `doctor`: check common dependencies and setup paths
 
