@@ -38,7 +38,8 @@ chiyo doc bm
 Default generated config:
 
 ```toml
-[bm]
+["chiyo/bm"]
+cmds = ["bm"]
 bookmarks_path = "~/Library/Safari/Bookmarks.plist"
 skip_folders = ["Bookmarks", "BookmarksMenu", "Tab Group Favorites", "com.apple.ReadingList", "Reading List"]
 fzf_prompt = "bm> "
@@ -49,12 +50,12 @@ Optional folder renaming can be added manually when you want shorter display
 paths:
 
 ```toml
-[bm.rename_folders]
+["chiyo/bm".rename_folders]
 BookmarksBar = "Personal"
 Favorites = "Personal"
 ```
 
-Bookmark source override can be edited in the existing `[bm]` table:
+Bookmark source override can be edited in the existing `["chiyo/bm"]` table:
 
 ```toml
 bookmarks_path = "~/path/to/compatible/Bookmarks.plist"
@@ -67,6 +68,6 @@ Folder skip and rename rules are applied before candidates are printed.
 
 ## Framework Entry
 
-`bm` is a framework-backed built-in. `chiyo run bm ...` reads `[bm]` from
+`bm` is a framework-backed built-in. `chiyo run bm ...` reads `["chiyo/bm"]` from
 `tools.toml`; `chiyo install bm` creates an optional direct wrapper and
 completion.

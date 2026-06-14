@@ -110,8 +110,9 @@ from chiyo_cli.toolkit import Field, PickOpenTool, STYLE_PRIMARY, STYLE_SECONDAR
 
 class Tool(PickOpenTool):
     name = "Paper Search"
-    command = "paper"
+    cmd = "paper"
     author = "jingke"
+    author_id = "jingke"
     description = "Search local papers and open PDFs."
     prompt = "paper> "
     docs = """
@@ -150,8 +151,9 @@ It provides default behavior for the common search-pick-open workflow:
 ```python
 class PickOpenTool:
     name = None
-    command = None
     author = None
+    author_id = None
+    cmd = None
     description = None
     prompt = None
     docs = ""
@@ -197,8 +199,9 @@ The base runner handles:
 The loader validates required metadata:
 
 - `name`
-- `command`
 - `author`
+- `author_id`
+- `cmd`
 - `description`
 - `docs`
 
@@ -206,7 +209,8 @@ Before installation, discovery views show compact metadata:
 
 - `name`
 - `author`
-- `command`
+- `author_id/cmd`
+- configured `cmds`
 - `description`
 
 Full docs are hidden by default and shown only when requested, for
@@ -363,8 +367,8 @@ disabled tool. Disabled status should not block wrapper generation. The warning
 should be simple:
 
 ```text
-warn    paper installed but disabled for chiyo run
-todo    add "paper" to [chiyo].enabled_tools in ~/.config/chiyo-cli/config.toml
+warn    fixture/paper installed but disabled for chiyo run
+todo    add "fixture/paper" to [chiyo].enabled_tools in ~/.config/chiyo-cli/config.toml
 ```
 
 ### Wrapper vs Symlink
@@ -434,16 +438,18 @@ For `chiyo run <tool>`, shell completion should complete enabled tool commands.
 ## Documentation Model
 
 User tool docs should live in the Python file, not in a separate Markdown file.
-Each tool must provide `name`, `command`, `author`, `description`, and `docs`.
-Docs should support Markdown.
+Each tool must provide `name`, `cmd`, `author`, `author_id`, `description`,
+and `docs`. `cmd` is the tool's default command, while `author_id/cmd` is the
+stable identity used in config. Docs should support Markdown.
 
 Example:
 
 ```python
 class Tool(PickOpenTool):
     name = "Paper Search"
-    command = "paper"
+    cmd = "paper"
     author = "jingke"
+    author_id = "jingke"
     description = "Search local papers and open PDFs."
     docs = """
     # paper
@@ -499,7 +505,7 @@ Example:
 ```toml
 [chiyo]
 tool_dirs = ["~/.config/chiyo-cli/tools"]
-enabled_tools = ["app", "bm", "paper", "zo"]
+enabled_tools = ["chiyo/app", "chiyo/bm", "jingke/paper", "chiyo/zo"]
 wrapper_dir = "~/.local/bin"
 completion_dir = "~/.local/share/zsh/site-functions"
 ```
@@ -512,15 +518,17 @@ tools.
 Example:
 
 ```toml
-[paper]
+["jingke/paper"]
+cmds = ["paper"]
 root = "~/Papers"
 fzf_prompt = "paper> "
 
-[zo]
+["chiyo/zo"]
+cmds = ["zo"]
 source = "sqlite"
 zotero_data_dir = "~/Zotero"
 
-[app.alias]
+["chiyo/app".alias]
 browser = "Safari"
 editor = "Emacs"
 ```
@@ -536,13 +544,13 @@ migration command. `config.toml` contains Chiyo infrastructure settings and
 There are two possible states:
 
 - discoverable: a tool file exists in a configured tool directory
-- enabled: the tool command appears in `enabled_tools`
+- enabled: the tool identity appears in `enabled_tools`
 
 The recommended behavior:
 
 - A file in `~/.config/chiyo-cli/tools/paper.py` is discoverable.
-- `chiyo tool list` shows discoverable tools, enabled status, `name`, `author`,
-  `command`, and `description`.
+- `chiyo tool list` shows discoverable tools, enabled status, `author_id/cmd`,
+  configured commands, `name`, `author`, and `description`.
 - `chiyo tool list --docs` may include full docs, but docs should be hidden by
   default because normal discovery should stay compact.
 - `chiyo run paper` only works if `paper` is enabled.
@@ -735,8 +743,8 @@ Security principles:
 - Loading a user tool means executing trusted code.
 - Community-shared tools should be reviewed before enabling or installing.
 - `chiyo tool list` may read required metadata by importing the tool file in a
-  small helper process and returning `name`, `command`, `author`, `description`,
-  and optionally `docs`.
+  small helper process and returning `name`, `cmd`, `author`, `author_id`,
+  `description`, and optionally `docs`.
 - Metadata does not need a separate database. The Python file remains the source
   of truth.
 - `chiyo install` should show the tool path and name before installing wrappers.
@@ -798,8 +806,9 @@ from chiyo_cli.toolkit import Field, PickOpenTool, STYLE_PRIMARY, STYLE_SECONDAR
 
 class Tool(PickOpenTool):
     name = "Paper Search"
-    command = "paper"
+    cmd = "paper"
     author = "jingke"
+    author_id = "jingke"
     description = "Search local papers and open PDFs."
     prompt = "paper> "
     docs = """
@@ -870,11 +879,11 @@ Resolved design choices:
 - Disabled tools should not run through `chiyo run`.
 - `chiyo` with no arguments should execute the selected tool directly after the
   tool is selected in `fzf`.
-- Tool metadata must include `name`, `command`, `author`, `description`, and
-  `docs`.
+- Tool metadata must include `name`, `cmd`, `author`, `author_id`,
+  `description`, and `docs`.
 - Before installation, default discovery output should show only `name`,
-  `author`, `command`, and `description`; docs should require a flag or
-  `chiyo doc TOOL`.
+  `author`, `author_id/cmd`, configured commands, and `description`; docs
+  should require a flag or `chiyo doc TOOL`.
 - `description` should be limited to 80 characters.
 - Required metadata may be read by importing the tool file in a small helper
   process; no metadata database is needed.
@@ -888,6 +897,10 @@ Resolved design choices:
   version.
 - Tool commands must match `^[a-z][a-z0-9-]*$` so generated wrappers, zsh
   functions, and completions remain safe and predictable.
+- Tool config sections use `author_id/cmd`. The optional `cmds` list in
+  `tools.toml` defines every command alias that can run or install the tool.
+- Enabled tools must not claim the same configured command. Duplicate commands
+  are reported as errors and are not dispatched.
 - Tool-specific flags must not conflict with common framework flags such as
   `--help`, `--confirm`, and `--list-completions`.
 
@@ -913,8 +926,9 @@ modules and tests are shaped the way they are.
    - `tools.toml` for built-in and user tool settings
 4. Add metadata loading and validation:
    - required `name`
-   - required `command`
+   - required `cmd`
    - required `author`
+   - required `author_id`
    - required `description`
    - required `docs`
    - 80-character `description` limit
@@ -922,10 +936,11 @@ modules and tests are shaped the way they are.
 6. Add enable/disable support:
    - `chiyo tool enable TOOL`
    - `chiyo tool disable TOOL`
-   - enabled tools stored in `[chiyo].enabled_tools`
+   - enabled tools stored in `[chiyo].enabled_tools` as `author_id/cmd`
 7. Add `chiyo tool list`:
    - show enabled status
-   - show `name`, `author`, `command`, and `description`
+   - show `name`, `author`, `author_id/cmd`, configured commands, and
+     `description`
    - hide docs by default
    - optionally show docs with a flag
 8. Add `chiyo doc TOOL`.

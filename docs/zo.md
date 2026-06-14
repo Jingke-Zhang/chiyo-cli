@@ -56,7 +56,8 @@ temporary copy of `zotero.sqlite` and reads that copy only.
 Default generated config:
 
 ```toml
-[zo]
+["chiyo/zo"]
+cmds = ["zo"]
 local_api_url = "http://localhost:23119/api/"
 zotero_data_dir = "~/Zotero"
 fzf_prompt = "zo> "
@@ -72,6 +73,6 @@ uses the same data source selection as normal search.
 
 ## Framework Entry
 
-`zo` is a framework-backed built-in tool. `chiyo run zo ...` reads `[zo]` from
+`zo` is a framework-backed built-in tool. `chiyo run zo ...` reads `["chiyo/zo"]` from
 `tools.toml`; `chiyo install zo` creates an optional direct wrapper and
 completion.

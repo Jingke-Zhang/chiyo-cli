@@ -29,7 +29,8 @@ chiyo doc proj
 Default generated config:
 
 ```toml
-[proj]
+["chiyo/proj"]
+cmds = ["proj"]
 roots = ["~/Documents", "~/Projects", "~/Developer"]
 markers = [".project", ".git"]
 exclude = ["node_modules", "Library", ".cache"]
@@ -53,5 +54,5 @@ prints one project name per line.
 
 ## Framework Entry
 
-`proj` is a framework-backed built-in. `chiyo shell proj ...` reads `[proj]`
+`proj` is a framework-backed built-in. `chiyo shell proj ...` reads `["chiyo/proj"]`
 from `tools.toml` and prints shell-safe `cd ...` code for shell integration.

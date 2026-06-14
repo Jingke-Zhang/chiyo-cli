@@ -30,8 +30,8 @@ chiyo doctor
 `config init` requires either `--all` or at least one target name. `chiyo`
 writes infrastructure defaults to `~/.config/chiyo-cli/config.toml`; tool names
 write tool defaults to `~/.config/chiyo-cli/tools.toml`. `--all` initializes
-Chiyo plus the currently enabled tools. Fresh config enables `gop` and `ws` by
-default.
+Chiyo plus the currently enabled tools. Fresh config enables `chiyo/gop` and
+`chiyo/ws` by default.
 
 Its write modes are:
 

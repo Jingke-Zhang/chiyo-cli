@@ -32,16 +32,17 @@ chiyo doc app
 Default generated config:
 
 ```toml
-[app]
+["chiyo/app"]
+cmds = ["app"]
 fzf_prompt = "app> "
 
-[app.alias]
+["chiyo/app".alias]
 ```
 
 Optional aliases can be added manually:
 
 ```toml
-[app.alias]
+["chiyo/app".alias]
 browser = "Safari"
 editor = "Emacs"
 terminal = "Ghostty"
@@ -58,6 +59,6 @@ are picked up without editing completion scripts.
 
 ## Framework Entry
 
-`app` is a framework-backed built-in tool. `chiyo run app ...` reads `[app]`
+`app` is a framework-backed built-in tool. `chiyo run app ...` reads `["chiyo/app"]`
 from `tools.toml`; `chiyo install app` creates an optional direct wrapper and
 completion.

@@ -181,8 +181,8 @@ Chiyo uses two config files:
 ```
 
 `config.toml` stores Chiyo infrastructure settings, such as enabled tools.
-`tools.toml` stores tool-specific settings. For example, `bm` uses `[bm]` in
-`tools.toml`.
+`tools.toml` stores tool-specific settings. Tool sections use the stable
+`author_id/cmd` identity, for example `["chiyo/bm"]`.
 
 Use `chiyo config init` to write explicit default config:
 
@@ -199,7 +199,10 @@ existing sections without replacing user values. Use `--force` to replace
 selected sections.
 
 `chiyo config init --all` initializes Chiyo plus the currently enabled tools.
-Fresh config enables `gop` and `ws` by default.
+Fresh config enables `chiyo/gop` and `chiyo/ws` by default. A tool section can
+set `cmds = ["bm", "bookmarks"]`; any configured command in that list can be
+used with `chiyo run` or installed as a wrapper, as long as no enabled tool
+claims the same command.
 
 Generated config is meant to be edited. If a command table exists, Chiyo treats
 it as explicit user config: missing keys fall back to code defaults with a

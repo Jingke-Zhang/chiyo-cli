@@ -16,6 +16,8 @@
   from hidden filter rows for future tools and plugin-style extensions.
 - Changed `chiyo config init --append` to fill missing default keys in existing
   tool sections without replacing user values.
+- Changed tool identity to `author_id/cmd`, added configurable `cmds` aliases,
+  and blocks enabled tools that claim duplicate commands.
 
 ## v0.1.2
 

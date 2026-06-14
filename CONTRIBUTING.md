@@ -47,6 +47,9 @@ New tools should stay small and follow the existing shape:
 - Keep Chiyo infrastructure configuration in
   `~/.config/chiyo-cli/config.toml`, and tool-specific configuration in
   `~/.config/chiyo-cli/tools.toml`.
+- Define `author`, `author_id`, `name`, and exactly one default `cmd`.
+  `author_id` is the stable namespace used in config keys, so a GitHub handle
+  is a good choice for shared tools.
 - Expose `--list-completions` when dynamic shell completion is useful.
 
 Prefer readable standard-library Python and small shell integrations over larger
@@ -74,8 +77,8 @@ class; helper modules can be imported relatively:
 Shared helpers live under `chiyo_cli/`. New tools should use these before adding
 tool-local parsing, formatting, or setup code:
 
-- `chiyo_cli.config.load_module_config`: load one `[tool]` table with defaults
-  and optional missing-key warnings.
+- `chiyo_cli.config.load_module_config`: load one tool table with defaults and
+  optional missing-key warnings.
 - `chiyo_cli.config.init_module_config`: write or replace one tool's default
   config without deleting other tools' tables.
 - `chiyo_cli.config.format_module_config`: render simple default config for
