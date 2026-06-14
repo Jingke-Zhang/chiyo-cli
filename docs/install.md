@@ -77,7 +77,7 @@ chiyo config init --all --append
 
 Uninstall removes only the `chiyo` bootstrap symlink when it points back to the
 current repository. Tool wrappers, completions, and shell functions are managed
-with `chiyo uninstall TOOL`.
+with `chiyo uninstall TOOLS...`.
 
 ## Repository Moves
 

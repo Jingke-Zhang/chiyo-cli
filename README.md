@@ -206,6 +206,8 @@ Fresh config enables `jingke-zhang/go-or-pick` and `jingke-zhang/web-search` by 
 set `cmds = ["bm", "bookmarks"]`; any configured command in that list can be
 used with `chiyo run` or installed as a wrapper, as long as no enabled tool
 claims the same command.
+Configured commands must match `^[a-z][a-z0-9-]*$`; invalid entries are reported
+by `chiyo tool list` and `chiyo doctor`.
 
 Generated config is meant to be edited. If a command table exists, Chiyo treats
 it as explicit user config: missing keys fall back to code defaults with a

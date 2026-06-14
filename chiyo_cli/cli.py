@@ -98,7 +98,12 @@ def parse_args(argv):
         "uninstall",
         help="Uninstall a direct wrapper for a discoverable tool.",
     )
-    uninstall_parser.add_argument("tool", help="Tool command to uninstall.")
+    uninstall_parser.add_argument(
+        "tools",
+        nargs="+",
+        metavar="TOOL",
+        help="Tool commands to uninstall.",
+    )
 
     config_parser = subparsers.add_parser(
         "config",
@@ -757,7 +762,11 @@ def user_tool_doctor_checks():
     config = chiyo_config()
     discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
     tools_by_key = {tool.key: tool for tool in discovery.tools}
-    cmd_index, duplicate_cmds = tool_command_index(discovery.tools, config, enabled_only=True)
+    cmd_index, duplicate_cmds, cmd_issues = tool_command_index(
+        discovery.tools,
+        config,
+        enabled_only=True,
+    )
     checks = []
 
     for error in discovery.errors:
@@ -775,6 +784,9 @@ def user_tool_doctor_checks():
     for cmd in sorted(duplicate_cmds):
         owners = ", ".join(tool.key for tool in cmd_index[cmd])
         checks.append(("warn", f"duplicate cmd: {owners}", f"user tool {cmd}"))
+
+    for issue in cmd_issues:
+        checks.append(("warn", issue.message, f"user tool {issue.tool_key} {issue.cmd}"))
 
     for tool in discovery.tools:
         wrapper = os.path.expanduser(wrapper_path(tool.cmd, config))
@@ -896,7 +908,12 @@ def tool_list_lines(include_docs=False):
     config = load_chiyo_config(config_path=CONFIG_PATH)
     enabled_tools = enabled_tool_keys(config)
     discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
-    cmd_index, duplicate_cmds = tool_command_index(discovery.tools, config, enabled_only=True)
+    cmd_index, duplicate_cmds, _enabled_cmd_issues = tool_command_index(
+        discovery.tools,
+        config,
+        enabled_only=True,
+    )
+    cmd_issues = configured_cmd_issues(discovery.tools)
     lines = []
 
     for tool in discovery.tools:
@@ -920,6 +937,11 @@ def tool_list_lines(include_docs=False):
     for cmd in sorted(duplicate_cmds):
         owners = ", ".join(tool.key for tool in cmd_index[cmd])
         lines.append(f"error    duplicate cmd {cmd}: {owners}")
+
+    for issue in cmd_issues:
+        lines.append(
+            f"error    invalid cmd {issue.cmd}: {issue.tool_key}: {issue.message}"
+        )
 
     if not lines:
         lines.append("no tools found")
@@ -958,6 +980,12 @@ def tool_command_index(tools, config, enabled_only=True):
         enabled_only=enabled_only,
         tools_config_path=TOOLS_CONFIG_PATH,
     )
+
+
+def configured_cmd_issues(tools):
+    from chiyo_cli.tool_resolver import configured_cmd_issues as resolver_configured_cmd_issues
+
+    return resolver_configured_cmd_issues(tools, config_path=TOOLS_CONFIG_PATH)
 
 
 def duplicate_cmd_message(index, duplicates):
@@ -1278,6 +1306,29 @@ def uninstall_tool_lines(tool_command):
     return lines
 
 
+def uninstall_tools_lines(tool_commands):
+    targets = []
+    seen = set()
+
+    for tool_command in tool_commands:
+        resolved = resolve_tool_command(tool_command, enabled_only=False)
+        metadata = None if resolved is None else resolved[0]
+        uninstall_command = metadata.cmd if metadata is not None and "/" in tool_command else tool_command
+
+        if uninstall_command in seen:
+            raise ToolCommandError(f"duplicate uninstall target: {uninstall_command}")
+
+        seen.add(uninstall_command)
+        targets.append(tool_command)
+
+    lines = []
+
+    for tool_command in targets:
+        lines.extend(uninstall_tool_lines(tool_command))
+
+    return lines
+
+
 def run_tool(tool_command, tool_args, execute_shell_actions=True):
     from chiyo_cli.tool_config import load_tool_config, tool_config_defaults
     from chiyo_cli.tool_loader import load_tool_class
@@ -1394,7 +1445,7 @@ def main(argv=None):
 
     if args.command == "uninstall":
         try:
-            print_tool_lines(uninstall_tool_lines(args.tool))
+            print_tool_lines(uninstall_tools_lines(args.tools))
         except ToolCommandError as error:
             print(f"chiyo uninstall: {error}", file=sys.stderr)
             sys.exit(1)

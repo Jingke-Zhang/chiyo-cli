@@ -406,6 +406,41 @@ class ChiyoTests(unittest.TestCase):
 
         self.assertIn("# Paper Search", "\n".join(lines))
 
+    def test_tool_list_reports_invalid_configured_cmds(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["fixture/paper-search"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                "\n".join(
+                    [
+                        '["fixture/paper-search"]',
+                        'cmds = ["paper", "Bad Cmd"]',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    lines = CHIYO.tool_list_lines()
+
+        self.assertIn(
+            "error    invalid cmd Bad Cmd: fixture/paper-search: cmd must match",
+            "\n".join(lines),
+        )
+
     def test_tool_doc_lines_returns_docs_for_discoverable_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
@@ -581,6 +616,37 @@ class ChiyoTests(unittest.TestCase):
 
                     with self.assertRaisesRegex(CHIYO.ToolCommandError, "duplicate cmd paper"):
                         CHIYO.run_tool("fixture/paper-search", [])
+
+    def test_run_tool_rejects_invalid_configured_cmd(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["fixture/paper-search"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                "\n".join(
+                    [
+                        '["fixture/paper-search"]',
+                        'cmds = ["paper", "Bad Cmd"]',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with self.assertRaisesRegex(CHIYO.ToolCommandError, "invalid cmd"):
+                        CHIYO.run_tool("paper", [])
 
     def test_run_tool_rejects_disabled_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1107,6 +1173,37 @@ class ChiyoTests(unittest.TestCase):
                 with self.assertRaisesRegex(CHIYO.ToolCommandError, "duplicate install target: app"):
                     CHIYO.install_tools_lines(["app", "jingke-zhang/application"])
 
+    def test_install_tool_rejects_invalid_configured_cmd(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = []',
+                        f'wrapper_dir = "{temp_dir}/bin"',
+                        f'completion_dir = "{temp_dir}/zsh"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                "\n".join(
+                    [
+                        '["fixture/paper-search"]',
+                        'cmds = ["paper", "Bad Cmd"]',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with self.assertRaisesRegex(CHIYO.ToolCommandError, "invalid cmd"):
+                        CHIYO.install_tool_lines("paper")
+
     def test_install_tool_warns_when_tool_is_disabled(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             wrapper_dir = Path(temp_dir) / "bin"
@@ -1213,6 +1310,52 @@ class ChiyoTests(unittest.TestCase):
         )
         self.assertFalse(wrapper.exists())
         self.assertFalse(completion.exists())
+
+    def test_uninstall_tools_lines_removes_multiple_generated_wrappers(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            wrapper_dir.mkdir()
+            completion_dir = Path(temp_dir) / "zsh"
+            completion_dir.mkdir()
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        'enabled_tools = ["jingke-zhang/application", "jingke-zhang/zotero"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            for command in ["app", "zo"]:
+                (wrapper_dir / command).write_text(
+                    CHIYO.wrapper_script(command),
+                    encoding="utf-8",
+                )
+                (completion_dir / f"_{command}").write_text(
+                    CHIYO.completion_script(command),
+                    encoding="utf-8",
+                )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.uninstall_tools_lines(["app", "zo"])
+
+        self.assertIn(f"uninstalled app: {wrapper_dir / 'app'}", lines)
+        self.assertIn(f"uninstalled _app: {completion_dir / '_app'}", lines)
+        self.assertIn(f"uninstalled zo: {wrapper_dir / 'zo'}", lines)
+        self.assertIn(f"uninstalled _zo: {completion_dir / '_zo'}", lines)
+        self.assertFalse((wrapper_dir / "app").exists())
+        self.assertFalse((completion_dir / "_app").exists())
+        self.assertFalse((wrapper_dir / "zo").exists())
+        self.assertFalse((completion_dir / "_zo").exists())
+
+    def test_uninstall_tools_lines_rejects_duplicate_targets(self):
+        with self.assertRaisesRegex(CHIYO.ToolCommandError, "duplicate uninstall target: app"):
+            CHIYO.uninstall_tools_lines(["app", "jingke-zhang/application"])
 
     def test_uninstall_shell_tool_removes_generated_artifacts(self):
         with tempfile.TemporaryDirectory() as temp_dir:

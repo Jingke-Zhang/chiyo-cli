@@ -12,6 +12,7 @@ chiyo run s gh chiyo-cli
 chiyo run ws cli-tools
 chiyo shell gop docs
 chiyo install s ws
+chiyo uninstall s ws
 chiyo doc s
 chiyo doctor
 ```
@@ -25,6 +26,7 @@ chiyo doctor
 - `run TOOL`: run an enabled tool through the framework
 - `shell TOOL`: run an enabled shell-action tool and print shell-safe code
 - `install TOOLS...`: install generated wrappers or shell functions plus completions
+- `uninstall TOOLS...`: uninstall generated wrappers or shell functions plus completions
 - `doc TOOL`: print docs embedded in the tool module
 - `doctor`: check common dependencies and setup paths
 
@@ -44,6 +46,10 @@ Its write modes are:
 
 `init zsh` does not add `~/.local/bin` to `PATH`. The development installer
 creates symlinks there, but users should manage PATH in their own shell config.
+
+Configured commands in `tools.toml` must match `^[a-z][a-z0-9-]*$`. Invalid
+`cmds` entries are reported by `tool list` and `doctor`, and Chiyo refuses to
+run or install a tool whose configured command list is invalid.
 
 `doctor` checks external dependencies, shell integration files,
 development-install symlinks in `~/.local/bin`, zsh completion links, `PATH`,
