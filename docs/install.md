@@ -42,6 +42,7 @@ Tool installation is delegated to Chiyo:
 
 ```sh
 chiyo install s
+chiyo install ws
 chiyo install gop
 chiyo install proj
 ```

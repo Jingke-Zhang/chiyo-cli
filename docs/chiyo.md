@@ -9,8 +9,10 @@ chiyo config init s --force
 chiyo config init app --append
 chiyo tool list
 chiyo run s gh chiyo-cli
+chiyo run ws cli-tools
 chiyo shell gop docs
 chiyo install s
+chiyo install ws
 chiyo doc s
 chiyo doctor
 ```
@@ -30,8 +32,9 @@ chiyo doctor
 `config init` requires either `--all` or at least one target name. `chiyo`
 writes infrastructure defaults to `~/.config/chiyo-cli/config.toml`; tool names
 write tool defaults to `~/.config/chiyo-cli/tools.toml`. `--all` initializes
-Chiyo plus the currently enabled tools. Fresh config enables `jingke-zhang/go-or-pick` and
-`jingke-zhang/web-search` by default.
+Chiyo plus the currently enabled tools. Fresh config enables
+`jingke-zhang/go-or-pick`, `jingke-zhang/web-search`, and
+`jingke-zhang/workspace` by default.
 
 Its write modes are:
 

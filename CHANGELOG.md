@@ -19,6 +19,8 @@
 - Changed tool identity to normalized `author_id/tool_name`, added configurable
   `cmds` aliases, and blocks enabled tools that claim duplicate commands.
 - Renamed the Web Search command from `ws` to `s`.
+- Added `ws`, a tmux workspace manager with project discovery, aliases,
+  session creation, kill, rename, and completion support.
 
 ## v0.1.2
 

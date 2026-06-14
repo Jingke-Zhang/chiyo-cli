@@ -21,6 +21,7 @@ Try a few commands:
 
 ```sh
 chiyo run s gh chiyo-cli
+chiyo run ws cli-tools
 chiyo run app safari
 chiyo run bm github
 chiyo run zo convex optimization
@@ -107,6 +108,7 @@ Initialize config and install tools as needed:
 ```sh
 chiyo config init --all --append
 chiyo install s
+chiyo install ws
 chiyo install gop
 ```
 
@@ -141,6 +143,7 @@ Path-like tools follow a small file palette:
 - [`bm`](docs/bm.md): search Safari bookmarks and open URLs
 - [`app`](docs/app.md): search installed macOS applications and launch one
 - [`s`](docs/s.md): build web search URLs and open them
+- [`ws`](docs/workspace.md): enter or manage tmux workspaces
 - [`zo`](docs/zo.md): search Zotero items and open entries or PDFs
 - [`gop`](docs/gop.md): search files/directories, then `cd` or `open`
 - [`proj`](docs/proj.md): search git projects, then `cd` into one
