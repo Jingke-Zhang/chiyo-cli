@@ -2,15 +2,14 @@ import os
 import tempfile
 import unittest
 from io import StringIO
-from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
 
+from chiyo_cli import cli as CHIYO
 from chiyo_cli.toolkit import ShellAction
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CHIYO = SourceFileLoader("chiyo", str(REPO_ROOT / "bin" / "chiyo")).load_module()
 FIXTURE_TOOL_DIR = REPO_ROOT / "tests" / "fixtures" / "user_tools"
 
 
@@ -51,7 +50,7 @@ class ChiyoTests(unittest.TestCase):
         self.assertIn(f'for chiyo_shell_file in "{shell_dir}"/*.zsh; do', script)
         self.assertIn('source "$chiyo_shell_file"', script)
 
-    @mock.patch("chiyo.shutil.which")
+    @mock.patch("chiyo_cli.cli.shutil.which")
     def test_doctor_lines_reports_missing_development_install(self, which):
         which.return_value = None
 
@@ -79,7 +78,7 @@ class ChiyoTests(unittest.TestCase):
         self.assertIn("Run: ./install.sh", lines)
         self.assertIn("Review todo items above.", lines)
 
-    @mock.patch("chiyo.shutil.which")
+    @mock.patch("chiyo_cli.cli.shutil.which")
     def test_doctor_lines_reports_valid_development_install(self, which):
         which.side_effect = lambda name: f"/usr/bin/{name}"
 
@@ -309,7 +308,7 @@ class ChiyoTests(unittest.TestCase):
         self.assertIn("[ws.engines.g]", content)
         self.assertNotIn("[ws.engines.old]", content)
 
-    @mock.patch("chiyo.shutil.which")
+    @mock.patch("chiyo_cli.cli.shutil.which")
     def test_doctor_lines_reports_available_command(self, which):
         which.side_effect = lambda name: f"/usr/bin/{name}"
 
@@ -867,7 +866,7 @@ class ChiyoTests(unittest.TestCase):
                 CHIYO.completion_script("paper"),
             )
 
-    def test_install_shell_tool_writes_function_completion_and_helper(self):
+    def test_install_shell_tool_writes_function_and_completion(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             wrapper_dir = Path(temp_dir) / "bin"
             completion_dir = Path(temp_dir) / "zsh"
@@ -892,12 +891,10 @@ class ChiyoTests(unittest.TestCase):
 
             shell_file = shell_dir / "gop.zsh"
             completion = completion_dir / "_gop"
-            helper = wrapper_dir / "gop-select"
             wrapper = wrapper_dir / "gop"
 
             self.assertIn(f"installed gop shell: {shell_file}", lines)
             self.assertIn(f"installed _gop: {completion}", lines)
-            self.assertIn(f"installed gop-select: {helper}", lines)
             self.assertEqual(
                 shell_file.read_text(encoding="utf-8"),
                 CHIYO.shell_function_script("gop"),
@@ -906,8 +903,7 @@ class ChiyoTests(unittest.TestCase):
                 completion.read_text(encoding="utf-8"),
                 CHIYO.completion_script("gop"),
             )
-            self.assertTrue(helper.is_symlink())
-            self.assertEqual(os.readlink(helper), os.path.join(CHIYO.BIN_DIR, "gop-select"))
+            self.assertFalse((wrapper_dir / "gop-select").exists())
             self.assertFalse(wrapper.exists())
 
     def test_install_tool_warns_when_tool_is_disabled(self):

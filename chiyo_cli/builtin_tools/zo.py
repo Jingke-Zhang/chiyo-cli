@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import sqlite3
 import tempfile
 from urllib.error import HTTPError, URLError

@@ -4,13 +4,10 @@ import sqlite3
 import tempfile
 import unittest
 from io import StringIO
-from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-ZO = SourceFileLoader("zo", str(REPO_ROOT / "bin" / "zo")).load_module()
+from chiyo_cli.builtin_tools import zo as ZO
 
 
 class FakeResponse:
@@ -113,7 +110,7 @@ class ZoteroTests(unittest.TestCase):
             "https://doi.org/10.1000/example",
         )
 
-    @mock.patch("zo.urlopen")
+    @mock.patch("chiyo_cli.builtin_tools.zo.urlopen")
     def test_load_items_from_local_api_filters_notes_and_title_matches(self, urlopen):
         note = api_item("NOTEKEY1", "Note")
         note["data"]["itemType"] = "note"
@@ -138,7 +135,10 @@ class ZoteroTests(unittest.TestCase):
             db_path = Path(temp_dir) / "zotero.sqlite"
             create_sqlite_fixture(db_path)
 
-            items = ZO.load_sqlite_items({"zotero_data_dir": temp_dir})
+            items = ZO.load_sqlite_items(
+                {"zotero_data_dir": temp_dir},
+                lambda message: self.fail(message),
+            )
 
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]["key"], "ITEMKEY1")
@@ -158,7 +158,7 @@ class ZoteroTests(unittest.TestCase):
         self.assertEqual(ZO.filter_items(items, "linear algebra"), [items[0]])
         self.assertEqual(ZO.filter_items(items, "axler"), [])
 
-    @mock.patch("zo.choose_item")
+    @mock.patch("chiyo_cli.toolkit.choose_item_from")
     def test_choose_zotero_item_displays_title_creators_and_year_only(self, choose_item):
         items = [
             {
@@ -173,24 +173,31 @@ class ZoteroTests(unittest.TestCase):
         ]
         choose_item.return_value = items[0]
 
-        selected = ZO.choose_zotero_item(items, {"fzf_prompt": "zo> "})
+        tool = ZO.Tool()
+        selected = tool.select_item(
+            items,
+            "",
+            tool.parser().parse_args([]),
+            {"fzf_prompt": "zo> "},
+        )
 
         self.assertEqual(selected, items[0])
-        self.assertEqual(len(choose_item.call_args.args[1][0]), 3)
+        display_fields = choose_item.call_args.kwargs["display_fields"]
+        self.assertEqual(len(display_fields(items[0])), 3)
         self.assertEqual(choose_item.call_args.kwargs["search_display_fields"], [1])
         self.assertNotIn("filter_rows", choose_item.call_args.kwargs)
-        self.assertEqual(choose_item.call_args.args[2], "zo> ")
+        self.assertEqual(choose_item.call_args.args[1], "zo> ")
 
-    @mock.patch("zo.open_location")
-    @mock.patch("zo.load_items")
-    @mock.patch("zo.load_config")
-    def test_main_prints_key_without_opening(self, load_config, load_items, open_location):
-        load_config.return_value = {
+    @mock.patch("chiyo_cli.builtin_tools.zo.open_location")
+    def test_run_prints_key_without_opening(self, open_location):
+        config = {
             "local_api_url": "http://localhost:23119/api/",
             "zotero_data_dir": "/tmp/Zotero",
             "fzf_prompt": "zo> ",
         }
-        load_items.return_value = [
+        tool = ZO.Tool()
+
+        with mock.patch.object(tool, "items", return_value=[
             {
                 "key": "ITEMKEY1",
                 "title": "Linear Algebra Done Right",
@@ -198,29 +205,26 @@ class ZoteroTests(unittest.TestCase):
                 "date": "2015",
                 "item_type": "book",
             }
-        ]
-
-        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
-            ZO.main(["--print-key", "linear"])
+        ]):
+            with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+                tool.run(["--print-key", "linear"], config=config)
 
         self.assertEqual(stdout.getvalue(), "ITEMKEY1\n")
         open_location.assert_not_called()
 
-    @mock.patch("zo.open_location")
-    @mock.patch("zo.load_items")
-    @mock.patch("zo.load_config")
-    def test_main_opens_zotero_select_uri_by_default(
+    @mock.patch("chiyo_cli.builtin_tools.zo.open_location")
+    def test_run_opens_zotero_select_uri_by_default(
         self,
-        load_config,
-        load_items,
         open_location,
     ):
-        load_config.return_value = {
+        config = {
             "local_api_url": "http://localhost:23119/api/",
             "zotero_data_dir": "/tmp/Zotero",
             "fzf_prompt": "zo> ",
         }
-        load_items.return_value = [
+        tool = ZO.Tool()
+
+        with mock.patch.object(tool, "items", return_value=[
             {
                 "key": "ITEMKEY1",
                 "library_type": "user",
@@ -229,13 +233,16 @@ class ZoteroTests(unittest.TestCase):
                 "date": "2015",
                 "item_type": "book",
             }
-        ]
+        ]):
+            tool.run(["linear"], config=config)
 
-        ZO.main(["linear"])
+        open_location.assert_called_once()
+        self.assertEqual(
+            open_location.call_args.args[0],
+            "zotero://select/library/items/ITEMKEY1",
+        )
 
-        open_location.assert_called_once_with("zotero://select/library/items/ITEMKEY1")
-
-    @mock.patch("zo.urlopen")
+    @mock.patch("chiyo_cli.builtin_tools.zo.urlopen")
     def test_attachment_path_uses_local_api_file_url(self, urlopen):
         children = [
             {
@@ -254,7 +261,10 @@ class ZoteroTests(unittest.TestCase):
         item = {"key": "ITEMKEY1", "source": "local-api"}
 
         path = ZO.attachment_path(
-            {"local_api_url": "http://localhost:23119/api/"},
+            {
+                "local_api_url": "http://localhost:23119/api/",
+                "zotero_data_dir": "~/Zotero",
+            },
             item,
         )
 

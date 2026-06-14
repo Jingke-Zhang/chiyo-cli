@@ -138,7 +138,19 @@ class Tool(PickOpenTool):
         ]
 
     def completion_items(self, config):
-        return self.items(config)
+        seen = set()
+        items = []
+
+        for item in self.items(config):
+            name = item["name"]
+
+            if name in seen:
+                continue
+
+            seen.add(name)
+            items.append(item)
+
+        return items
 
     def completion_label(self, item, config):
         _ = config

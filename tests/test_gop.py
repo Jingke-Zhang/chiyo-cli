@@ -3,15 +3,11 @@ import subprocess
 import tempfile
 import unittest
 from io import StringIO
-from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
 
+from chiyo_cli.builtin_tools import gop as GOP
 from chiyo_cli.tool_config import load_tool_config
-
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-GOP = SourceFileLoader("gop_select", str(REPO_ROOT / "bin" / "gop-select")).load_module()
 
 
 class GopTests(unittest.TestCase):
@@ -43,7 +39,7 @@ class GopTests(unittest.TestCase):
             self.assertEqual(config["roots"], [str(root)])
             self.assertEqual(config["exclude"], ["Library"])
 
-    @mock.patch("gop_select.warn")
+    @mock.patch("chiyo_cli.builtin_tools.gop.warn")
     def test_normalize_roots_skips_missing_directories_with_warning(self, warn):
         with tempfile.TemporaryDirectory() as temp_dir:
             missing_root = os.path.join(temp_dir, "missing")
@@ -53,16 +49,16 @@ class GopTests(unittest.TestCase):
                 f"skipping missing search root: {missing_root}"
             )
 
-    @mock.patch("gop_select.warn")
+    @mock.patch("chiyo_cli.builtin_tools.gop.warn")
     def test_normalize_roots_fails_when_no_roots_exist(self, _warn):
         with tempfile.TemporaryDirectory() as temp_dir:
             missing_root = os.path.join(temp_dir, "missing")
 
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(RuntimeError):
                 GOP.normalize_roots([missing_root])
 
-    @mock.patch("gop_select.shutil.which", return_value="/usr/bin/fd")
-    @mock.patch("gop_select.subprocess.run")
+    @mock.patch("chiyo_cli.toolkit.shutil.which", return_value="/usr/bin/fd")
+    @mock.patch("chiyo_cli.toolkit.subprocess.run")
     def test_run_fd_searches_absolute_paths_under_roots(self, run, _which):
         run.return_value = subprocess.CompletedProcess(
             args=[],
@@ -80,8 +76,8 @@ class GopTests(unittest.TestCase):
             ["fd", "--absolute-path", "project", "/Users/me"],
         )
 
-    @mock.patch("gop_select.shutil.which", return_value="/usr/bin/fd")
-    @mock.patch("gop_select.subprocess.run")
+    @mock.patch("chiyo_cli.toolkit.shutil.which", return_value="/usr/bin/fd")
+    @mock.patch("chiyo_cli.toolkit.subprocess.run")
     def test_run_fd_can_limit_results_for_fast_direct_detection(self, run, _which):
         run.return_value = subprocess.CompletedProcess(
             args=[],
@@ -143,29 +139,31 @@ class GopTests(unittest.TestCase):
             ["/a", "/b"],
         )
 
-    @mock.patch("gop_select.choose_path")
+    @mock.patch("chiyo_cli.builtin_tools.gop.run_fd")
     def test_select_path_returns_single_match_directly_when_allowed(self, choose):
-        selected = GOP.select_path(
-            ["/Users/me/project"],
-            {"fzf_prompt": "gop> "},
-            allow_direct=True,
-        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "project")
+            choose.return_value = [path]
+            selected = GOP.Tool().select_path(
+                GOP.Tool().parser().parse_args(["project"]),
+                {"roots": [temp_dir], "exclude": [], "fzf_prompt": "gop> "},
+            )
 
-        self.assertEqual(selected, "/Users/me/project")
-        choose.assert_not_called()
+        self.assertEqual(selected, path)
+        choose.assert_called_once()
 
-    @mock.patch("gop_select.choose_path", return_value="/Users/me/project")
+    @mock.patch("chiyo_cli.builtin_tools.gop.choose_path_stream", return_value="/Users/me/project")
     def test_select_path_uses_fzf_when_confirmation_is_required(self, choose):
-        selected = GOP.select_path(
-            ["/Users/me/project"],
-            {"fzf_prompt": "gop> "},
-            allow_direct=False,
-        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            selected = GOP.Tool().select_path(
+                GOP.Tool().parser().parse_args(["--confirm", "project"]),
+                {"roots": [temp_dir], "exclude": [], "fzf_prompt": "gop> "},
+            )
 
         self.assertEqual(selected, "/Users/me/project")
         choose.assert_called_once()
 
-    @mock.patch("gop_select.run_fd")
+    @mock.patch("chiyo_cli.builtin_tools.gop.run_fd")
     def test_list_completions_prints_compact_paths(self, run_fd):
         home = os.path.expanduser("~")
         run_fd.return_value = [
@@ -174,13 +172,22 @@ class GopTests(unittest.TestCase):
         ]
 
         with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
-            GOP.list_completions("Proj", [home], ["Library"])
+            GOP.Tool().print_completions_for_args(
+                GOP.Tool().parser().parse_args(["--list-completions", "Proj"]),
+                {"roots": [home], "exclude": ["Library"], "fzf_prompt": "gop> "},
+            )
 
         self.assertEqual(stdout.getvalue(), "~/Documents/Project\n")
-        run_fd.assert_called_once_with("Proj", [home], ["Library"], max_results=200)
+        run_fd.assert_called_once_with(
+            "Proj",
+            [home],
+            ["Library"],
+            max_results=200,
+            fail=mock.ANY,
+        )
 
-    @mock.patch("gop_select.shutil.which", return_value="/usr/bin/tool")
-    @mock.patch("gop_select.subprocess.Popen")
+    @mock.patch("chiyo_cli.toolkit.shutil.which", return_value="/usr/bin/tool")
+    @mock.patch("chiyo_cli.builtin_tools.gop.subprocess.Popen")
     def test_choose_path_stream_formats_fd_output_for_fzf(self, popen, _which):
         fd_process = mock.Mock()
         fd_stdout = mock.MagicMock()
@@ -199,6 +206,7 @@ class GopTests(unittest.TestCase):
             ["/Users/me"],
             [],
             {"fzf_prompt": "gop> "},
+            lambda message: self.fail(message),
         )
 
         self.assertEqual(selected, "/Users/me/project")
@@ -224,40 +232,42 @@ class GopTests(unittest.TestCase):
             "/Users/me/project",
         )
 
-    @mock.patch("builtins.print")
-    @mock.patch("gop_select.run_fd", return_value=["/tmp/project"])
-    @mock.patch("gop_select.load_config")
-    def test_main_can_override_roots_from_command_line(self, load_config, run_fd, print_):
-        load_config.return_value = {
+    @mock.patch("chiyo_cli.builtin_tools.gop.run_fd", return_value=["/tmp/project"])
+    def test_run_can_override_roots_from_command_line(self, run_fd):
+        config = {
             "roots": ["/Users/me"],
             "exclude": [],
             "fzf_prompt": "gop> ",
         }
 
-        GOP.main(["--root", "/tmp", "project"])
+        result = GOP.Tool().run(
+            ["--root", "/tmp", "project"],
+            config=config,
+            execute_shell_actions=False,
+        )
 
         self.assertEqual(run_fd.call_args.args[1], ["/tmp"])
-        print_.assert_called_once_with("/tmp/project")
+        self.assertEqual(result.value, "/tmp/project")
 
-    @mock.patch("builtins.print")
-    @mock.patch("gop_select.run_fd", return_value=["/tmp/project"])
-    @mock.patch("gop_select.load_config")
-    def test_main_combines_config_and_command_line_excludes(
+    @mock.patch("chiyo_cli.builtin_tools.gop.run_fd", return_value=["/tmp/project"])
+    def test_run_combines_config_and_command_line_excludes(
         self,
-        load_config,
         run_fd,
-        print_,
     ):
-        load_config.return_value = {
+        config = {
             "roots": ["/tmp"],
             "exclude": ["Library"],
             "fzf_prompt": "gop> ",
         }
 
-        GOP.main(["--exclude", "node_modules", "project"])
+        result = GOP.Tool().run(
+            ["--exclude", "node_modules", "project"],
+            config=config,
+            execute_shell_actions=False,
+        )
 
         self.assertEqual(run_fd.call_args.args[2], ["Library", "node_modules"])
-        print_.assert_called_once_with("/tmp/project")
+        self.assertEqual(result.value, "/tmp/project")
 
 
 if __name__ == "__main__":

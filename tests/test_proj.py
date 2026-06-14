@@ -3,15 +3,11 @@ import subprocess
 import tempfile
 import unittest
 from io import StringIO
-from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
 
+from chiyo_cli.builtin_tools import proj as PROJ
 from chiyo_cli.tool_config import load_tool_config
-
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-PROJ = SourceFileLoader("proj_select", str(REPO_ROOT / "bin" / "proj-select")).load_module()
 
 
 class ProjTests(unittest.TestCase):
@@ -45,7 +41,7 @@ class ProjTests(unittest.TestCase):
             "/Users/me/project",
         )
 
-    @mock.patch("proj_select.warn")
+    @mock.patch("chiyo_cli.builtin_tools.proj.warn")
     def test_normalize_roots_skips_missing_directories_with_warning(self, warn):
         with tempfile.TemporaryDirectory() as temp_dir:
             missing_root = os.path.join(temp_dir, "missing")
@@ -55,8 +51,8 @@ class ProjTests(unittest.TestCase):
                 f"skipping missing project root: {missing_root}"
             )
 
-    @mock.patch("proj_select.shutil.which", return_value="/usr/bin/fd")
-    @mock.patch("proj_select.subprocess.run")
+    @mock.patch("chiyo_cli.toolkit.shutil.which", return_value="/usr/bin/fd")
+    @mock.patch("chiyo_cli.toolkit.subprocess.run")
     def test_run_fd_searches_project_markers(self, run, _which):
         run.return_value = subprocess.CompletedProcess(
             args=[],
@@ -82,7 +78,7 @@ class ProjTests(unittest.TestCase):
             ],
         )
 
-    @mock.patch("proj_select.run_fd")
+    @mock.patch("chiyo_cli.builtin_tools.proj.run_fd")
     def test_all_projects_deduplicates_project_paths(self, run_fd):
         run_fd.return_value = [
             "/Users/me/project/.project",
@@ -90,7 +86,7 @@ class ProjTests(unittest.TestCase):
         ]
 
         self.assertEqual(
-            PROJ.all_projects(["/Users/me"], [".project", ".git"], []),
+            PROJ.all_projects(["/Users/me"], [".project", ".git"], [], lambda message: self.fail(message)),
             ["/Users/me/project"],
         )
 
@@ -123,12 +119,15 @@ class ProjTests(unittest.TestCase):
         self.assertEqual(fields[0].value, "chiyo-cli  ")
         self.assertEqual(fields[1].value, "~/Documents/chiyo-cli")
 
-    @mock.patch("proj_select.choose_item")
+    @mock.patch("chiyo_cli.fzf.choose_item")
     def test_choose_project_searches_only_project_name_column(self, choose_item):
         choose_item.return_value = "/Users/me/Documents/chiyo-cli"
 
-        selected = PROJ.choose_project(
+        tool = PROJ.Tool()
+        selected = tool.select_item(
             ["/Users/me/Documents/chiyo-cli"],
+            "",
+            tool.parser().parse_args([]),
             {"fzf_prompt": "proj> "},
         )
 
@@ -137,12 +136,14 @@ class ProjTests(unittest.TestCase):
         self.assertEqual(choose_item.call_args.kwargs["search_display_fields"], [1])
         self.assertNotIn("filter_rows", choose_item.call_args.kwargs)
 
-    @mock.patch("proj_select.choose_project")
+    @mock.patch("chiyo_cli.fzf.choose_item")
     def test_select_project_returns_single_match_directly_when_allowed(self, choose):
-        selected = PROJ.select_project(
+        tool = PROJ.Tool()
+        selected = tool.select_item(
             ["/Users/me/project"],
+            "project",
+            tool.parser().parse_args(["project"]),
             {"fzf_prompt": "proj> "},
-            allow_direct=True,
         )
 
         self.assertEqual(selected, "/Users/me/project")
@@ -150,12 +151,16 @@ class ProjTests(unittest.TestCase):
 
     def test_list_completions_prints_project_names(self):
         with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
-            PROJ.list_completions(
-                [
+            tool = PROJ.Tool()
+            with mock.patch.object(
+                tool,
+                "items",
+                return_value=[
                     "/Users/me/chiyo-cli",
                     "/Users/me/other",
-                ]
-            )
+                ],
+            ):
+                tool.print_completions({})
 
         self.assertEqual(stdout.getvalue(), "chiyo-cli\nother\n")
 

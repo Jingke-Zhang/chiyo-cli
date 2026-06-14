@@ -3,13 +3,11 @@ import plistlib
 import tempfile
 import unittest
 from io import StringIO
-from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from unittest import mock
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-BM = SourceFileLoader("bm", str(REPO_ROOT / "bin" / "bm")).load_module()
+from chiyo_cli.builtin_tools import bm as BM
+from chiyo_cli.tool_config import load_tool_config
 
 
 def bookmark(title, url):
@@ -105,7 +103,7 @@ class BookmarkTests(unittest.TestCase):
             }
 
             self.assertEqual(
-                BM.load_bookmarks(config),
+                BM.load_bookmarks(BM.Tool().normalize_config(config), lambda message: self.fail(message)),
                 [
                     ("Example", "https://example.com"),
                     ("Example", "https://other.example"),
@@ -130,13 +128,13 @@ class BookmarkTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            with mock.patch.object(BM, "TOOLS_CONFIG_PATH", str(path)):
-                config = BM.load_config()
+            config = load_tool_config("bm", BM.DEFAULT_CONFIG, config_path=str(path))
+            config = BM.Tool().normalize_config(config)
 
-        self.assertTrue(config["bookmarks_path"].endswith("Bookmarks.plist"))
+        self.assertTrue(str(config["bookmarks_path"]).endswith("Bookmarks.plist"))
         self.assertEqual(config["browser"], "Google Chrome")
 
-    @mock.patch("bm.choose_item")
+    @mock.patch("chiyo_cli.fzf.choose_item")
     def test_choose_bookmark_preserves_duplicate_display_names(self, choose_item):
         bookmarks = [
             ("Example", "https://first.example"),
@@ -144,9 +142,14 @@ class BookmarkTests(unittest.TestCase):
         ]
         choose_item.return_value = bookmarks[1]
 
-        selected = BM.choose_bookmark(bookmarks, {"fzf_prompt": "bm> "})
+        selected = BM.Tool().select_item(
+            bookmarks,
+            "",
+            BM.Tool().parser().parse_args([]),
+            {"fzf_prompt": "bm> "},
+        )
 
-        self.assertEqual(selected, "https://second.example")
+        self.assertEqual(selected, ("Example", "https://second.example"))
         self.assertEqual(choose_item.call_args.args[0], bookmarks)
         self.assertEqual(choose_item.call_args.kwargs["search_display_fields"], [1])
         self.assertNotIn("filter_rows", choose_item.call_args.kwargs)
@@ -157,11 +160,12 @@ class BookmarkTests(unittest.TestCase):
             ("Work/Other", "https://example.com"),
         ]
 
+        tool = BM.Tool()
         self.assertEqual(
-            BM.filter_bookmarks(bookmarks, "Personal"),
+            [item for item in bookmarks if tool.match(item, "Personal", {})],
             [("Personal/Example", "https://docs.example.com")],
         )
-        self.assertEqual(BM.filter_bookmarks(bookmarks, "docs.example"), [])
+        self.assertEqual([item for item in bookmarks if tool.match(item, "docs.example", {})], [])
 
     def test_list_completions_prints_bookmark_paths(self):
         bookmarks = [
@@ -170,56 +174,54 @@ class BookmarkTests(unittest.TestCase):
         ]
 
         with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
-            BM.list_completions(bookmarks)
+            tool = BM.Tool()
+            with mock.patch.object(tool, "items", return_value=bookmarks):
+                tool.print_completions({})
 
         self.assertEqual(stdout.getvalue(), "Academic/Google Scholar\nPersonal/YouTube\n")
 
-    @mock.patch("bm.open_url")
-    @mock.patch("bm.load_bookmarks")
-    @mock.patch("bm.load_config")
-    def test_main_lists_completions_without_opening_url(
-        self,
-        load_config,
-        load_bookmarks,
-        open_url,
-    ):
-        load_config.return_value = {
+    @mock.patch("chiyo_cli.toolkit.open_with_app")
+    def test_run_lists_completions_without_opening_url(self, open_with_app):
+        config = {
             "bookmarks_path": "/tmp/bookmarks.plist",
             "skip_folders": set(),
             "rename_folders": {},
             "fzf_prompt": "bm> ",
             "browser": "Safari",
         }
-        load_bookmarks.return_value = [
-            ("Academic/Google Scholar", "https://scholar.google.com"),
-        ]
+        tool = BM.Tool()
 
-        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
-            BM.main(["--list-completions"])
+        with mock.patch.object(tool, "items", return_value=[
+            ("Academic/Google Scholar", "https://scholar.google.com"),
+        ]):
+            with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+                tool.run(["--list-completions"], config=config)
 
         self.assertEqual(stdout.getvalue(), "Academic/Google Scholar\n")
-        open_url.assert_not_called()
+        open_with_app.assert_not_called()
 
-    @mock.patch("bm.choose_bookmark")
+    @mock.patch("chiyo_cli.fzf.choose_item")
     def test_select_bookmark_returns_single_match_directly_when_allowed(self, choose):
-        selected = BM.select_bookmark(
+        selected = BM.Tool().select_item(
             [("Example", "https://example.com")],
+            "Example",
+            BM.Tool().parser().parse_args(["Example"]),
             {"fzf_prompt": "bm> "},
-            allow_direct=True,
         )
 
-        self.assertEqual(selected, "https://example.com")
+        self.assertEqual(selected, ("Example", "https://example.com"))
         choose.assert_not_called()
 
-    @mock.patch("bm.choose_bookmark", return_value="https://example.com")
+    @mock.patch("chiyo_cli.fzf.choose_item", return_value=("Example", "https://example.com"))
     def test_select_bookmark_uses_fzf_for_single_match_without_query(self, choose):
-        selected = BM.select_bookmark(
+        selected = BM.Tool().select_item(
             [("Example", "https://example.com")],
+            "",
+            BM.Tool().parser().parse_args([]),
             {"fzf_prompt": "bm> "},
-            allow_direct=False,
         )
 
-        self.assertEqual(selected, "https://example.com")
+        self.assertEqual(selected, ("Example", "https://example.com"))
         choose.assert_called_once()
 
 

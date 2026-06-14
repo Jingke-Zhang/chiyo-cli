@@ -151,11 +151,11 @@ def format_toml_value(value):
     return toml_quote(value)
 
 
-def format_module_config(module_name, defaults):
-    lines = [f"[{module_name}]"]
+def append_toml_table(lines, table_name, values):
+    lines.append(f"[{table_name}]")
     nested_tables = []
 
-    for key, value in defaults.items():
+    for key, value in values.items():
         if isinstance(value, dict):
             nested_tables.append((key, value))
             continue
@@ -164,14 +164,12 @@ def format_module_config(module_name, defaults):
 
     for key, table in nested_tables:
         lines.append("")
-        lines.append(f"[{module_name}.{key}]")
+        append_toml_table(lines, f"{table_name}.{key}", table)
 
-        for nested_key, nested_value in table.items():
-            if isinstance(nested_value, dict):
-                continue
 
-            lines.append(f"{nested_key} = {format_toml_value(nested_value)}")
-
+def format_module_config(module_name, defaults):
+    lines = []
+    append_toml_table(lines, module_name, defaults)
     return "\n".join(lines) + "\n"
 
 
