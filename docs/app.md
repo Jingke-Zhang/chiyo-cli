@@ -10,14 +10,14 @@ Filtering uses application names and configured aliases; displayed paths are not
 searched, including during interactive `fzf` filtering.
 
 ```sh
-app
-app safari
-app browser
-app --print-name safari
-app --confirm browser
+chiyo run app
+chiyo run app safari
+chiyo run app browser
+chiyo run app --print-name safari
+chiyo run app --confirm browser
 chiyo config init app --append
-app --list-completions
-chiyo run app Safari
+chiyo run app --list-completions
+chiyo install app
 chiyo doc app
 ```
 
@@ -52,13 +52,12 @@ path as a separate selectable result.
 
 ## Completion Data
 
-`app --list-completions` prints one discovered application name per line. The
-data comes from Spotlight metadata, so installed application changes are picked
-up without editing completion scripts.
+`chiyo run app --list-completions` prints one discovered application name per
+line. The data comes from Spotlight metadata, so installed application changes
+are picked up without editing completion scripts.
 
 ## Framework Entry
 
-`app` is also available as a framework-backed built-in tool through
-`chiyo run app ...` once `app` is enabled in `[chiyo].enabled_tools`. This entry
-reads `[app]` from `tools.toml` and supports generated wrappers through
-`chiyo install app`.
+`app` is a framework-backed built-in tool. `chiyo run app ...` reads `[app]`
+from `tools.toml`; `chiyo install app` creates an optional direct wrapper and
+completion.

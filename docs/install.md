@@ -3,8 +3,8 @@
 Chiyo CLI uses development installation during the v0.x series.
 
 The repository remains the source of truth. `install.sh` only bootstraps the
-`chiyo` command into `~/.local/bin`. Tool wrappers, zsh completions, shell
-functions, and helper commands are installed later through `chiyo install TOOL`.
+`chiyo` command into `~/.local/bin`. Tool wrappers, zsh completions, and shell
+functions are installed later through `chiyo install TOOL`.
 
 ## Install
 
@@ -48,7 +48,8 @@ chiyo install proj
 
 For ordinary tools, `chiyo install TOOL` creates a direct wrapper and generated
 completion. For shell-sensitive tools such as `gop` and `proj`, it installs a
-shell function, generated completion, and helper command such as `gop-select`.
+shell function and generated completion; the function calls `chiyo shell TOOL`
+so `cd` actions can affect the parent shell.
 
 ## Shell Setup
 
@@ -77,8 +78,8 @@ chiyo config init --all --append
 ```
 
 Uninstall removes only the `chiyo` bootstrap symlink when it points back to the
-current repository. Tool wrappers, completions, shell functions, and helper
-commands are managed with `chiyo uninstall TOOL`.
+current repository. Tool wrappers, completions, and shell functions are managed
+with `chiyo uninstall TOOL`.
 
 ## Repository Moves
 

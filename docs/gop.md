@@ -1,18 +1,18 @@
 # gop
 
-`gop` selects files and directories with `fd` and `fzf`. The helper
-`gop-select` prints the selected path, while the zsh function decides the
-action: directories are opened with `cd`, and everything else is opened with
-macOS `open`.
+`gop` selects files and directories with `fd` and `fzf`. It is shell-sensitive:
+directories emit `cd` shell code, while regular files and executables emit
+`open` shell code.
 
 ```sh
+chiyo install gop
 gop
 gop project
 gop -r ~/Documents project
 gop --exclude node_modules project
 gop --confirm project
 chiyo config init gop --append
-gop-select --list-completions
+chiyo run gop --list-completions
 chiyo shell gop project
 chiyo doc gop
 ```
@@ -22,7 +22,7 @@ chiyo doc gop
 - `-r, --root DIR`: search this directory instead of configured roots; repeat to search multiple directories
 - `-E, --exclude PATTERN`: exclude an `fd` glob pattern; repeat to exclude multiple patterns
 - `--confirm`: always confirm the selected path in `fzf`
-- `--list-completions`: print path candidates from `gop-select` for shell completion
+- `--list-completions`: print path candidates for shell completion
 
 ## Display Colors
 
@@ -58,13 +58,12 @@ exclude = ["Library", "node_modules", "OrbStack"]
 
 ## Completion Data
 
-`gop` is a shell function, so its completion script asks `gop-select` for path
-candidates. `gop-select --list-completions` prints compact paths from configured
-roots, one per line.
+`gop` is installed as a shell function, so its completion script asks
+`chiyo run gop --list-completions` for path candidates. The completion command
+prints compact paths from configured roots, one per line.
 
 ## Framework Entry
 
-`gop` is also available as a framework-backed built-in through
-`chiyo shell gop ...` once `gop` is enabled in `[chiyo].enabled_tools`. This
-entry reads `[gop]` from `tools.toml`, reuses the streaming selector, and prints
-shell-safe `cd ...` or `open ...` code for shell integration.
+`gop` is a framework-backed built-in. `chiyo shell gop ...` reads `[gop]` from
+`tools.toml`, reuses the streaming selector, and prints shell-safe `cd ...` or
+`open ...` code for shell integration.

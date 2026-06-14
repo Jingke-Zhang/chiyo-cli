@@ -3,8 +3,10 @@
 A collection of small search-oriented command-line tools.
 
 Chiyo CLI is a personal toolbox for reaching known objects faster from the
-terminal. The tools live in `bin/` and are designed to be small, focused, easy
-to read, customizable, and composable with other command-line programs.
+terminal. `bin/chiyo` is the bootstrap command; built-in tools live under
+`chiyo_cli/builtin_tools`, and user tools live in
+`~/.config/chiyo-cli/tools/`. Tools are designed to be small, focused, easy to
+read, customizable, and composable with other command-line programs.
 
 ## Quick Start
 
@@ -18,12 +20,12 @@ chiyo doctor
 Try a few commands:
 
 ```sh
-ws gh chiyo-cli
-app safari
-bm github
-zo convex optimization
-proj cli-tools
-gop docs
+chiyo run ws gh chiyo-cli
+chiyo run app safari
+chiyo run bm github
+chiyo run zo convex optimization
+chiyo shell proj cli-tools
+chiyo shell gop docs
 ```
 
 ## Why
@@ -211,12 +213,12 @@ Shared config loading and initialization helpers live in `chiyo_cli/config.py`.
 Tools that support dynamic shell completion expose a common interface:
 
 ```sh
-<tool> --list-completions
+chiyo run <tool> --list-completions
 ```
 
-The command prints plain text candidates, one per line. zsh completion files in
-`completions/` call this interface instead of parsing config files or platform
-data directly.
+The command prints plain text candidates, one per line. Generated zsh
+completion files call this interface instead of parsing config files or
+platform data directly.
 
 ## Development
 
@@ -231,11 +233,10 @@ Contributions should keep tool behavior focused, documented, and covered by
 tests where practical. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 See [docs/release.md](docs/release.md) for the release checklist.
 
-Shared implementation interfaces live in `chiyo_cli/`. New tools should reuse
-`chiyo_cli.config` for shared TOML loading/initialization and
-`chiyo_cli.fzf.choose_item` for interactive selection. The fzf helper separates
-visible display rows from hidden filter rows, so tools can show paths, URLs, or
-other context without automatically making those fields searchable.
+Shared implementation interfaces live in `chiyo_cli/`. New tools should
+subclass `chiyo_cli.toolkit.PickOpenTool`, use `default_config` for generated
+`tools.toml` sections, and rely on the framework for common argument parsing,
+filtering, completion, selection, and action execution.
 
 ## Security
 

@@ -10,16 +10,16 @@ to inspect the match in `fzf` first. Query filtering and interactive `fzf`
 filtering match item titles only.
 
 ```sh
-zo
-zo convex optimization
-zo --open-pdf hazan
-zo --print-key mp-spdz
-zo --print-url linear algebra
-zo --print-path systems
-zo --source sqlite algorithms
-chiyo config init zo --append
-zo --list-completions
+chiyo run zo
 chiyo run zo convex optimization
+chiyo run zo --open-pdf hazan
+chiyo run zo --print-key mp-spdz
+chiyo run zo --print-url linear algebra
+chiyo run zo --print-path systems
+chiyo run zo --source sqlite algorithms
+chiyo config init zo --append
+chiyo run zo --list-completions
+chiyo install zo
 chiyo doc zo
 ```
 
@@ -42,8 +42,8 @@ Zotero Settings -> Advanced -> Allow other applications on this computer to comm
 ```
 
 The Local API runs on `localhost:23119`, works offline, and does not require an
-API key. If it is unavailable, `zo --source auto` falls back to a temporary
-copy of `zotero.sqlite` and reads that copy only.
+API key. If it is unavailable, `chiyo run zo --source auto` falls back to a
+temporary copy of `zotero.sqlite` and reads that copy only.
 
 ## Config
 
@@ -67,12 +67,11 @@ directory that contains `zotero.sqlite` and `storage/`.
 
 ## Completion Data
 
-`zo --list-completions` prints one item title per line. Completion uses the same
-data source selection as normal search.
+`chiyo run zo --list-completions` prints one item title per line. Completion
+uses the same data source selection as normal search.
 
 ## Framework Entry
 
-`zo` is also available as a framework-backed built-in tool through
-`chiyo run zo ...` once `zo` is enabled in `[chiyo].enabled_tools`. This entry
-reads `[zo]` from `tools.toml` and supports generated wrappers through
-`chiyo install zo`.
+`zo` is a framework-backed built-in tool. `chiyo run zo ...` reads `[zo]` from
+`tools.toml`; `chiyo install zo` creates an optional direct wrapper and
+completion.

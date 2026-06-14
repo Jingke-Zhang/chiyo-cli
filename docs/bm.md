@@ -9,14 +9,14 @@ Filtering uses normalized bookmark display paths only; URLs are displayed but
 not searched, including during interactive `fzf` filtering.
 
 ```sh
-bm
-bm github
-bm --print-url github
-bm --browser "Google Chrome" github
-bm --confirm github
-chiyo config init bm --append
-bm --list-completions
+chiyo run bm
 chiyo run bm github
+chiyo run bm --print-url github
+chiyo run bm --browser "Google Chrome" github
+chiyo run bm --confirm github
+chiyo config init bm --append
+chiyo run bm --list-completions
+chiyo install bm
 chiyo doc bm
 ```
 
@@ -62,12 +62,11 @@ bookmarks_path = "~/path/to/compatible/Bookmarks.plist"
 
 ## Completion Data
 
-`bm --list-completions` prints one normalized bookmark path per line. Folder
-skip and rename rules are applied before candidates are printed.
+`chiyo run bm --list-completions` prints one normalized bookmark path per line.
+Folder skip and rename rules are applied before candidates are printed.
 
 ## Framework Entry
 
-`bm` is also available as a framework-backed built-in through
-`chiyo run bm ...` once `bm` is enabled in `[chiyo].enabled_tools`. This entry
-reads `[bm]` from `tools.toml` and supports generated wrappers through
-`chiyo install bm`.
+`bm` is a framework-backed built-in. `chiyo run bm ...` reads `[bm]` from
+`tools.toml`; `chiyo install bm` creates an optional direct wrapper and
+completion.

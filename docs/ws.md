@@ -5,15 +5,15 @@ templates, URL-encodes the query, and opens the generated URL in the system
 default browser.
 
 ```sh
-ws g wavelet tree
-ws gh chiyo-cli
-ws scholar beaver triple
-ws wavelet tree
-ws -- g wavelet tree
 chiyo run ws g wavelet tree
+chiyo run ws gh chiyo-cli
+chiyo run ws scholar beaver triple
+chiyo run ws wavelet tree
+chiyo run ws -- g wavelet tree
 chiyo doc ws
 chiyo config init ws --append
-ws --list-completions
+chiyo run ws --list-completions
+chiyo install ws
 ```
 
 ## Options
@@ -54,12 +54,11 @@ complete engine set. Delete an engine table to disable that key.
 
 ## Completion Data
 
-`ws --list-completions` prints one configured engine key per line. User-added
-engines under `[ws.engines.*]` appear automatically.
+`chiyo run ws --list-completions` prints one configured engine key per line.
+User-added engines under `[ws.engines.*]` appear automatically.
 
 ## Framework Entry
 
-`ws` is also available as a framework-backed built-in tool through
-`chiyo run ws ...` once `ws` is enabled in `[chiyo].enabled_tools`. This entry
-reads `[ws]` from `tools.toml` and supports generated wrappers through
-`chiyo install ws`.
+`ws` is a framework-backed built-in tool. `chiyo run ws ...` reads `[ws]` from
+`tools.toml`; `chiyo install ws` creates an optional direct wrapper and
+completion.

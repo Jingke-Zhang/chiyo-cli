@@ -1,8 +1,8 @@
-# User Tool Framework Design
+# User Tool Framework Architecture
 
-This document describes a proposed framework for turning Chiyo CLI from a
-collection of search-oriented scripts into a small, extensible
-search-pick-open toolkit.
+This document describes the user-tool framework that turns Chiyo CLI from a
+collection of search-oriented scripts into a small, extensible search-pick-open
+toolkit.
 
 The goal is not to build a large plugin system. The goal is to make the common
 shape of Chiyo tools easy to reuse:
@@ -11,9 +11,8 @@ shape of Chiyo tools easy to reuse:
 load data -> filter/sort in Python -> render rows -> pick in fzf -> act on item
 ```
 
-Existing tools such as `app`, `bm`, `proj`, `gop`, `ws`, and `zo` should
-eventually become built-in examples of the same interface that user-defined
-tools use.
+Existing tools such as `app`, `bm`, `proj`, `gop`, `ws`, and `zo` are built-in
+examples of the same interface that user-defined tools use.
 
 ## Goals
 
@@ -129,9 +128,9 @@ class Tool(PickOpenTool):
 
 ## Base Class Responsibilities
 
-The proposed base class is `PickOpenTool`.
+The base class is `PickOpenTool`.
 
-It should provide default behavior for the common search-pick-open workflow:
+It provides default behavior for the common search-pick-open workflow:
 
 ```python
 class PickOpenTool:
@@ -169,7 +168,7 @@ class PickOpenTool:
         raise NotImplementedError
 ```
 
-The base runner should handle:
+The base runner handles:
 
 - argument parsing
 - config loading
@@ -180,7 +179,7 @@ The base runner should handle:
 - invoking `open_item`
 - standardized errors
 
-The loader should validate required metadata:
+The loader validates required metadata:
 
 - `name`
 - `command`
@@ -188,17 +187,17 @@ The loader should validate required metadata:
 - `description`
 - `docs`
 
-Before installation, discovery views should show only:
+Before installation, discovery views show compact metadata:
 
 - `name`
 - `author`
 - `command`
 - `description`
 
-Full docs should be hidden by default and shown only when requested, for
+Full docs are hidden by default and shown only when requested, for
 example with a docs flag or `chiyo doc TOOL`.
 
-`description` should be concise. The recommended limit is 80 characters, which
+`description` is concise. The enforced limit is 80 characters, which
 keeps tool lists readable in normal terminal widths.
 
 Recommended optional metadata:
@@ -292,12 +291,11 @@ chiyo zo linear algebra
 chiyo app browser
 ```
 
-This shape is no longer preferred. The framework should avoid dynamic
-`chiyo TOOL ...` dispatch. Instead, `chiyo` should remain the macro-level
-command for configuration, installation, documentation, diagnostics, and tool
-selection.
+This shape is not used. The framework avoids dynamic `chiyo TOOL ...`
+dispatch. Instead, `chiyo` remains the macro-level command for configuration,
+installation, documentation, diagnostics, and tool selection.
 
-The explicit execution entrypoint should be:
+The explicit execution entrypoint is:
 
 ```sh
 chiyo run paper convex optimization
@@ -305,8 +303,8 @@ chiyo run zo linear algebra
 chiyo run app browser
 ```
 
-If `chiyo` is called with no arguments, it may eventually open an `fzf` picker
-for enabled tools:
+If `chiyo` is called with no arguments, a future version may open an `fzf`
+picker for enabled tools:
 
 ```sh
 chiyo
@@ -470,7 +468,7 @@ framework should allow built-ins to expose docs through the same interface.
 
 ## Config Files
 
-Two config files are proposed:
+Chiyo uses two config files:
 
 ```text
 ~/.config/chiyo-cli/config.toml
@@ -555,10 +553,9 @@ chiyo run paper
 Disabled tools should not run through `chiyo run`. Since `chiyo run` is the
 only official module execution path, disabled means unavailable for execution.
 
-Tool commands should have very few framework restrictions because execution is
-scoped under `chiyo run`. Users are responsible for choosing sensible command
-names. The loader should still reject empty commands and commands that cannot be
-used as a wrapper filename.
+Tool commands have only the restrictions needed for generated wrappers, zsh
+functions, and completions. The loader requires commands to match
+`^[a-z][a-z0-9-]*$`.
 
 ## User Flags
 
@@ -580,10 +577,10 @@ def open_item(self, item, args, config):
 
 This supports tools such as:
 
-- `bm --print-url`
-- `zo --print-path`
-- `zo --open-pdf`
-- `app --print-name`
+- `chiyo run bm --print-url`
+- `chiyo run zo --print-path`
+- `chiyo run zo --open-pdf`
+- `chiyo run app --print-name`
 - future custom actions
 
 The framework should reserve common flags such as:
@@ -613,8 +610,9 @@ Why this is needed:
 - `cd ~/project` cannot run inside Python if the goal is to change the user's
   current terminal directory. A child process cannot change the parent shell's
   state.
-- Existing `gop` and `proj` solve this with shell functions that call a helper
-  command, capture the selected path, then run `cd` in the parent shell.
+- Earlier `gop` and `proj` implementations solved this with shell functions
+  that called helper commands, captured the selected path, then ran `cd` in the
+  parent shell.
 
 The framework should make this explicit instead of hiding it in tool-specific
 shell scripts.
@@ -645,14 +643,14 @@ For normal wrappers, Chiyo can execute `open` or print directly. For actions
 that must modify the parent shell, such as `cd`, shell integration must
 interpret the result.
 
-Existing style:
+Older helper-command style:
 
 ```sh
 target="$(chiyo gop-select "$@")"
 cd "$target"
 ```
 
-Future unified style:
+Current unified style:
 
 ```sh
 eval "$(chiyo shell gop "$@")"
@@ -697,11 +695,11 @@ Recommendation:
 - Use `gop` after the protocol is proven, because it mixes directory `cd` and
   file `open`.
 
-## Built-In Tool Migration
+## Built-In Tool Status
 
-Existing built-ins should eventually migrate to the same interface.
+Built-in tools use the same framework interface as user tools.
 
-Suggested order:
+Migration order:
 
 1. `ws`: simple data, simple action, no filesystem walking
 2. `bm`: local data source, URL action
@@ -710,8 +708,8 @@ Suggested order:
 5. `proj`: shell `cd` behavior
 6. `gop`: streaming/search-root behavior and shell-sensitive action
 
-Do not migrate everything at once. The framework should prove itself with one
-or two simple tools first.
+The simpler tools proved the interface first, then the shell-sensitive and
+larger data-source tools moved over.
 
 ## Security Model
 
@@ -841,7 +839,7 @@ class Tool(PickOpenTool):
         self.open_path(item["path"])
 ```
 
-## Open Questions
+## Design Status
 
 Resolved design choices:
 
@@ -873,21 +871,21 @@ Resolved design choices:
   needed at this stage.
 - Parent-shell actions should serialize as safely quoted shell code in the first
   version.
-- Tool commands should have minimal restrictions because execution uses
-  `chiyo run`; users are responsible for choosing sensible names.
+- Tool commands must match `^[a-z][a-z0-9-]*$` so generated wrappers, zsh
+  functions, and completions remain safe and predictable.
 - Tool-specific flags must not conflict with common framework flags such as
   `--help`, `--confirm`, and `--list-completions`.
 
 Remaining questions:
 
 - No unresolved design questions at this stage. Future questions should be
-  captured as implementation notes when the framework work begins.
+  captured as implementation notes near the code they affect.
 
-## Incremental Implementation Plan
+## Historical Implementation Plan
 
-This refactor should be split into small steps that can each be tested and
-reviewed independently. The plan below is intentionally more detailed than the
-feature list so the work can be divided into safe commits or pull requests.
+The framework was split into small steps that could each be tested and reviewed
+independently. The plan below remains as historical context for why the current
+modules and tests are shaped the way they are.
 
 1. Add `PickOpenTool` and a framework runner built on `choose_item_from`.
 2. Add fixture user tools for tests, such as:

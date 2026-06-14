@@ -7,6 +7,11 @@ chiyo init zsh
 chiyo config init --all --write
 chiyo config init ws --force
 chiyo config init app --append
+chiyo tool list
+chiyo run ws gh chiyo-cli
+chiyo shell gop docs
+chiyo install ws
+chiyo doc ws
 chiyo doctor
 ```
 
@@ -14,6 +19,12 @@ chiyo doctor
 
 - `init zsh`: print zsh integration code for completions and shell functions
 - `config init`: write explicit default config for Chiyo or selected tools
+- `tool list|enable|disable`: inspect and control tools available through
+  `chiyo run`
+- `run TOOL`: run an enabled tool through the framework
+- `shell TOOL`: run an enabled shell-action tool and print shell-safe code
+- `install TOOL`: install a generated wrapper or shell function plus completion
+- `doc TOOL`: print docs embedded in the tool module
 - `doctor`: check common dependencies and setup paths
 
 `config init` requires either `--all` or at least one target name. `chiyo`

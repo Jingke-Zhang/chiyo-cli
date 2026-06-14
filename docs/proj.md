@@ -1,18 +1,18 @@
 # proj
 
-`proj` switches to a project directory from the terminal. The helper
-`proj-select` discovers directories that contain project marker paths, selects a
-project with direct matching or `fzf`, and prints the selected directory. The
-zsh function then `cd`s there.
+`proj` switches to a project directory from the terminal. It discovers
+directories that contain project marker paths, selects a project with direct
+matching or `fzf`, and emits `cd` shell code for the parent shell.
 
 ```sh
+chiyo install proj
 proj
 proj chiyo
 proj -r ~/Documents/01-projects cli
 proj --exclude node_modules cli
 proj --confirm cli
 chiyo config init proj --append
-proj-select --list-completions
+chiyo run proj --list-completions
 chiyo shell proj cli
 chiyo doc proj
 ```
@@ -40,19 +40,18 @@ Marker names are configurable. A directory is considered a project when it
 contains any configured marker.
 
 Missing search roots are skipped with a warning. If no configured roots exist,
-`proj-select` exits with an error.
+`proj` exits with an error.
 
 In `fzf`, project names and paths are displayed as aligned columns. Fuzzy search
 only matches the project name column; paths are shown for disambiguation.
 
 ## Completion Data
 
-`proj` is a shell function, so its completion script asks `proj-select` for
-project names. `proj-select --list-completions` prints one project name per line.
+`proj` is installed as a shell function, so its completion script asks
+`chiyo run proj --list-completions` for project names. The completion command
+prints one project name per line.
 
 ## Framework Entry
 
-`proj` is also available as a framework-backed built-in through
-`chiyo shell proj ...` once `proj` is enabled in `[chiyo].enabled_tools`. This
-entry reads `[proj]` from `tools.toml` and prints shell-safe `cd ...` code for
-shell integration.
+`proj` is a framework-backed built-in. `chiyo shell proj ...` reads `[proj]`
+from `tools.toml` and prints shell-safe `cd ...` code for shell integration.
