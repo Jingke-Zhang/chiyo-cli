@@ -41,6 +41,7 @@ class ToolMetadata:
     command: str
     description: str
     docs: str
+    shell: bool
     path: str
 
 
@@ -168,6 +169,7 @@ def metadata_from_tool_class(tool_class, path):
         command=cmd,
         description=tool_class.description,
         docs=tool_class.docs,
+        shell=bool(getattr(tool_class, "shell", False)),
         path=str(Path(path)),
     )
 

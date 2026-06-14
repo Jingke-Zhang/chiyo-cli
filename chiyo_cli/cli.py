@@ -21,7 +21,6 @@ ZSH_SITE_FUNCTIONS_DIR = "~/.local/share/zsh/site-functions"
 COMMANDS = ["chiyo"]
 COMPLETIONS = []
 SHELL_INTEGRATION = 'eval "$(chiyo init zsh)"'
-SHELL_TOOLS = {"gop", "proj"}
 LEGACY_SHELL_HELPERS = {
     "gop": ["gop-select"],
     "proj": ["proj-select"],
@@ -1162,11 +1161,11 @@ def write_completion(path, tool_command):
     return expanded
 
 
-def assert_install_targets_are_safe(tool_command, config):
+def assert_install_targets_are_safe(tool_command, config, shell_tool=False):
     wrapper = os.path.expanduser(wrapper_path(tool_command, config))
     completion = os.path.expanduser(completion_path(tool_command, config))
 
-    if tool_command in SHELL_TOOLS:
+    if shell_tool:
         shell = os.path.expanduser(shell_path(tool_command, config))
 
         if os.path.exists(shell) and not is_generated_shell_artifact(shell, tool_command):
@@ -1196,7 +1195,7 @@ def resolve_install_target(tool_command):
 
 
 def install_resolved_tool_lines(metadata, install_command, config):
-    if metadata.cmd in SHELL_TOOLS:
+    if metadata.shell:
         installed_shell = write_shell_artifact(shell_path(install_command, config), install_command)
         installed_completion = write_completion(completion_path(install_command, config), install_command)
         lines = [
@@ -1225,7 +1224,7 @@ def install_resolved_tool_lines(metadata, install_command, config):
 def install_tool_lines(tool_command):
     config = chiyo_config()
     metadata, install_command = resolve_install_target(tool_command)
-    assert_install_targets_are_safe(install_command, config)
+    assert_install_targets_are_safe(install_command, config, shell_tool=metadata.shell)
     return install_resolved_tool_lines(metadata, install_command, config)
 
 
@@ -1234,12 +1233,12 @@ def install_tools_lines(tool_commands):
     targets = [resolve_install_target(tool_command) for tool_command in tool_commands]
     seen = set()
 
-    for _metadata, install_command in targets:
+    for metadata, install_command in targets:
         if install_command in seen:
             raise ToolCommandError(f"duplicate install target: {install_command}")
 
         seen.add(install_command)
-        assert_install_targets_are_safe(install_command, config)
+        assert_install_targets_are_safe(install_command, config, shell_tool=metadata.shell)
 
     lines = []
 
@@ -1251,32 +1250,35 @@ def install_tools_lines(tool_commands):
 
 def uninstall_tool_lines(tool_command):
     config = chiyo_config()
-    path = os.path.expanduser(wrapper_path(tool_command, config))
-    completion = os.path.expanduser(completion_path(tool_command, config))
+    resolved = resolve_tool_command(tool_command, enabled_only=False)
+    metadata = None if resolved is None else resolved[0]
+    uninstall_command = metadata.cmd if metadata is not None and "/" in tool_command else tool_command
+    path = os.path.expanduser(wrapper_path(uninstall_command, config))
+    completion = os.path.expanduser(completion_path(uninstall_command, config))
     lines = []
 
-    if tool_command in SHELL_TOOLS:
-        shell = os.path.expanduser(shell_path(tool_command, config))
+    if metadata is not None and metadata.shell:
+        shell = os.path.expanduser(shell_path(uninstall_command, config))
 
         if os.path.exists(shell):
-            if not is_generated_shell_artifact(shell, tool_command):
+            if not is_generated_shell_artifact(shell, uninstall_command):
                 raise ToolCommandError(f"refusing to remove non-chiyo shell file: {shell}")
 
             os.unlink(shell)
-            lines.append(f"uninstalled {tool_command} shell: {shell}")
+            lines.append(f"uninstalled {uninstall_command} shell: {shell}")
         else:
-            lines.append(f"not installed: {tool_command}")
+            lines.append(f"not installed: {uninstall_command}")
 
         if os.path.exists(completion):
-            if not is_generated_completion(completion, tool_command):
+            if not is_generated_completion(completion, uninstall_command):
                 raise ToolCommandError(
                     f"refusing to remove non-chiyo completion: {completion}"
                 )
 
             os.unlink(completion)
-            lines.append(f"uninstalled _{tool_command}: {completion}")
+            lines.append(f"uninstalled _{uninstall_command}: {completion}")
 
-        for helper in LEGACY_SHELL_HELPERS.get(tool_command, []):
+        for helper in LEGACY_SHELL_HELPERS.get(uninstall_command, []):
             helper_file = os.path.expanduser(helper_path(helper, config))
             source = os.path.join(BIN_DIR, helper)
 
@@ -1287,22 +1289,22 @@ def uninstall_tool_lines(tool_command):
         return lines
 
     if os.path.exists(path):
-        if not is_generated_wrapper(path, tool_command):
+        if not is_generated_wrapper(path, uninstall_command):
             raise ToolCommandError(f"refusing to remove non-chiyo wrapper: {path}")
 
         os.unlink(path)
-        lines.append(f"uninstalled {tool_command}: {path}")
+        lines.append(f"uninstalled {uninstall_command}: {path}")
     else:
-        lines.append(f"not installed: {tool_command}")
+        lines.append(f"not installed: {uninstall_command}")
 
     if os.path.exists(completion):
-        if not is_generated_completion(completion, tool_command):
+        if not is_generated_completion(completion, uninstall_command):
             raise ToolCommandError(
                 f"refusing to remove non-chiyo completion: {completion}"
             )
 
         os.unlink(completion)
-        lines.append(f"uninstalled _{tool_command}: {completion}")
+        lines.append(f"uninstalled _{uninstall_command}: {completion}")
 
     return lines
 

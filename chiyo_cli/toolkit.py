@@ -133,6 +133,7 @@ class PickOpenTool:
     description = None
     prompt = None
     docs = ""
+    shell = False
     default_config = {}
     search_display_fields = [1]
 

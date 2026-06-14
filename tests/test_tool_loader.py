@@ -209,6 +209,10 @@ class ToolLoaderTests(unittest.TestCase):
         self.assertIn("ws", commands)
         self.assertIn("zo", commands)
         self.assertEqual(discovery.errors, [])
+        shell_by_command = {tool.command: tool.shell for tool in discovery.tools}
+        self.assertTrue(shell_by_command["gop"])
+        self.assertTrue(shell_by_command["proj"])
+        self.assertFalse(shell_by_command["s"])
 
     def test_discover_tools_can_include_builtins(self):
         discovery = discover_tools([FIXTURE_DIR], include_builtins=True)

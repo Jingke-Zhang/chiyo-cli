@@ -140,6 +140,7 @@ class Tool(PickOpenTool):
     author = "Chiyo CLI"
     author_id = "Jingke-Zhang"
     description = "Select a project directory for cd."
+    shell = True
     docs = """
     # proj
 

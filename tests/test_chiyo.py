@@ -997,6 +997,56 @@ class ChiyoTests(unittest.TestCase):
             self.assertFalse((wrapper_dir / "gop-select").exists())
             self.assertFalse(wrapper.exists())
 
+    def test_install_shell_tool_alias_writes_function_and_completion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            completion_dir = Path(temp_dir) / "zsh"
+            shell_dir = Path(temp_dir) / "shell"
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                        f'shell_dir = "{shell_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                "\n".join(
+                    [
+                        '["jingke-zhang/go-or-pick"]',
+                        'cmds = ["go"]',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    lines = CHIYO.install_tool_lines("go")
+
+            shell_file = shell_dir / "go.zsh"
+            completion = completion_dir / "_go"
+            wrapper = wrapper_dir / "go"
+
+            self.assertIn(f"installed go shell: {shell_file}", lines)
+            self.assertIn(f"installed _go: {completion}", lines)
+            self.assertEqual(
+                shell_file.read_text(encoding="utf-8"),
+                CHIYO.shell_function_script("go"),
+            )
+            self.assertEqual(
+                completion.read_text(encoding="utf-8"),
+                CHIYO.completion_script("go"),
+            )
+            self.assertFalse(wrapper.exists())
+
     def test_install_tools_lines_installs_multiple_tools(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             wrapper_dir = Path(temp_dir) / "bin"
@@ -1207,6 +1257,57 @@ class ChiyoTests(unittest.TestCase):
             self.assertFalse(shell_file.exists())
             self.assertFalse(completion.exists())
             self.assertFalse(helper.exists())
+
+    def test_uninstall_shell_tool_alias_removes_generated_artifacts(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            wrapper_dir.mkdir()
+            completion_dir = Path(temp_dir) / "zsh"
+            completion_dir.mkdir()
+            shell_dir = Path(temp_dir) / "shell"
+            shell_dir.mkdir()
+            shell_file = shell_dir / "go.zsh"
+            shell_file.write_text(CHIYO.shell_function_script("go"), encoding="utf-8")
+            completion = completion_dir / "_go"
+            completion.write_text(CHIYO.completion_script("go"), encoding="utf-8")
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                        f'shell_dir = "{shell_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                "\n".join(
+                    [
+                        '["jingke-zhang/go-or-pick"]',
+                        'cmds = ["go"]',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    lines = CHIYO.uninstall_tool_lines("go")
+
+            self.assertEqual(
+                lines,
+                [
+                    f"uninstalled go shell: {shell_file}",
+                    f"uninstalled _go: {completion}",
+                ],
+            )
+            self.assertFalse(shell_file.exists())
+            self.assertFalse(completion.exists())
 
     def test_uninstall_tool_refuses_non_generated_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
