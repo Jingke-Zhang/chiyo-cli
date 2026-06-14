@@ -206,6 +206,7 @@ class ToolLoaderTests(unittest.TestCase):
         self.assertIn("gop", commands)
         self.assertIn("proj", commands)
         self.assertIn("s", commands)
+        self.assertIn("ws", commands)
         self.assertIn("zo", commands)
         self.assertEqual(discovery.errors, [])
 
@@ -215,6 +216,7 @@ class ToolLoaderTests(unittest.TestCase):
         commands = [tool.command for tool in discovery.tools]
         self.assertIn("paper", commands)
         self.assertIn("s", commands)
+        self.assertIn("ws", commands)
 
 
 if __name__ == "__main__":

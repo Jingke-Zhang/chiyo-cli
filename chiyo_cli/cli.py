@@ -32,6 +32,7 @@ BUILTIN_TOOL_KEYS = {
     "gop": "jingke-zhang/go-or-pick",
     "proj": "jingke-zhang/project",
     "s": "jingke-zhang/web-search",
+    "ws": "jingke-zhang/workspace",
     "zo": "jingke-zhang/zotero",
 }
 BUILTIN_KEY_COMMANDS = {key: cmd for cmd, key in BUILTIN_TOOL_KEYS.items()}

@@ -15,7 +15,11 @@ TOOLS_CONFIG_PATH = "~/.config/chiyo-cli/tools.toml"
 CHIYO_CONFIG_MODULE = "chiyo"
 DEFAULT_CHIYO_CONFIG = {
     "tool_dirs": ["~/.config/chiyo-cli/tools"],
-    "enabled_tools": ["jingke-zhang/go-or-pick", "jingke-zhang/web-search"],
+    "enabled_tools": [
+        "jingke-zhang/go-or-pick",
+        "jingke-zhang/web-search",
+        "jingke-zhang/workspace",
+    ],
     "wrapper_dir": "~/.local/bin",
     "completion_dir": "~/.local/share/zsh/site-functions",
     "shell_dir": "~/.local/share/chiyo-cli/shell",

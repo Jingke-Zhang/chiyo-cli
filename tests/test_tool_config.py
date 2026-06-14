@@ -22,7 +22,7 @@ class ToolConfigTests(unittest.TestCase):
 
             config = load_chiyo_config(config_path=str(config_path))
 
-        self.assertEqual(config["enabled_tools"], ["jingke-zhang/go-or-pick", "jingke-zhang/web-search"])
+        self.assertEqual(config["enabled_tools"], ["jingke-zhang/go-or-pick", "jingke-zhang/web-search", "jingke-zhang/workspace"])
         self.assertTrue(config["tool_dirs"][0].endswith(".config/chiyo-cli/tools"))
         self.assertTrue(config["wrapper_dir"].endswith(".local/bin"))
 
@@ -126,7 +126,7 @@ class ToolConfigTests(unittest.TestCase):
 
         self.assertEqual(
             config["enabled_tools"],
-            ["jingke-zhang/go-or-pick", "jingke-zhang/web-search", "paper"],
+            ["jingke-zhang/go-or-pick", "jingke-zhang/web-search", "jingke-zhang/workspace", "paper"],
         )
 
     def test_disable_tool_removes_command_and_reports_previous_state(self):
@@ -139,7 +139,7 @@ class ToolConfigTests(unittest.TestCase):
 
             config = load_chiyo_config(config_path=str(config_path))
 
-        self.assertEqual(config["enabled_tools"], ["jingke-zhang/go-or-pick", "jingke-zhang/web-search"])
+        self.assertEqual(config["enabled_tools"], ["jingke-zhang/go-or-pick", "jingke-zhang/web-search", "jingke-zhang/workspace"])
 
 
 if __name__ == "__main__":

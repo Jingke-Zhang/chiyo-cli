@@ -22,6 +22,7 @@ BUILTIN_TOOL_MODULES = {
     "gop": "chiyo_cli.builtin_tools.gop",
     "proj": "chiyo_cli.builtin_tools.proj",
     "s": "chiyo_cli.builtin_tools.ws",
+    "ws": "chiyo_cli.builtin_tools.workspace",
     "zo": "chiyo_cli.builtin_tools.zo",
 }
 

@@ -161,11 +161,13 @@ class ChiyoTests(unittest.TestCase):
         self.assertIn("wrote [chiyo] config", "\n".join(lines))
         self.assertIn("wrote [jingke-zhang/go-or-pick] config", "\n".join(lines))
         self.assertIn("wrote [jingke-zhang/web-search] config", "\n".join(lines))
+        self.assertIn("wrote [jingke-zhang/workspace] config", "\n".join(lines))
         self.assertIn("[chiyo]", config_content)
-        self.assertIn('enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search"]', config_content)
+        self.assertIn('enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search", "jingke-zhang/workspace"]', config_content)
         self.assertNotIn("[ws]", config_content)
         self.assertIn('["jingke-zhang/go-or-pick"]', tools_content)
         self.assertIn('["jingke-zhang/web-search".engines.g]', tools_content)
+        self.assertIn('["jingke-zhang/workspace"]', tools_content)
         self.assertNotIn("[bm]", tools_content)
 
     def test_config_init_all_uses_current_enabled_tools(self):
@@ -332,7 +334,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search"]',
+                        'enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search", "jingke-zhang/workspace"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -351,7 +353,7 @@ class ChiyoTests(unittest.TestCase):
             content = Path(config_path).read_text(encoding="utf-8")
 
         self.assertIn("[chiyo]", content)
-        self.assertIn('enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search"]', content)
+        self.assertIn('enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search", "jingke-zhang/workspace"]', content)
 
     def test_tool_list_shows_discovered_tools_and_enabled_status(self):
         with tempfile.TemporaryDirectory() as temp_dir:
