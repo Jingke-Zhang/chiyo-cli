@@ -6,6 +6,8 @@ from pathlib import Path
 import shutil
 import sys
 
+from chiyo_cli.tool_resolver import ToolCommandError
+
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 if REPO_ROOT not in sys.path:
@@ -40,10 +42,6 @@ CHIYO_CONFIG_TARGET = "chiyo"
 
 
 class ConfigInitRefused(Exception):
-    pass
-
-
-class ToolCommandError(Exception):
     pass
 
 
@@ -910,102 +908,53 @@ def tool_list_lines(include_docs=False):
 
 
 def tool_metadata_by_command(tool_command):
-    resolved = resolve_tool_command(tool_command, enabled_only=False)
-    return None if resolved is None else resolved[0]
+    from chiyo_cli.tool_resolver import tool_metadata_by_command as resolve_metadata
+
+    return resolve_metadata(
+        tool_command,
+        config_path=CONFIG_PATH,
+        tools_config_path=TOOLS_CONFIG_PATH,
+    )
 
 
 def enabled_tool_keys(config):
-    return set(config.get("enabled_tools", []))
+    from chiyo_cli.tool_resolver import enabled_tool_keys as resolver_enabled_tool_keys
+
+    return resolver_enabled_tool_keys(config)
 
 
 def configured_cmds(tool):
-    from chiyo_cli.tool_config import load_tool_config, tool_config_defaults
+    from chiyo_cli.tool_resolver import configured_cmds as resolver_configured_cmds
 
-    config = load_tool_config(
-        tool.key,
-        tool_config_defaults(tool, {}),
-        config_path=TOOLS_CONFIG_PATH,
-    )
-    cmds = config.get("cmds", [tool.cmd])
-
-    if not isinstance(cmds, list):
-        return [tool.cmd]
-
-    normalized = []
-
-    for cmd in cmds:
-        if not isinstance(cmd, str) or not cmd:
-            continue
-
-        if cmd not in normalized:
-            normalized.append(cmd)
-
-    return normalized or [tool.cmd]
+    return resolver_configured_cmds(tool, config_path=TOOLS_CONFIG_PATH)
 
 
 def tool_command_index(tools, config, enabled_only=True):
-    from chiyo_cli.tool_loader import COMMAND_PATTERN
+    from chiyo_cli.tool_resolver import tool_command_index as resolver_tool_command_index
 
-    enabled = enabled_tool_keys(config)
-    index = {}
-
-    for tool in tools:
-        if enabled_only and tool.key not in enabled:
-            continue
-
-        for cmd in configured_cmds(tool):
-            if not COMMAND_PATTERN.fullmatch(cmd):
-                continue
-
-            index.setdefault(cmd, []).append(tool)
-
-    duplicates = {
-        cmd
-        for cmd, owners in index.items()
-        if len(owners) > 1
-    }
-    return index, duplicates
+    return resolver_tool_command_index(
+        tools,
+        config,
+        enabled_only=enabled_only,
+        tools_config_path=TOOLS_CONFIG_PATH,
+    )
 
 
 def duplicate_cmd_message(index, duplicates):
-    parts = []
+    from chiyo_cli.tool_resolver import duplicate_cmd_message as resolver_duplicate_cmd_message
 
-    for cmd in sorted(duplicates):
-        owners = ", ".join(tool.key for tool in index[cmd])
-        parts.append(f"duplicate cmd {cmd}: {owners}")
-
-    return "; ".join(parts)
+    return resolver_duplicate_cmd_message(index, duplicates)
 
 
 def resolve_tool_command(tool_command, enabled_only=True):
-    from chiyo_cli.tool_config import load_chiyo_config
-    from chiyo_cli.tool_loader import discover_tools
+    from chiyo_cli.tool_resolver import resolve_tool_command as resolver_resolve_tool_command
 
-    config = load_chiyo_config(config_path=CONFIG_PATH)
-    discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
-    index, duplicates = tool_command_index(
-        discovery.tools,
-        config,
+    return resolver_resolve_tool_command(
+        tool_command,
         enabled_only=enabled_only,
+        config_path=CONFIG_PATH,
+        tools_config_path=TOOLS_CONFIG_PATH,
     )
-
-    if duplicates and (enabled_only or tool_command in duplicates):
-        raise ToolCommandError(duplicate_cmd_message(index, duplicates))
-
-    matches = index.get(tool_command, [])
-
-    if matches:
-        return matches[0], config
-
-    if "/" in tool_command:
-        for tool in discovery.tools:
-            if tool.key == tool_command:
-                if enabled_only and tool.key not in enabled_tool_keys(config):
-                    break
-
-                return tool, config
-
-    return None
 
 
 def chiyo_config():
