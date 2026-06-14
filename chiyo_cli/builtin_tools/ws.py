@@ -1,4 +1,4 @@
-"""Framework-backed ws built-in."""
+"""Framework-backed web search built-in."""
 
 from urllib.parse import quote
 
@@ -31,19 +31,19 @@ def build_search_url(engine, query):
 
 class Tool(PickOpenTool):
     name = "Web Search"
-    cmd = "ws"
+    cmd = "s"
     author = "Chiyo CLI"
-    author_id = "chiyo"
+    author_id = "Jingke-Zhang"
     description = "Open a configured web search engine."
     docs = """
-    # ws
+    # s
 
     Open a configured web search URL. The first query term selects an engine
     when it matches a configured engine key.
     """
-    prompt = "ws> "
+    prompt = "s> "
     default_config = {
-        "fzf_prompt": "ws> ",
+        "fzf_prompt": "s> ",
         "engines": DEFAULT_ENGINES,
     }
     search_display_fields = [1, 2]

@@ -159,13 +159,13 @@ class ChiyoTests(unittest.TestCase):
             tools_content = Path(tools_path).read_text(encoding="utf-8")
 
         self.assertIn("wrote [chiyo] config", "\n".join(lines))
-        self.assertIn("wrote [chiyo/gop] config", "\n".join(lines))
-        self.assertIn("wrote [chiyo/ws] config", "\n".join(lines))
+        self.assertIn("wrote [jingke-zhang/go-or-pick] config", "\n".join(lines))
+        self.assertIn("wrote [jingke-zhang/web-search] config", "\n".join(lines))
         self.assertIn("[chiyo]", config_content)
-        self.assertIn('enabled_tools = ["chiyo/gop", "chiyo/ws"]', config_content)
+        self.assertIn('enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search"]', config_content)
         self.assertNotIn("[ws]", config_content)
-        self.assertIn('["chiyo/gop"]', tools_content)
-        self.assertIn('["chiyo/ws".engines.g]', tools_content)
+        self.assertIn('["jingke-zhang/go-or-pick"]', tools_content)
+        self.assertIn('["jingke-zhang/web-search".engines.g]', tools_content)
         self.assertNotIn("[bm]", tools_content)
 
     def test_config_init_all_uses_current_enabled_tools(self):
@@ -173,7 +173,7 @@ class ChiyoTests(unittest.TestCase):
             config_path = os.path.join(temp_dir, "config.toml")
             tools_path = os.path.join(temp_dir, "tools.toml")
             Path(config_path).write_text(
-                '[chiyo]\nenabled_tools = ["bm", "zo"]\n',
+                '[chiyo]\nenabled_tools = ["jingke-zhang/explorer-bookmark", "jingke-zhang/zotero"]\n',
                 encoding="utf-8",
             )
 
@@ -186,12 +186,12 @@ class ChiyoTests(unittest.TestCase):
 
             tools_content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertEqual(["chiyo", "chiyo/bm", "chiyo/zo"], targets)
+        self.assertEqual(["chiyo", "jingke-zhang/explorer-bookmark", "jingke-zhang/zotero"], targets)
         self.assertIn("append [chiyo] defaults", "\n".join(lines))
-        self.assertIn("append [chiyo/bm] config", "\n".join(lines))
-        self.assertIn("append [chiyo/zo] config", "\n".join(lines))
-        self.assertIn('["chiyo/bm"]', tools_content)
-        self.assertIn('["chiyo/zo"]', tools_content)
+        self.assertIn("append [jingke-zhang/explorer-bookmark] config", "\n".join(lines))
+        self.assertIn("append [jingke-zhang/zotero] config", "\n".join(lines))
+        self.assertIn('["jingke-zhang/explorer-bookmark"]', tools_content)
+        self.assertIn('["jingke-zhang/zotero"]', tools_content)
         self.assertNotIn("[gop]", tools_content)
         self.assertNotIn("[ws]", tools_content)
 
@@ -204,7 +204,7 @@ class ChiyoTests(unittest.TestCase):
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_path):
                     with self.assertRaises(CHIYO.ConfigInitRefused):
-                        CHIYO.config_init_lines(["ws"], "write")
+                        CHIYO.config_init_lines(["s"], "write")
 
     def test_config_init_append_skips_existing_and_adds_missing(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -214,13 +214,14 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_path):
-                    lines = CHIYO.config_init_lines(["ws", "app"], "append")
+                    lines = CHIYO.config_init_lines(["s", "app"], "append")
 
             content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertIn("skip [chiyo/ws] config: already exists", lines)
-        self.assertIn("append [chiyo/app] config", "\n".join(lines))
-        self.assertIn('["chiyo/app".alias]', content)
+        self.assertIn("append [jingke-zhang/web-search] config", "\n".join(lines))
+        self.assertIn("append [jingke-zhang/application] config", "\n".join(lines))
+        self.assertIn('["jingke-zhang/application".alias]', content)
+        self.assertIn('["jingke-zhang/web-search".engines.g]', content)
         self.assertIn('fzf_prompt = "old> "', content)
 
     def test_config_init_append_adds_missing_bm_defaults(self):
@@ -243,9 +244,9 @@ class ChiyoTests(unittest.TestCase):
 
             content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertIn("skip [chiyo/bm] config: already exists", "\n".join(lines))
+        self.assertIn("append [jingke-zhang/explorer-bookmark] config", "\n".join(lines))
         self.assertIn('skip_folders = ["Bookmarks"]', content)
-        self.assertNotIn('["chiyo/bm"]', content)
+        self.assertIn('["jingke-zhang/explorer-bookmark"]', content)
 
     def test_config_init_append_preserves_existing_bm_defaults(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -270,10 +271,11 @@ class ChiyoTests(unittest.TestCase):
 
             content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertIn("skip [chiyo/bm] config: already exists", lines)
+        self.assertIn("append [jingke-zhang/explorer-bookmark] config", "\n".join(lines))
         self.assertIn('bookmarks_path = "~/Bookmarks.plist"', content)
         self.assertIn('fzf_prompt = "bookmarks> "', content)
         self.assertIn('browser = "Google Chrome"', content)
+        self.assertIn('["jingke-zhang/explorer-bookmark"]', content)
 
     def test_config_init_force_replaces_selected_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -298,13 +300,13 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_path):
-                    CHIYO.config_init_lines(["ws"], "force")
+                    CHIYO.config_init_lines(["s"], "force")
 
             content = Path(tools_path).read_text(encoding="utf-8")
 
         self.assertIn("[other]", content)
-        self.assertIn('["chiyo/ws".engines.g]', content)
-        self.assertNotIn("[ws.engines.old]", content)
+        self.assertIn('["jingke-zhang/web-search".engines.g]', content)
+        self.assertIn("[ws.engines.old]", content)
 
     @mock.patch("chiyo_cli.cli.shutil.which")
     def test_doctor_lines_reports_available_command(self, which):
@@ -330,7 +332,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["chiyo/gop", "chiyo/ws"]',
+                        'enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -339,17 +341,17 @@ class ChiyoTests(unittest.TestCase):
             )
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
-                self.assertEqual(CHIYO.enable_tool_lines("paper"), ["enabled tool: fixture/paper"])
-                self.assertEqual(CHIYO.disable_tool_lines("paper"), ["disabled tool: fixture/paper"])
+                self.assertEqual(CHIYO.enable_tool_lines("paper"), ["enabled tool: fixture/paper-search"])
+                self.assertEqual(CHIYO.disable_tool_lines("paper"), ["disabled tool: fixture/paper-search"])
                 self.assertEqual(
                     CHIYO.disable_tool_lines("paper"),
-                    ["tool already disabled: fixture/paper"],
+                    ["tool already disabled: fixture/paper-search"],
                 )
 
             content = Path(config_path).read_text(encoding="utf-8")
 
         self.assertIn("[chiyo]", content)
-        self.assertIn('enabled_tools = ["chiyo/gop", "chiyo/ws"]', content)
+        self.assertIn('enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search"]', content)
 
     def test_tool_list_shows_discovered_tools_and_enabled_status(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -359,7 +361,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["paper"]',
+                        'enabled_tools = ["fixture/paper-search"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -371,7 +373,7 @@ class ChiyoTests(unittest.TestCase):
                 lines = CHIYO.tool_list_lines()
 
         output = "\n".join(lines)
-        self.assertIn("enabled  fixture/paper", output)
+        self.assertIn("enabled  fixture/paper-search", output)
         self.assertIn("Paper Search by Fixture Author", output)
         self.assertIn("disabled fixture/disabled-notes", output)
         self.assertIn("warn", output)
@@ -478,7 +480,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["paper"]',
+                        'enabled_tools = ["fixture/paper-search"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -488,7 +490,7 @@ class ChiyoTests(unittest.TestCase):
             Path(tools_config_path).write_text(
                 "\n".join(
                     [
-                        "[paper]",
+                        '["fixture/paper-search"]',
                         f'root = "{root}"',
                     ]
                 ),
@@ -514,7 +516,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["fixture/paper"]',
+                        'enabled_tools = ["fixture/paper-search"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -524,7 +526,7 @@ class ChiyoTests(unittest.TestCase):
             Path(tools_config_path).write_text(
                 "\n".join(
                     [
-                        '["fixture/paper"]',
+                        '["fixture/paper-search"]',
                         f'root = "{root}"',
                         'cmds = ["paper", "papers"]',
                     ]
@@ -547,7 +549,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["fixture/paper", "fixture/disabled-notes"]',
+                        'enabled_tools = ["fixture/paper-search", "fixture/disabled-notes"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -557,7 +559,7 @@ class ChiyoTests(unittest.TestCase):
             Path(tools_config_path).write_text(
                 "\n".join(
                     [
-                        '["fixture/paper"]',
+                        '["fixture/paper-search"]',
                         'cmds = ["paper"]',
                         "",
                         '["fixture/disabled-notes"]',
@@ -573,7 +575,7 @@ class ChiyoTests(unittest.TestCase):
                         CHIYO.run_tool("paper", [])
 
                     with self.assertRaisesRegex(CHIYO.ToolCommandError, "duplicate cmd paper"):
-                        CHIYO.run_tool("fixture/paper", [])
+                        CHIYO.run_tool("fixture/paper-search", [])
 
     def test_run_tool_rejects_disabled_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -636,7 +638,7 @@ class ChiyoTests(unittest.TestCase):
 
         self.assertEqual(lines, ["printf '%s\\n' 'plain value'"])
 
-    def test_run_tool_runs_builtin_ws(self):
+    def test_run_tool_runs_builtin_s(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
             tools_config_path = os.path.join(temp_dir, "tools.toml")
@@ -645,7 +647,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["ws"]',
+                        'enabled_tools = ["jingke-zhang/web-search"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -656,7 +658,7 @@ class ChiyoTests(unittest.TestCase):
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
                     with mock.patch("chiyo_cli.toolkit.open_location") as open_location:
-                        result = CHIYO.run_tool("ws", ["g", "wavelet", "tree"])
+                        result = CHIYO.run_tool("s", ["g", "wavelet", "tree"])
 
         self.assertEqual(result, "https://www.google.com/search?q=wavelet%20tree")
         open_location.assert_called_once_with(
@@ -672,7 +674,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["app"]',
+                        'enabled_tools = ["jingke-zhang/application"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -682,7 +684,7 @@ class ChiyoTests(unittest.TestCase):
             Path(tools_config_path).write_text(
                 "\n".join(
                     [
-                        "[app.alias]",
+                        '["jingke-zhang/application".alias]',
                         'browser = "Safari"',
                     ]
                 ),
@@ -707,7 +709,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["bm"]',
+                        'enabled_tools = ["jingke-zhang/explorer-bookmark"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -748,7 +750,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["zo"]',
+                        'enabled_tools = ["jingke-zhang/zotero"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -781,7 +783,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["proj"]',
+                        'enabled_tools = ["jingke-zhang/project"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -810,7 +812,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["gop"]',
+                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -818,7 +820,7 @@ class ChiyoTests(unittest.TestCase):
                 encoding="utf-8",
             )
             Path(tools_config_path).write_text(
-                f'[gop]\nroots = ["{temp_dir}"]\nexclude = []\nfzf_prompt = "gop> "\n',
+                f'["jingke-zhang/go-or-pick"]\nroots = ["{temp_dir}"]\nexclude = []\nfzf_prompt = "gop> "\n',
                 encoding="utf-8",
             )
 
@@ -844,7 +846,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["gop"]',
+                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -852,7 +854,7 @@ class ChiyoTests(unittest.TestCase):
                 encoding="utf-8",
             )
             Path(tools_config_path).write_text(
-                '[gop]\nroots = ["~/Documents"]\nexclude = []\nfzf_prompt = "gop> "\n',
+                '["jingke-zhang/go-or-pick"]\nroots = ["~/Documents"]\nexclude = []\nfzf_prompt = "gop> "\n',
                 encoding="utf-8",
             )
 
@@ -877,7 +879,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["gop"]',
+                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -885,7 +887,7 @@ class ChiyoTests(unittest.TestCase):
                 encoding="utf-8",
             )
             Path(tools_config_path).write_text(
-                f'[gop]\nroots = ["{temp_dir}"]\nexclude = []\nfzf_prompt = "gop> "\n',
+                f'["jingke-zhang/go-or-pick"]\nroots = ["{temp_dir}"]\nexclude = []\nfzf_prompt = "gop> "\n',
                 encoding="utf-8",
             )
 
@@ -914,9 +916,9 @@ class ChiyoTests(unittest.TestCase):
             )
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
-                lines = CHIYO.tool_doc_lines("ws")
+                lines = CHIYO.tool_doc_lines("s")
 
-        self.assertIn("# ws", "\n".join(lines))
+        self.assertIn("# s", "\n".join(lines))
 
     def test_install_tool_writes_wrapper_for_enabled_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -928,7 +930,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["paper"]',
+                        'enabled_tools = ["fixture/paper-search"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                     ]
@@ -961,7 +963,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["gop"]',
+                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                         f'shell_dir = "{shell_dir}"',
@@ -1011,7 +1013,7 @@ class ChiyoTests(unittest.TestCase):
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 lines = CHIYO.install_tool_lines("paper")
 
-        self.assertIn("warn    fixture/paper installed but disabled for chiyo run", lines)
+        self.assertIn("warn    fixture/paper-search installed but disabled for chiyo run", lines)
 
     def test_install_tool_refuses_to_replace_existing_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1024,7 +1026,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["paper"]',
+                        'enabled_tools = ["fixture/paper-search"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -1048,7 +1050,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["paper"]',
+                        'enabled_tools = ["fixture/paper-search"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                     ]
@@ -1076,7 +1078,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["paper"]',
+                        'enabled_tools = ["fixture/paper-search"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                     ]
@@ -1117,7 +1119,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["gop"]',
+                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                         f'shell_dir = "{shell_dir}"',
@@ -1152,7 +1154,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["paper"]',
+                        'enabled_tools = ["fixture/paper-search"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -1199,12 +1201,12 @@ class ChiyoTests(unittest.TestCase):
                 ]
 
         output = "\n".join(lines)
-        self.assertIn("ok      user tool fixture/paper metadata:", output)
+        self.assertIn("ok      user tool fixture/paper-search metadata:", output)
         self.assertIn("warn    user tool missing: enabled but not discoverable", output)
-        self.assertIn("ok      user tool fixture/paper wrapper:", output)
-        self.assertIn("ok      user tool fixture/paper zsh:", output)
+        self.assertIn("ok      user tool fixture/paper-search wrapper:", output)
+        self.assertIn("ok      user tool fixture/paper-search zsh:", output)
         self.assertIn(
-            "warn    user tool fixture/paper: fixture/paper installed but disabled for chiyo run",
+            "warn    user tool fixture/paper-search: fixture/paper-search installed but disabled for chiyo run",
             output,
         )
         self.assertIn("warn    user tool missing_author.py:", output)
@@ -1225,7 +1227,7 @@ class ChiyoTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["paper"]',
+                        'enabled_tools = ["fixture/paper-search"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                     ]
@@ -1240,7 +1242,7 @@ class ChiyoTests(unittest.TestCase):
                 ]
 
         self.assertIn(
-            f"warn    user tool fixture/paper zsh: {completion_dir / '_paper'} not found",
+            f"warn    user tool fixture/paper-search zsh: {completion_dir / '_paper'} not found",
             "\n".join(lines),
         )
 

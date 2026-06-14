@@ -138,7 +138,7 @@ class Tool(PickOpenTool):
     name = "Project"
     cmd = "proj"
     author = "Chiyo CLI"
-    author_id = "chiyo"
+    author_id = "Jingke-Zhang"
     description = "Select a project directory for cd."
     docs = """
     # proj

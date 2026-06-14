@@ -118,7 +118,7 @@ class BookmarkTests(unittest.TestCase):
             path.write_text(
                 "\n".join(
                     [
-                        "[bm]",
+                        '["jingke-zhang/explorer-bookmark"]',
                         'bookmarks_path = "~/Bookmarks.plist"',
                         'skip_folders = ["Bookmarks"]',
                         'fzf_prompt = "bookmarks> "',
@@ -128,7 +128,7 @@ class BookmarkTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            config = load_tool_config("bm", BM.DEFAULT_CONFIG, config_path=str(path))
+            config = load_tool_config("jingke-zhang/explorer-bookmark", BM.DEFAULT_CONFIG, config_path=str(path))
             config = BM.Tool().normalize_config(config)
 
         self.assertTrue(str(config["bookmarks_path"]).endswith("Bookmarks.plist"))

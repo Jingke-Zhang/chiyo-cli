@@ -165,7 +165,7 @@ class PickOpenTool:
         raise SystemExit(exit_code)
 
     def warn(self, message):
-        print_warning(self.command, message)
+        print_warning(tool_cmd(self), message)
 
     def path(self, value):
         return Path(expand_path(value))

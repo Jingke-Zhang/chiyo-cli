@@ -26,7 +26,7 @@ class ToolLoaderTests(unittest.TestCase):
         metadata = load_tool_metadata(FIXTURE_DIR / "paper.py")
 
         self.assertEqual(metadata.name, "Paper Search")
-        self.assertEqual(metadata.key, "fixture/paper")
+        self.assertEqual(metadata.key, "fixture/paper-search")
         self.assertEqual(metadata.cmd, "paper")
         self.assertEqual(metadata.command, "paper")
         self.assertEqual(metadata.author, "Fixture Author")
@@ -53,7 +53,6 @@ class ToolLoaderTests(unittest.TestCase):
         class Tool(PickOpenTool):
             name = "Long Description"
             cmd = "long-description"
-            command = "long-description"
             author = "Fixture Author"
             author_id = "fixture"
             description = "x" * (DESCRIPTION_LIMIT + 1)
@@ -75,7 +74,6 @@ class ToolLoaderTests(unittest.TestCase):
         class Tool(PickOpenTool):
             name = "Unsafe Command"
             cmd = "bad command"
-            command = "bad command"
             author = "Fixture Author"
             author_id = "fixture"
             description = "Search fixture items."
@@ -132,7 +130,6 @@ class ToolLoaderTests(unittest.TestCase):
                         "class Tool(PickOpenTool):",
                         '    name = "Course Search"',
                         '    cmd = "course"',
-                        '    command = "course"',
                         '    author = "Fixture Author"',
                         '    author_id = "fixture"',
                         "    description = DESCRIPTION",
@@ -154,7 +151,7 @@ class ToolLoaderTests(unittest.TestCase):
             metadata = load_tool_metadata(tool_dir / "tool.py")
 
         self.assertEqual(metadata.command, "course")
-        self.assertEqual(metadata.key, "fixture/course")
+        self.assertEqual(metadata.key, "fixture/course-search")
         self.assertEqual(metadata.description, "Search course notes.")
 
     def test_discover_tool_paths_finds_public_python_files(self):
@@ -200,7 +197,7 @@ class ToolLoaderTests(unittest.TestCase):
         self.assertEqual(discovery.tools, [])
         self.assertEqual(discovery.errors, [])
 
-    def test_discover_builtin_tools_includes_ws(self):
+    def test_discover_builtin_tools_includes_s(self):
         discovery = discover_builtin_tools()
 
         commands = [tool.command for tool in discovery.tools]
@@ -208,7 +205,7 @@ class ToolLoaderTests(unittest.TestCase):
         self.assertIn("bm", commands)
         self.assertIn("gop", commands)
         self.assertIn("proj", commands)
-        self.assertIn("ws", commands)
+        self.assertIn("s", commands)
         self.assertIn("zo", commands)
         self.assertEqual(discovery.errors, [])
 
@@ -217,7 +214,7 @@ class ToolLoaderTests(unittest.TestCase):
 
         commands = [tool.command for tool in discovery.tools]
         self.assertIn("paper", commands)
-        self.assertIn("ws", commands)
+        self.assertIn("s", commands)
 
 
 if __name__ == "__main__":

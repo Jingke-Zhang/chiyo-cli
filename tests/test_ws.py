@@ -58,7 +58,7 @@ class WsTests(unittest.TestCase):
             tool.items({"engines": engines}),
             "",
             tool.parser().parse_args([]),
-            {"fzf_prompt": "ws> ", "engines": engines},
+            {"fzf_prompt": "s> ", "engines": engines},
         )
 
         self.assertEqual(selected["key"], "gh")
@@ -81,7 +81,7 @@ class WsTests(unittest.TestCase):
     @mock.patch("chiyo_cli.toolkit.open_location")
     def test_run_lists_completions_without_opening_url(self, open_location):
         config = {
-            "fzf_prompt": "ws> ",
+            "fzf_prompt": "s> ",
             "engines": {
                 "g": {"name": "Google", "url": "https://g.test?q={query}"},
             }
@@ -113,10 +113,10 @@ class WsTests(unittest.TestCase):
             config_path.write_text(
                 "\n".join(
                     [
-                        "[ws]",
-                        'fzf_prompt = "ws> "',
+                        '["jingke-zhang/web-search"]',
+                        'fzf_prompt = "s> "',
                         "",
-                        "[ws.engines.g]",
+                        '["jingke-zhang/web-search".engines.g]',
                         'name = "Google"',
                         'url = "https://google.test/search?q={query}"',
                     ]
@@ -125,7 +125,7 @@ class WsTests(unittest.TestCase):
             )
 
             config = load_tool_config(
-                "ws",
+                "jingke-zhang/web-search",
                 WS.Tool.default_config,
                 config_path=str(config_path),
             )
@@ -138,10 +138,10 @@ class WsTests(unittest.TestCase):
             path.write_text(
                 "\n".join(
                     [
-                        "[ws]",
-                        'fzf_prompt = "ws> "',
+                        '["jingke-zhang/web-search"]',
+                        'fzf_prompt = "s> "',
                         "",
-                        "[ws.engines.custom]",
+                        '["jingke-zhang/web-search".engines.custom]',
                         'name = "Custom"',
                         'url = "https://custom.test/search?q={query}"',
                     ]
@@ -149,31 +149,31 @@ class WsTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            config = load_tool_config("ws", WS.Tool.default_config, config_path=str(path))
+            config = load_tool_config("jingke-zhang/web-search", WS.Tool.default_config, config_path=str(path))
 
             self.assertEqual(list(config["engines"]), ["custom"])
 
     def test_load_config_warns_when_ws_uses_default_engines_fallback(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "config.toml"
-            path.write_text("[ws]\nfzf_prompt = \"ws> \"\n", encoding="utf-8")
+            path.write_text('["jingke-zhang/web-search"]\nfzf_prompt = "s> "\n', encoding="utf-8")
 
             warn = mock.Mock()
             config = load_tool_config(
-                "ws",
+                "jingke-zhang/web-search",
                 WS.Tool.default_config,
                 config_path=str(path),
                 warn=warn,
             )
 
             self.assertIn("g", config["engines"])
-            warn.assert_called_once_with("config [ws] missing engines; using default.")
+            warn.assert_called_once_with("config [jingke-zhang/web-search] missing engines; using default.")
 
     def test_format_default_config_includes_default_engines(self):
-        content = format_module_config("ws", WS.Tool.default_config)
+        content = format_module_config("jingke-zhang/web-search", WS.Tool.default_config)
 
-        self.assertIn("[ws]", content)
-        self.assertIn("[ws.engines.g]", content)
+        self.assertIn('["jingke-zhang/web-search"]', content)
+        self.assertIn('["jingke-zhang/web-search".engines.g]', content)
 
 
 if __name__ == "__main__":

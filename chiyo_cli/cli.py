@@ -27,13 +27,14 @@ LEGACY_SHELL_HELPERS = {
     "proj": ["proj-select"],
 }
 BUILTIN_TOOL_KEYS = {
-    "app": "chiyo/app",
-    "bm": "chiyo/bm",
-    "gop": "chiyo/gop",
-    "proj": "chiyo/proj",
-    "ws": "chiyo/ws",
-    "zo": "chiyo/zo",
+    "app": "jingke-zhang/application",
+    "bm": "jingke-zhang/explorer-bookmark",
+    "gop": "jingke-zhang/go-or-pick",
+    "proj": "jingke-zhang/project",
+    "s": "jingke-zhang/web-search",
+    "zo": "jingke-zhang/zotero",
 }
+BUILTIN_KEY_COMMANDS = {key: cmd for cmd, key in BUILTIN_TOOL_KEYS.items()}
 CONFIG_TOOLS = set(BUILTIN_TOOL_KEYS) | set(BUILTIN_TOOL_KEYS.values())
 CHIYO_CONFIG_TARGET = "chiyo"
 
@@ -339,16 +340,14 @@ def write_tools_config_text(content):
 def format_tool_config(tool):
     from chiyo_cli.config import format_module_config
     from chiyo_cli.tool_loader import load_tool_class
+    from chiyo_cli.tool_loader import load_tool_metadata
     from chiyo_cli.tool_config import tool_config_defaults
 
-    legacy_tool = tool.split("/", 1)[1] if "/" in tool else tool
-    tool_class = load_tool_class(f"builtin:{legacy_tool}")
-    cmd = getattr(tool_class, "cmd", None) or getattr(tool_class, "command")
-    author_id = getattr(tool_class, "author_id")
-    tool_key = f"{author_id}/{cmd}"
-    metadata = type("Metadata", (), {"cmd": cmd})()
+    cmd = BUILTIN_KEY_COMMANDS.get(tool, tool)
+    tool_class = load_tool_class(f"builtin:{cmd}")
+    metadata = load_tool_metadata(f"builtin:{cmd}")
     return format_module_config(
-        tool_key,
+        metadata.key,
         tool_config_defaults(metadata, tool_class.default_config),
     ).strip()
 
@@ -509,7 +508,6 @@ def replace_config_sections(content, tools):
 
     for tool in tools:
         remaining = remove_module_config(remaining, tool)
-        remaining = remove_module_config(remaining, legacy_tool_key(tool))
 
     return append_config_sections(remaining, tools)
 
@@ -558,7 +556,7 @@ def config_init_lines(tools, mode):
 
         if mode == "append":
             for target in selected_targets:
-                if is_configured(content, target) or is_configured(content, legacy_tool_key(target)):
+                if is_configured(content, target):
                     skipped.append(target)
                 else:
                     selected.append(target)
@@ -644,9 +642,9 @@ def validate_config_init_args(args, parser=None):
 
         config = load_chiyo_config(config_path=CONFIG_PATH)
         enabled_tools = [
-            config_tool_key(tool)
+            tool
             for tool in config.get("enabled_tools", [])
-            if tool in CONFIG_TOOLS
+            if tool in BUILTIN_KEY_COMMANDS
         ]
         return [CHIYO_CONFIG_TARGET, *enabled_tools]
 
@@ -685,13 +683,12 @@ def config_module_checks():
     config = load_chiyo_config(config_path=CONFIG_PATH)
 
     for tool in config.get("enabled_tools", []):
-        if tool not in CONFIG_TOOLS:
+        if tool not in BUILTIN_KEY_COMMANDS:
             continue
 
-        tool_key = config_tool_key(tool)
-        legacy_key = legacy_tool_key(tool_key)
+        tool_key = tool
 
-        if is_configured(tools_content, tool_key) or is_configured(tools_content, legacy_key):
+        if is_configured(tools_content, tool_key):
             checks.append(("ok", f"[{tool_key}] exists", f"{tool_key} config"))
         else:
             checks.append(
@@ -703,13 +700,6 @@ def config_module_checks():
             )
 
     return checks
-
-
-def legacy_tool_key(tool_key):
-    if "/" in tool_key:
-        return tool_key.split("/", 1)[1]
-
-    return tool_key
 
 
 def command_symlink_checks():
@@ -744,7 +734,6 @@ def user_tool_doctor_checks():
     config = chiyo_config()
     discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
     tools_by_key = {tool.key: tool for tool in discovery.tools}
-    tools_by_cmd = {tool.cmd: tool for tool in discovery.tools}
     cmd_index, duplicate_cmds = tool_command_index(discovery.tools, config, enabled_only=True)
     checks = []
 
@@ -755,12 +744,10 @@ def user_tool_doctor_checks():
         checks.append(("ok", tool.path, f"user tool {tool.key} metadata"))
 
     for enabled in config.get("enabled_tools", []):
-        key = config_tool_key(enabled)
-
-        if key in tools_by_key or enabled in tools_by_cmd:
-            checks.append(("ok", "loadable", f"user tool {key} enabled"))
+        if enabled in tools_by_key:
+            checks.append(("ok", "loadable", f"user tool {enabled} enabled"))
         else:
-            checks.append(("warn", "enabled but not discoverable", f"user tool {key}"))
+            checks.append(("warn", "enabled but not discoverable", f"user tool {enabled}"))
 
     for cmd in sorted(duplicate_cmds):
         owners = ", ".join(tool.key for tool in cmd_index[cmd])
@@ -774,7 +761,7 @@ def user_tool_doctor_checks():
         if wrapper_installed and is_generated_wrapper(wrapper, tool.cmd):
             checks.append(("ok", wrapper, f"user tool {tool.key} wrapper"))
 
-            if tool.key not in enabled_tool_keys(config) and tool.cmd not in config.get("enabled_tools", []):
+            if tool.key not in enabled_tool_keys(config):
                 checks.append(
                     (
                         "warn",
@@ -890,7 +877,7 @@ def tool_list_lines(include_docs=False):
     lines = []
 
     for tool in discovery.tools:
-        status = "enabled" if tool.key in enabled_tools or tool.cmd in config.get("enabled_tools", []) else "disabled"
+        status = "enabled" if tool.key in enabled_tools else "disabled"
         cmds = ", ".join(configured_cmds(tool))
         lines.append(
             f"{status:8} {tool.key:24} {cmds:16} {tool.name} "
@@ -924,12 +911,7 @@ def tool_metadata_by_command(tool_command):
 
 
 def enabled_tool_keys(config):
-    keys = set()
-
-    for tool in config.get("enabled_tools", []):
-        keys.add(config_tool_key(tool))
-
-    return keys
+    return set(config.get("enabled_tools", []))
 
 
 def configured_cmds(tool):
@@ -939,7 +921,6 @@ def configured_cmds(tool):
         tool.key,
         tool_config_defaults(tool, {}),
         config_path=TOOLS_CONFIG_PATH,
-        legacy_key=tool.cmd,
     )
     cmds = config.get("cmds", [tool.cmd])
 
@@ -965,7 +946,7 @@ def tool_command_index(tools, config, enabled_only=True):
     index = {}
 
     for tool in tools:
-        if enabled_only and tool.key not in enabled and tool.cmd not in config.get("enabled_tools", []):
+        if enabled_only and tool.key not in enabled:
             continue
 
         for cmd in configured_cmds(tool):
@@ -1217,7 +1198,7 @@ def install_tool_lines(tool_command):
             f"installed _{install_command}: {installed_completion}",
         ]
 
-        if metadata.key not in enabled_tool_keys(config) and metadata.cmd not in config.get("enabled_tools", []):
+        if metadata.key not in enabled_tool_keys(config):
             lines.append(f"warn    {metadata.key} installed but disabled for chiyo run")
 
         return lines
@@ -1229,7 +1210,7 @@ def install_tool_lines(tool_command):
         f"installed _{install_command}: {installed_completion}",
     ]
 
-    if metadata.key not in enabled_tool_keys(config) and metadata.cmd not in config.get("enabled_tools", []):
+    if metadata.key not in enabled_tool_keys(config):
         lines.append(f"warn    {metadata.key} installed but disabled for chiyo run")
 
     return lines
@@ -1309,7 +1290,6 @@ def run_tool(tool_command, tool_args, execute_shell_actions=True):
         metadata.key,
         tool_config_defaults(metadata, tool.default_config),
         config_path=TOOLS_CONFIG_PATH,
-        legacy_key=metadata.cmd,
     )
     if execute_shell_actions:
         return tool.run(tool_args, config=tool_config)

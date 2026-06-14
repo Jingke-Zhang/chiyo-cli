@@ -17,7 +17,7 @@ class ProjTests(unittest.TestCase):
             config_path.write_text(
                 "\n".join(
                     [
-                        "[proj]",
+                        '["jingke-zhang/project"]',
                         f'roots = ["{temp_dir}"]',
                         'markers = [".project", "package.json"]',
                         'exclude = ["node_modules"]',
@@ -28,7 +28,7 @@ class ProjTests(unittest.TestCase):
             )
 
             config = load_tool_config(
-                "proj",
+                "jingke-zhang/project",
                 PROJ.DEFAULT_CONFIG,
                 config_path=str(config_path),
             )

@@ -100,10 +100,10 @@ def load_bookmarks(config, fail):
 
 
 class Tool(PickOpenTool):
-    name = "Browser Bookmarks"
+    name = "Explorer Bookmark"
     cmd = "bm"
     author = "Chiyo CLI"
-    author_id = "chiyo"
+    author_id = "Jingke-Zhang"
     description = "Search browser bookmarks and open a URL."
     docs = """
     # bm

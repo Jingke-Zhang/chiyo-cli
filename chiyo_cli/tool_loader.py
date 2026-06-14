@@ -15,12 +15,13 @@ from chiyo_cli.toolkit import PickOpenTool, ToolFlagError, validate_tool_flags
 REQUIRED_METADATA = ["name", "author", "author_id", "description", "docs"]
 DESCRIPTION_LIMIT = 80
 COMMAND_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
+IDENTITY_PART_PATTERN = re.compile(r"[^a-z0-9]+")
 BUILTIN_TOOL_MODULES = {
     "app": "chiyo_cli.builtin_tools.app",
     "bm": "chiyo_cli.builtin_tools.bm",
     "gop": "chiyo_cli.builtin_tools.gop",
     "proj": "chiyo_cli.builtin_tools.proj",
-    "ws": "chiyo_cli.builtin_tools.ws",
+    "s": "chiyo_cli.builtin_tools.ws",
     "zo": "chiyo_cli.builtin_tools.zo",
 }
 
@@ -156,11 +157,12 @@ def metadata_from_tool_class(tool_class, path):
     validate_tool_class(tool_class, path)
     cmd = default_tool_cmd(tool_class)
     author_id = tool_class.author_id
+    tool_id = normalized_identity_part(tool_class.name)
     return ToolMetadata(
         name=tool_class.name,
         author=tool_class.author,
         author_id=author_id,
-        key=f"{author_id}/{cmd}",
+        key=f"{normalized_identity_part(author_id)}/{tool_id}",
         cmd=cmd,
         command=cmd,
         description=tool_class.description,
@@ -171,6 +173,15 @@ def metadata_from_tool_class(tool_class, path):
 
 def default_tool_cmd(tool_class):
     return getattr(tool_class, "cmd", None) or getattr(tool_class, "command", None)
+
+
+def normalized_identity_part(value):
+    normalized = IDENTITY_PART_PATTERN.sub("-", str(value).strip().lower()).strip("-")
+
+    if not normalized:
+        raise ToolLoadError("tool identity parts must contain letters or numbers")
+
+    return normalized
 
 
 def load_tool_metadata(path):
