@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from chiyo_cli.tool_loader import (
+    COMMAND_PATTERN,
     DESCRIPTION_LIMIT,
     ToolLoadError,
     discover_tool_paths,
@@ -64,6 +65,32 @@ class ToolLoaderTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ToolLoadError, "description"):
             validate_tool_class(Tool)
+
+    def test_validate_tool_class_rejects_shell_unsafe_command(self):
+        class Tool(PickOpenTool):
+            name = "Unsafe Command"
+            command = "bad command"
+            author = "Fixture Author"
+            description = "Search fixture items."
+            docs = "Unsafe command."
+
+            def items(self, config):
+                return []
+
+            def display_fields(self, item, config):
+                return []
+
+            def open_item(self, item, args, config):
+                return None
+
+        with self.assertRaisesRegex(ToolLoadError, "tool command"):
+            validate_tool_class(Tool)
+
+    def test_command_pattern_accepts_generated_shell_safe_names(self):
+        self.assertIsNotNone(COMMAND_PATTERN.fullmatch("paper"))
+        self.assertIsNotNone(COMMAND_PATTERN.fullmatch("disabled-notes"))
+        self.assertIsNone(COMMAND_PATTERN.fullmatch("Bad"))
+        self.assertIsNone(COMMAND_PATTERN.fullmatch("bad command"))
 
     def test_load_tool_class_rejects_missing_tool_class(self):
         with tempfile.TemporaryDirectory() as temp_dir:

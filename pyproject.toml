@@ -8,6 +8,9 @@ version = "0.1.2"
 description = "A collection of small search-oriented command-line tools."
 readme = "README.md"
 requires-python = ">=3.9"
+dependencies = [
+  "tomli; python_version < '3.11'",
+]
 license = { file = "LICENSE" }
 authors = [
   { name = "chiyo" },
@@ -24,5 +27,8 @@ classifiers = [
   "Topic :: Utilities",
 ]
 
-[tool.setuptools]
-packages = ["chiyo_cli"]
+[project.scripts]
+chiyo = "chiyo_cli.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["chiyo_cli", "chiyo_cli.*"]

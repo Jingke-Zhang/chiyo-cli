@@ -2,6 +2,7 @@
 
 import importlib.util
 import importlib
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from chiyo_cli.toolkit import PickOpenTool, ToolFlagError, validate_tool_flags
 
 REQUIRED_METADATA = ["name", "command", "author", "description", "docs"]
 DESCRIPTION_LIMIT = 80
+COMMAND_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 BUILTIN_TOOL_MODULES = {
     "app": "chiyo_cli.builtin_tools.app",
     "bm": "chiyo_cli.builtin_tools.bm",
@@ -102,6 +104,15 @@ def validate_tool_class(tool_class, path=None):
         location = f": {path}" if path is not None else ""
         raise ToolLoadError(
             f"tool description must be {DESCRIPTION_LIMIT} characters or fewer{location}"
+        )
+
+    command = getattr(tool_class, "command")
+
+    if not isinstance(command, str) or not COMMAND_PATTERN.fullmatch(command):
+        location = f": {path}" if path is not None else ""
+        raise ToolLoadError(
+            "tool command must match ^[a-z][a-z0-9-]*$"
+            f"{location}"
         )
 
     try:
