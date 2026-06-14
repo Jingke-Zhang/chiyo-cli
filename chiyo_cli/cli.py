@@ -27,17 +27,6 @@ LEGACY_SHELL_HELPERS = {
     "gop": ["gop-select"],
     "proj": ["proj-select"],
 }
-BUILTIN_TOOL_KEYS = {
-    "app": "jingke-zhang/application",
-    "bm": "jingke-zhang/explorer-bookmark",
-    "gop": "jingke-zhang/go-or-pick",
-    "proj": "jingke-zhang/project",
-    "s": "jingke-zhang/web-search",
-    "ws": "jingke-zhang/workspace",
-    "zo": "jingke-zhang/zotero",
-}
-BUILTIN_KEY_COMMANDS = {key: cmd for cmd, key in BUILTIN_TOOL_KEYS.items()}
-CONFIG_TOOLS = set(BUILTIN_TOOL_KEYS) | set(BUILTIN_TOOL_KEYS.values())
 CHIYO_CONFIG_TARGET = "chiyo"
 
 
@@ -340,15 +329,42 @@ def write_tools_config_text(content):
     return write_text(TOOLS_CONFIG_PATH, content)
 
 
+def builtin_tools():
+    from chiyo_cli.tool_loader import discover_builtin_tools
+
+    return discover_builtin_tools().tools
+
+
+def builtin_tools_by_cmd():
+    return {tool.cmd: tool for tool in builtin_tools()}
+
+
+def builtin_tools_by_key():
+    return {tool.key: tool for tool in builtin_tools()}
+
+
+def builtin_config_targets():
+    by_cmd = builtin_tools_by_cmd()
+    by_key = builtin_tools_by_key()
+    return set(by_cmd) | set(by_key)
+
+
+def config_tool_metadata(tool):
+    by_cmd = builtin_tools_by_cmd()
+
+    if tool in by_cmd:
+        return by_cmd[tool]
+
+    return builtin_tools_by_key().get(tool)
+
+
 def format_tool_config(tool):
     from chiyo_cli.config import format_module_config
     from chiyo_cli.tool_loader import load_tool_class
-    from chiyo_cli.tool_loader import load_tool_metadata
     from chiyo_cli.tool_config import tool_config_defaults
 
-    cmd = BUILTIN_KEY_COMMANDS.get(tool, tool)
-    tool_class = load_tool_class(f"builtin:{cmd}")
-    metadata = load_tool_metadata(f"builtin:{cmd}")
+    metadata = config_tool_metadata(tool)
+    tool_class = load_tool_class(metadata.path)
     return format_module_config(
         metadata.key,
         tool_config_defaults(metadata, tool_class.default_config),
@@ -644,14 +660,15 @@ def validate_config_init_args(args, parser=None):
         from chiyo_cli.tool_config import load_chiyo_config
 
         config = load_chiyo_config(config_path=CONFIG_PATH)
+        builtin_keys = set(builtin_tools_by_key())
         enabled_tools = [
             tool
             for tool in config.get("enabled_tools", [])
-            if tool in BUILTIN_KEY_COMMANDS
+            if tool in builtin_keys
         ]
         return [CHIYO_CONFIG_TARGET, *enabled_tools]
 
-    known_targets = set(CONFIG_TOOLS) | {CHIYO_CONFIG_TARGET}
+    known_targets = builtin_config_targets() | {CHIYO_CONFIG_TARGET}
     unknown_tools = sorted(set(args.tools) - known_targets)
 
     if unknown_tools:
@@ -661,7 +678,8 @@ def validate_config_init_args(args, parser=None):
 
 
 def config_tool_key(tool):
-    return BUILTIN_TOOL_KEYS.get(tool, tool)
+    metadata = config_tool_metadata(tool)
+    return metadata.key if metadata is not None else tool
 
 
 def config_module_checks():
@@ -685,8 +703,10 @@ def config_module_checks():
 
     config = load_chiyo_config(config_path=CONFIG_PATH)
 
+    builtin_keys = set(builtin_tools_by_key())
+
     for tool in config.get("enabled_tools", []):
-        if tool not in BUILTIN_KEY_COMMANDS:
+        if tool not in builtin_keys:
             continue
 
         tool_key = tool
