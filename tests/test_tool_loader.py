@@ -108,6 +108,45 @@ class ToolLoaderTests(unittest.TestCase):
             with self.assertRaisesRegex(ToolLoadError, "subclass PickOpenTool"):
                 load_tool_class(path)
 
+    def test_load_directory_tool_supports_relative_imports(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tool_dir = Path(temp_dir) / "course"
+            tool_dir.mkdir()
+            (tool_dir / "data.py").write_text(
+                'DESCRIPTION = "Search course notes."\n',
+                encoding="utf-8",
+            )
+            (tool_dir / "tool.py").write_text(
+                "\n".join(
+                    [
+                        "from chiyo_cli.toolkit import PickOpenTool",
+                        "from .data import DESCRIPTION",
+                        "",
+                        "class Tool(PickOpenTool):",
+                        '    name = "Course Search"',
+                        '    command = "course"',
+                        '    author = "Fixture Author"',
+                        "    description = DESCRIPTION",
+                        '    docs = "Search course notes."',
+                        "",
+                        "    def items(self, config):",
+                        "        return []",
+                        "",
+                        "    def display_fields(self, item, config):",
+                        "        return []",
+                        "",
+                        "    def open_item(self, item, args, config):",
+                        "        return None",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            metadata = load_tool_metadata(tool_dir / "tool.py")
+
+        self.assertEqual(metadata.command, "course")
+        self.assertEqual(metadata.description, "Search course notes.")
+
     def test_discover_tool_paths_finds_public_python_files(self):
         paths = discover_tool_paths([FIXTURE_DIR, FIXTURE_DIR / "missing"])
 
@@ -115,6 +154,19 @@ class ToolLoaderTests(unittest.TestCase):
         self.assertIn("paper.py", names)
         self.assertIn("missing_author.py", names)
         self.assertNotIn("__init__.py", names)
+
+    def test_discover_tool_paths_finds_directory_tool_entries(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "course").mkdir()
+            (root / "course" / "tool.py").write_text("", encoding="utf-8")
+            (root / "notes").mkdir()
+            (root / "_private").mkdir()
+            (root / "_private" / "tool.py").write_text("", encoding="utf-8")
+
+            paths = discover_tool_paths([root])
+
+        self.assertEqual([path.as_posix().split("/")[-2:] for path in paths], [["course", "tool.py"]])
 
     def test_discover_user_tools_returns_valid_metadata_and_errors(self):
         discovery = discover_user_tools([FIXTURE_DIR])

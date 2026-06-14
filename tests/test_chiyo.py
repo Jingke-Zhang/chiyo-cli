@@ -674,8 +674,8 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.zo.load_items") as load_items:
-                        with mock.patch("chiyo_cli.builtin_tools.zo.open_location") as open_location:
+                    with mock.patch("chiyo_cli.builtin_tools.zo.tool.load_items") as load_items:
+                        with mock.patch("chiyo_cli.builtin_tools.zo.tool.open_location") as open_location:
                             load_items.return_value = [item]
                             result = CHIYO.run_tool("zo", ["linear"])
 

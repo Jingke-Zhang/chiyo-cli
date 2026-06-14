@@ -110,7 +110,7 @@ class ZoteroTests(unittest.TestCase):
             "https://doi.org/10.1000/example",
         )
 
-    @mock.patch("chiyo_cli.builtin_tools.zo.urlopen")
+    @mock.patch("chiyo_cli.builtin_tools.zo.local_api.urlopen")
     def test_load_items_from_local_api_filters_notes_and_title_matches(self, urlopen):
         note = api_item("NOTEKEY1", "Note")
         note["data"]["itemType"] = "note"
@@ -188,7 +188,7 @@ class ZoteroTests(unittest.TestCase):
         self.assertNotIn("filter_rows", choose_item.call_args.kwargs)
         self.assertEqual(choose_item.call_args.args[1], "zo> ")
 
-    @mock.patch("chiyo_cli.builtin_tools.zo.open_location")
+    @mock.patch("chiyo_cli.builtin_tools.zo.tool.open_location")
     def test_run_prints_key_without_opening(self, open_location):
         config = {
             "local_api_url": "http://localhost:23119/api/",
@@ -212,7 +212,7 @@ class ZoteroTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "ITEMKEY1\n")
         open_location.assert_not_called()
 
-    @mock.patch("chiyo_cli.builtin_tools.zo.open_location")
+    @mock.patch("chiyo_cli.builtin_tools.zo.tool.open_location")
     def test_run_opens_zotero_select_uri_by_default(
         self,
         open_location,
@@ -242,8 +242,13 @@ class ZoteroTests(unittest.TestCase):
             "zotero://select/library/items/ITEMKEY1",
         )
 
-    @mock.patch("chiyo_cli.builtin_tools.zo.urlopen")
-    def test_attachment_path_uses_local_api_file_url(self, urlopen):
+    @mock.patch("chiyo_cli.builtin_tools.zo.attachments.urlopen")
+    @mock.patch("chiyo_cli.builtin_tools.zo.local_api.urlopen")
+    def test_attachment_path_uses_local_api_file_url(
+        self,
+        local_api_urlopen,
+        attachment_urlopen,
+    ):
         children = [
             {
                 "key": "PDFKEY12",
@@ -254,10 +259,10 @@ class ZoteroTests(unittest.TestCase):
                 },
             }
         ]
-        urlopen.side_effect = [
-            FakeResponse(json.dumps(children).encode("utf-8")),
-            FakeResponse(b"file:///Users/me/Zotero/storage/PDFKEY12/paper.pdf"),
-        ]
+        local_api_urlopen.return_value = FakeResponse(json.dumps(children).encode("utf-8"))
+        attachment_urlopen.return_value = FakeResponse(
+            b"file:///Users/me/Zotero/storage/PDFKEY12/paper.pdf"
+        )
         item = {"key": "ITEMKEY1", "source": "local-api"}
 
         path = ZO.attachment_path(

@@ -52,6 +52,23 @@ New tools should stay small and follow the existing shape:
 Prefer readable standard-library Python and small shell integrations over larger
 frameworks.
 
+Use a single Python file for small tools:
+
+```text
+~/.config/chiyo-cli/tools/paper.py
+```
+
+Use a directory tool when a tool needs multiple data sources, parsers, or action
+helpers. The entrypoint must be `tool.py` and must define the public `Tool`
+class; helper modules can be imported relatively:
+
+```text
+~/.config/chiyo-cli/tools/zotero/
+  tool.py
+  local_api.py
+  sqlite_source.py
+```
+
 ### Reusable Interfaces
 
 Shared helpers live under `chiyo_cli/`. New tools should use these before adding

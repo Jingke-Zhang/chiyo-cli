@@ -70,24 +70,39 @@ Example:
 ~/.config/chiyo-cli/tools/paper.py
 ~/.config/chiyo-cli/tools/note.py
 ~/.config/chiyo-cli/tools/course.py
+~/.config/chiyo-cli/tools/zotero/tool.py
 ```
 
-This directory contains executable behavior, not plain configuration. Each file
-is Python code and must be treated as trusted code.
+This directory contains executable behavior, not plain configuration. Tool
+files are Python code and must be treated as trusted code.
+
+Small tools can stay as a single file. Larger tools can use a directory with a
+`tool.py` entrypoint and helper modules next to it:
+
+```text
+~/.config/chiyo-cli/tools/zotero/
+  tool.py
+  local_api.py
+  sqlite_source.py
+  item.py
+```
+
+`tool.py` is loaded as a package module, so it can use relative imports such as
+`from .sqlite_source import load_items`.
 
 ## Tool Definition Shape
 
-Only class-based tools should be supported at first.
+Tools are class-based.
 
 Reasoning:
 
 - A class naturally groups metadata, docs, default config, flags, helper
   methods, display logic, and actions.
-- Supporting only one tool shape keeps loading and documentation simpler.
+- Supporting only one entrypoint shape keeps loading and documentation simpler.
 - A class can still be very small for simple tools.
 - A class leaves room for inheritance, mixins, and specialized base classes.
 
-The recommended pattern is one public `Tool` class per file:
+The recommended pattern is one public `Tool` class per entrypoint:
 
 ```python
 from chiyo_cli.toolkit import Field, PickOpenTool, STYLE_PRIMARY, STYLE_SECONDARY

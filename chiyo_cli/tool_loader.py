@@ -3,6 +3,8 @@
 import importlib.util
 import importlib
 import re
+import sys
+import types
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -60,6 +62,10 @@ def load_module_from_path(path):
         return importlib.import_module(module_name)
 
     path = Path(path)
+
+    if path.name == "tool.py":
+        return load_directory_tool_module(path)
+
     module_name = f"chiyo_user_tool_{path.stem}_{abs(hash(str(path)))}"
     spec = importlib.util.spec_from_file_location(module_name, path)
 
@@ -67,6 +73,27 @@ def load_module_from_path(path):
         raise ToolLoadError(f"could not load tool module: {path}")
 
     module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_directory_tool_module(path):
+    path = Path(path)
+    package_dir = path.parent
+    package_name = f"chiyo_user_tool_{package_dir.name}_{abs(hash(str(package_dir)))}"
+    module_name = f"{package_name}.tool"
+    package = types.ModuleType(package_name)
+    package.__path__ = [str(package_dir)]
+    package.__package__ = package_name
+    sys.modules[package_name] = package
+
+    spec = importlib.util.spec_from_file_location(module_name, path)
+
+    if spec is None or spec.loader is None:
+        raise ToolLoadError(f"could not load tool module: {path}")
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -153,8 +180,22 @@ def discover_tool_paths(tool_dirs):
             for path in directory.glob("*.py")
             if not path.name.startswith("_")
         )
+        paths.extend(
+            path
+            for path in directory.glob("*/tool.py")
+            if not path.parent.name.startswith("_")
+        )
 
-    return sorted(paths, key=lambda path: (path.stem.lower(), str(path)))
+    return sorted(paths, key=tool_path_sort_key)
+
+
+def tool_path_sort_key(path):
+    if path.name == "tool.py":
+        name = path.parent.name
+    else:
+        name = path.stem
+
+    return name.lower(), str(path)
 
 
 def discover_user_tools(tool_dirs):
