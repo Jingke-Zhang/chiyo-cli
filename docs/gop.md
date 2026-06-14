@@ -38,7 +38,7 @@ forms, and returns the exact absolute path to the shell function.
 Default generated config:
 
 ```toml
-["chiyo/gop"]
+["jingke-zhang/go-or-pick"]
 cmds = ["gop"]
 roots = ["~/Documents", "~/Downloads", "~/Desktop"]
 exclude = ["Library", "node_modules", "OrbStack"]
@@ -52,7 +52,7 @@ Edit `roots` to control the search range and `exclude` to skip large or noisy
 directories:
 
 ```toml
-["chiyo/gop"]
+["jingke-zhang/go-or-pick"]
 roots = ["~/Documents", "~/Downloads"]
 exclude = ["Library", "node_modules", "OrbStack"]
 ```
@@ -65,6 +65,6 @@ prints compact paths from configured roots, one per line.
 
 ## Framework Entry
 
-`gop` is a framework-backed built-in. `chiyo shell gop ...` reads `["chiyo/gop"]` from
+`gop` is a framework-backed built-in. `chiyo shell gop ...` reads `["jingke-zhang/go-or-pick"]` from
 `tools.toml`, reuses the streaming selector, and prints shell-safe `cd ...` or
 `open ...` code for shell integration.

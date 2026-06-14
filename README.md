@@ -20,7 +20,7 @@ chiyo doctor
 Try a few commands:
 
 ```sh
-chiyo run ws gh chiyo-cli
+chiyo run s gh chiyo-cli
 chiyo run app safari
 chiyo run bm github
 chiyo run zo convex optimization
@@ -106,7 +106,7 @@ Initialize config and install tools as needed:
 
 ```sh
 chiyo config init --all --append
-chiyo install ws
+chiyo install s
 chiyo install gop
 ```
 
@@ -140,7 +140,7 @@ Path-like tools follow a small file palette:
 - [`chiyo`](docs/chiyo.md): shell integration and setup diagnostics
 - [`bm`](docs/bm.md): search Safari bookmarks and open URLs
 - [`app`](docs/app.md): search installed macOS applications and launch one
-- [`ws`](docs/ws.md): build web search URLs and open them
+- [`s`](docs/s.md): build web search URLs and open them
 - [`zo`](docs/zo.md): search Zotero items and open entries or PDFs
 - [`gop`](docs/gop.md): search files/directories, then `cd` or `open`
 - [`proj`](docs/proj.md): search git projects, then `cd` into one
@@ -182,13 +182,15 @@ Chiyo uses two config files:
 
 `config.toml` stores Chiyo infrastructure settings, such as enabled tools.
 `tools.toml` stores tool-specific settings. Tool sections use the stable
-`author_id/cmd` identity, for example `["chiyo/bm"]`.
+`author_id/tool_name` identity, for example `["jingke-zhang/explorer-bookmark"]`.
+Identity parts are normalized to lowercase, with spaces and punctuation
+converted to `-`.
 
 Use `chiyo config init` to write explicit default config:
 
 ```sh
 chiyo config init --all --write
-chiyo config init ws --force
+chiyo config init s --force
 chiyo config init app --append
 ```
 
@@ -199,7 +201,7 @@ existing sections without replacing user values. Use `--force` to replace
 selected sections.
 
 `chiyo config init --all` initializes Chiyo plus the currently enabled tools.
-Fresh config enables `chiyo/gop` and `chiyo/ws` by default. A tool section can
+Fresh config enables `jingke-zhang/go-or-pick` and `jingke-zhang/web-search` by default. A tool section can
 set `cmds = ["bm", "bookmarks"]`; any configured command in that list can be
 used with `chiyo run` or installed as a wrapper, as long as no enabled tool
 claims the same command.
