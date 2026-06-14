@@ -1,8 +1,7 @@
 # User Tool Framework Architecture
 
-This document describes the user-tool framework that turns Chiyo CLI from a
-collection of search-oriented scripts into a small, extensible search-pick-open
-toolkit.
+This document records the current user-tool framework architecture and some
+historical design decisions that shaped it.
 
 The goal is not to build a large plugin system. The goal is to make the common
 shape of Chiyo tools easy to reuse:
@@ -359,8 +358,7 @@ paper query
 
 `chiyo install paper` should generate a wrapper, but it should not
 automatically enable the tool. If the tool is not enabled, installation should
-warn clearly and suggest the enable command. This keeps enablement as an
-explicit user decision.
+warn clearly. This keeps enablement as an explicit user decision.
 
 `chiyo install` should be able to install any discoverable tool, including a
 disabled tool. Disabled status should not block wrapper generation. The warning
@@ -368,7 +366,6 @@ should be simple:
 
 ```text
 warn    fixture/paper-search installed but disabled for chiyo run
-todo    add "fixture/paper-search" to [chiyo].enabled_tools in ~/.config/chiyo-cli/config.toml
 ```
 
 ### Wrapper vs Symlink
@@ -551,13 +548,14 @@ There are two possible states:
 The recommended behavior:
 
 - A file in `~/.config/chiyo-cli/tools/paper.py` is discoverable.
-- `chiyo tool list` shows discoverable tools, enabled status, `author_id/tool_name`,
-  configured commands, `name`, `author`, and `description`.
+- `chiyo tool list` shows status, human-readable tool name, configured commands,
+  author display name, and description.
 - `chiyo tool list --docs` may include full docs, but docs should be hidden by
   default because normal discovery should stay compact.
 - `chiyo run paper` only works if `paper` is enabled.
 - `chiyo install paper` installs a wrapper but does not enable `paper`.
-- If a user installs a disabled tool, Chiyo should warn and suggest enabling it.
+- If a user installs a disabled tool, Chiyo warns that the wrapper is installed
+  but disabled for `chiyo run`.
 - Config controls Chiyo behavior, not whether a Python file exists.
 
 This avoids surprising execution of arbitrary Python files just because they
@@ -869,11 +867,10 @@ class Tool(PickOpenTool):
 
 Resolved design choices:
 
-- `chiyo install TOOL` should not automatically enable the tool.
-- `chiyo install TOOL` should still install disabled tools, but it must warn.
+- `chiyo install TOOLS...` should not automatically enable tools.
+- `chiyo install TOOLS...` should still install disabled tools, but it must warn.
 - Disabled-tool install warning should use this fixed format:
-  `warn    TOOL installed but disabled for chiyo run` and
-  `todo    add "TOOL" to [chiyo].enabled_tools in ~/.config/chiyo-cli/config.toml`.
+  `warn    TOOL installed but disabled for chiyo run`.
 - Installed wrappers should call `chiyo run TOOL "$@"`.
 - Dynamic `chiyo TOOL ...` dispatch should not be part of the design.
 - The tool config file should be named `tools.toml`.
@@ -883,9 +880,9 @@ Resolved design choices:
   tool is selected in `fzf`.
 - Tool metadata must include `name`, `cmd`, `author`, `author_id`,
   `description`, and `docs`.
-- Before installation, default discovery output should show only `name`,
-  `author`, `author_id/tool_name`, configured commands, and `description`; docs
-  should require a flag or `chiyo doc TOOL`.
+- Before installation, default discovery output should show only status, `name`,
+  configured commands, `author`, and `description`; docs should require a flag
+  or `chiyo doc TOOL`.
 - `description` should be limited to 80 characters.
 - Required metadata may be read by importing the tool file in a small helper
   process; no metadata database is needed.
@@ -903,6 +900,8 @@ Resolved design choices:
   lowercase with spaces and punctuation converted to `-`. The optional `cmds`
   list in `tools.toml` defines every command alias that can run or install the
   tool.
+- Invalid configured commands are reported by `chiyo tool list` and `chiyo doctor`;
+  Chiyo refuses to run or install a tool whose configured command list is invalid.
 - Enabled tools must not claim the same configured command. Duplicate commands
   are reported as errors and are not dispatched.
 - Tool-specific flags must not conflict with common framework flags such as
@@ -942,9 +941,7 @@ modules and tests are shaped the way they are.
    - `chiyo tool disable TOOL`
    - enabled tools stored in `[chiyo].enabled_tools` as `author_id/tool_name`
 7. Add `chiyo tool list`:
-   - show enabled status
-   - show `name`, `author`, `author_id/tool_name`, configured commands, and
-     `description`
+   - show enabled status, `name`, configured commands, `author`, and `description`
    - hide docs by default
    - optionally show docs with a flag
 8. Add `chiyo doc TOOL`.
@@ -952,8 +949,8 @@ modules and tests are shaped the way they are.
 10. Add framework flag validation so user flags cannot conflict with common
     framework flags such as `--help`, `--confirm`, and `--list-completions`.
 11. Add wrapper install/uninstall:
-    - `chiyo install TOOL`
-    - `chiyo uninstall TOOL`
+    - `chiyo install TOOLS...`
+    - `chiyo uninstall TOOLS...`
     - wrappers call `chiyo run TOOL "$@"`
     - disabled installed tools emit the fixed warning format
 12. Add generated zsh completion for installed wrappers.
