@@ -26,7 +26,15 @@ LEGACY_SHELL_HELPERS = {
     "gop": ["gop-select"],
     "proj": ["proj-select"],
 }
-CONFIG_TOOLS = {"app", "bm", "gop", "proj", "ws", "zo"}
+BUILTIN_TOOL_KEYS = {
+    "app": "chiyo/app",
+    "bm": "chiyo/bm",
+    "gop": "chiyo/gop",
+    "proj": "chiyo/proj",
+    "ws": "chiyo/ws",
+    "zo": "chiyo/zo",
+}
+CONFIG_TOOLS = set(BUILTIN_TOOL_KEYS) | set(BUILTIN_TOOL_KEYS.values())
 CHIYO_CONFIG_TARGET = "chiyo"
 
 
@@ -331,9 +339,18 @@ def write_tools_config_text(content):
 def format_tool_config(tool):
     from chiyo_cli.config import format_module_config
     from chiyo_cli.tool_loader import load_tool_class
+    from chiyo_cli.tool_config import tool_config_defaults
 
-    tool_class = load_tool_class(f"builtin:{tool}")
-    return format_module_config(tool_class.command, tool_class.default_config).strip()
+    legacy_tool = tool.split("/", 1)[1] if "/" in tool else tool
+    tool_class = load_tool_class(f"builtin:{legacy_tool}")
+    cmd = getattr(tool_class, "cmd", None) or getattr(tool_class, "command")
+    author_id = getattr(tool_class, "author_id")
+    tool_key = f"{author_id}/{cmd}"
+    metadata = type("Metadata", (), {"cmd": cmd})()
+    return format_module_config(
+        tool_key,
+        tool_config_defaults(metadata, tool_class.default_config),
+    ).strip()
 
 
 def format_config_section(target):
@@ -352,12 +369,26 @@ def is_configured(content, tool):
 
 
 def is_exact_header(line, tool):
-    return line.strip() == f"[{tool}]"
+    from chiyo_cli.config import parse_table_name
+
+    stripped = line.strip()
+
+    if not stripped.startswith("[") or not stripped.endswith("]"):
+        return False
+
+    return parse_table_name(stripped.strip("[]").strip()) == tool
 
 
 def is_nested_header(line, tool):
+    from chiyo_cli.config import parse_table_name
+
     stripped = line.strip()
-    return stripped.startswith(f"[{tool}.") and stripped.endswith("]")
+
+    if not stripped.startswith("[") or not stripped.endswith("]"):
+        return False
+
+    table_name = parse_table_name(stripped.strip("[]").strip())
+    return table_name.startswith(f"{tool}.")
 
 
 def config_key(line):
@@ -478,12 +509,13 @@ def replace_config_sections(content, tools):
 
     for tool in tools:
         remaining = remove_module_config(remaining, tool)
+        remaining = remove_module_config(remaining, legacy_tool_key(tool))
 
     return append_config_sections(remaining, tools)
 
 
 def config_init_lines(tools, mode):
-    targets = list(dict.fromkeys(tools))
+    targets = list(dict.fromkeys(config_tool_key(tool) for tool in tools))
     config_targets = [
         target
         for target in targets
@@ -526,13 +558,16 @@ def config_init_lines(tools, mode):
 
         if mode == "append":
             for target in selected_targets:
-                if is_configured(content, target):
+                if is_configured(content, target) or is_configured(content, legacy_tool_key(target)):
                     skipped.append(target)
                 else:
                     selected.append(target)
             new_content = append_config_sections(content, selected)
 
             for target in skipped:
+                if not is_configured(new_content, target):
+                    continue
+
                 new_content, changed = append_missing_main_table_defaults(
                     new_content,
                     target,
@@ -609,7 +644,7 @@ def validate_config_init_args(args, parser=None):
 
         config = load_chiyo_config(config_path=CONFIG_PATH)
         enabled_tools = [
-            tool
+            config_tool_key(tool)
             for tool in config.get("enabled_tools", [])
             if tool in CONFIG_TOOLS
         ]
@@ -621,7 +656,11 @@ def validate_config_init_args(args, parser=None):
     if unknown_tools:
         raise ValueError(f"Unknown tool config: {', '.join(unknown_tools)}")
 
-    return args.tools
+    return [config_tool_key(tool) for tool in args.tools]
+
+
+def config_tool_key(tool):
+    return BUILTIN_TOOL_KEYS.get(tool, tool)
 
 
 def config_module_checks():
@@ -649,18 +688,28 @@ def config_module_checks():
         if tool not in CONFIG_TOOLS:
             continue
 
-        if is_configured(tools_content, tool):
-            checks.append(("ok", f"[{tool}] exists", f"{tool} config"))
+        tool_key = config_tool_key(tool)
+        legacy_key = legacy_tool_key(tool_key)
+
+        if is_configured(tools_content, tool_key) or is_configured(tools_content, legacy_key):
+            checks.append(("ok", f"[{tool_key}] exists", f"{tool_key} config"))
         else:
             checks.append(
                 (
                     "todo",
-                    f"run chiyo config init {tool} --append",
-                    f"{tool} config",
+                    f"run chiyo config init {tool_key} --append",
+                    f"{tool_key} config",
                 )
             )
 
     return checks
+
+
+def legacy_tool_key(tool_key):
+    if "/" in tool_key:
+        return tool_key.split("/", 1)[1]
+
+    return tool_key
 
 
 def command_symlink_checks():
@@ -694,35 +743,43 @@ def user_tool_doctor_checks():
 
     config = chiyo_config()
     discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
-    tools_by_command = {tool.command: tool for tool in discovery.tools}
+    tools_by_key = {tool.key: tool for tool in discovery.tools}
+    tools_by_cmd = {tool.cmd: tool for tool in discovery.tools}
+    cmd_index, duplicate_cmds = tool_command_index(discovery.tools, config, enabled_only=True)
     checks = []
 
     for error in discovery.errors:
         checks.append(("warn", error.message, f"user tool {Path(error.path).name}"))
 
     for tool in discovery.tools:
-        checks.append(("ok", tool.path, f"user tool {tool.command} metadata"))
+        checks.append(("ok", tool.path, f"user tool {tool.key} metadata"))
 
-    for command in config.get("enabled_tools", []):
-        if command in tools_by_command:
-            checks.append(("ok", "loadable", f"user tool {command} enabled"))
+    for enabled in config.get("enabled_tools", []):
+        key = config_tool_key(enabled)
+
+        if key in tools_by_key or enabled in tools_by_cmd:
+            checks.append(("ok", "loadable", f"user tool {key} enabled"))
         else:
-            checks.append(("warn", "enabled but not discoverable", f"user tool {command}"))
+            checks.append(("warn", "enabled but not discoverable", f"user tool {key}"))
+
+    for cmd in sorted(duplicate_cmds):
+        owners = ", ".join(tool.key for tool in cmd_index[cmd])
+        checks.append(("warn", f"duplicate cmd: {owners}", f"user tool {cmd}"))
 
     for tool in discovery.tools:
-        wrapper = os.path.expanduser(wrapper_path(tool.command, config))
-        completion = os.path.expanduser(completion_path(tool.command, config))
+        wrapper = os.path.expanduser(wrapper_path(tool.cmd, config))
+        completion = os.path.expanduser(completion_path(tool.cmd, config))
         wrapper_installed = os.path.exists(wrapper)
 
-        if wrapper_installed and is_generated_wrapper(wrapper, tool.command):
-            checks.append(("ok", wrapper, f"user tool {tool.command} wrapper"))
+        if wrapper_installed and is_generated_wrapper(wrapper, tool.cmd):
+            checks.append(("ok", wrapper, f"user tool {tool.key} wrapper"))
 
-            if tool.command not in config.get("enabled_tools", []):
+            if tool.key not in enabled_tool_keys(config) and tool.cmd not in config.get("enabled_tools", []):
                 checks.append(
                     (
                         "warn",
-                        f"{tool.command} installed but disabled for chiyo run",
-                        f"user tool {tool.command}",
+                        f"{tool.key} installed but disabled for chiyo run",
+                        f"user tool {tool.key}",
                     )
                 )
         elif wrapper_installed:
@@ -730,19 +787,19 @@ def user_tool_doctor_checks():
                 (
                     "warn",
                     f"{wrapper} is not a generated chiyo wrapper",
-                    f"user tool {tool.command} wrapper",
+                    f"user tool {tool.key} wrapper",
                 )
             )
 
         if wrapper_installed:
-            if os.path.exists(completion) and is_generated_completion(completion, tool.command):
-                checks.append(("ok", completion, f"user tool {tool.command} zsh"))
+            if os.path.exists(completion) and is_generated_completion(completion, tool.cmd):
+                checks.append(("ok", completion, f"user tool {tool.key} zsh"))
             elif os.path.exists(completion):
                 checks.append(
                     (
                         "warn",
                         f"{completion} is not a generated chiyo completion",
-                        f"user tool {tool.command} zsh",
+                        f"user tool {tool.key} zsh",
                     )
                 )
             else:
@@ -750,7 +807,7 @@ def user_tool_doctor_checks():
                     (
                         "warn",
                         f"{completion} not found",
-                        f"user tool {tool.command} zsh",
+                        f"user tool {tool.key} zsh",
                     )
                 )
 
@@ -798,19 +855,23 @@ def doctor():
 def enable_tool_lines(tool):
     from chiyo_cli.tool_config import enable_tool
 
-    enable_tool(tool, config_path=CONFIG_PATH)
-    return [f"enabled tool: {tool}"]
+    metadata = tool_metadata_by_command(tool)
+    target = metadata.key if metadata is not None else config_tool_key(tool)
+    enable_tool(target, config_path=CONFIG_PATH)
+    return [f"enabled tool: {target}"]
 
 
 def disable_tool_lines(tool):
     from chiyo_cli.tool_config import disable_tool
 
-    was_enabled = disable_tool(tool, config_path=CONFIG_PATH)
+    metadata = tool_metadata_by_command(tool)
+    target = metadata.key if metadata is not None else config_tool_key(tool)
+    was_enabled = disable_tool(target, config_path=CONFIG_PATH)
 
     if was_enabled:
-        return [f"disabled tool: {tool}"]
+        return [f"disabled tool: {target}"]
 
-    return [f"tool already disabled: {tool}"]
+    return [f"tool already disabled: {target}"]
 
 
 def print_tool_lines(lines):
@@ -823,14 +884,16 @@ def tool_list_lines(include_docs=False):
     from chiyo_cli.tool_loader import discover_tools
 
     config = load_chiyo_config(config_path=CONFIG_PATH)
-    enabled_tools = set(config.get("enabled_tools", []))
+    enabled_tools = enabled_tool_keys(config)
     discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
+    cmd_index, duplicate_cmds = tool_command_index(discovery.tools, config, enabled_only=True)
     lines = []
 
     for tool in discovery.tools:
-        status = "enabled" if tool.command in enabled_tools else "disabled"
+        status = "enabled" if tool.key in enabled_tools or tool.cmd in config.get("enabled_tools", []) else "disabled"
+        cmds = ", ".join(configured_cmds(tool))
         lines.append(
-            f"{status:8} {tool.command:16} {tool.name} "
+            f"{status:8} {tool.key:24} {cmds:16} {tool.name} "
             f"by {tool.author} - {tool.description}"
         )
 
@@ -845,6 +908,10 @@ def tool_list_lines(include_docs=False):
     for error in discovery.errors:
         lines.append(f"warn     {error.path}: {error.message}")
 
+    for cmd in sorted(duplicate_cmds):
+        owners = ", ".join(tool.key for tool in cmd_index[cmd])
+        lines.append(f"error    duplicate cmd {cmd}: {owners}")
+
     if not lines:
         lines.append("no tools found")
 
@@ -852,15 +919,106 @@ def tool_list_lines(include_docs=False):
 
 
 def tool_metadata_by_command(tool_command):
+    resolved = resolve_tool_command(tool_command, enabled_only=False)
+    return None if resolved is None else resolved[0]
+
+
+def enabled_tool_keys(config):
+    keys = set()
+
+    for tool in config.get("enabled_tools", []):
+        keys.add(config_tool_key(tool))
+
+    return keys
+
+
+def configured_cmds(tool):
+    from chiyo_cli.tool_config import load_tool_config, tool_config_defaults
+
+    config = load_tool_config(
+        tool.key,
+        tool_config_defaults(tool, {}),
+        config_path=TOOLS_CONFIG_PATH,
+        legacy_key=tool.cmd,
+    )
+    cmds = config.get("cmds", [tool.cmd])
+
+    if not isinstance(cmds, list):
+        return [tool.cmd]
+
+    normalized = []
+
+    for cmd in cmds:
+        if not isinstance(cmd, str) or not cmd:
+            continue
+
+        if cmd not in normalized:
+            normalized.append(cmd)
+
+    return normalized or [tool.cmd]
+
+
+def tool_command_index(tools, config, enabled_only=True):
+    from chiyo_cli.tool_loader import COMMAND_PATTERN
+
+    enabled = enabled_tool_keys(config)
+    index = {}
+
+    for tool in tools:
+        if enabled_only and tool.key not in enabled and tool.cmd not in config.get("enabled_tools", []):
+            continue
+
+        for cmd in configured_cmds(tool):
+            if not COMMAND_PATTERN.fullmatch(cmd):
+                continue
+
+            index.setdefault(cmd, []).append(tool)
+
+    duplicates = {
+        cmd
+        for cmd, owners in index.items()
+        if len(owners) > 1
+    }
+    return index, duplicates
+
+
+def duplicate_cmd_message(index, duplicates):
+    parts = []
+
+    for cmd in sorted(duplicates):
+        owners = ", ".join(tool.key for tool in index[cmd])
+        parts.append(f"duplicate cmd {cmd}: {owners}")
+
+    return "; ".join(parts)
+
+
+def resolve_tool_command(tool_command, enabled_only=True):
     from chiyo_cli.tool_config import load_chiyo_config
     from chiyo_cli.tool_loader import discover_tools
 
     config = load_chiyo_config(config_path=CONFIG_PATH)
     discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
+    index, duplicates = tool_command_index(
+        discovery.tools,
+        config,
+        enabled_only=enabled_only,
+    )
 
-    for tool in discovery.tools:
-        if tool.command == tool_command:
-            return tool
+    if duplicates and (enabled_only or tool_command in duplicates):
+        raise ToolCommandError(duplicate_cmd_message(index, duplicates))
+
+    matches = index.get(tool_command, [])
+
+    if matches:
+        return matches[0], config
+
+    if "/" in tool_command:
+        for tool in discovery.tools:
+            if tool.key == tool_command:
+                if enabled_only and tool.key not in enabled_tool_keys(config):
+                    break
+
+                return tool, config
 
     return None
 
@@ -1042,35 +1200,37 @@ def assert_install_targets_are_safe(tool_command, config):
 
 def install_tool_lines(tool_command):
     config = chiyo_config()
-    metadata = tool_metadata_by_command(tool_command)
+    resolved = resolve_tool_command(tool_command, enabled_only=False)
+    metadata = None if resolved is None else resolved[0]
 
     if metadata is None:
         raise ToolCommandError(f"unknown tool: {tool_command}")
 
-    assert_install_targets_are_safe(tool_command, config)
+    install_command = metadata.cmd if "/" in tool_command else tool_command
+    assert_install_targets_are_safe(install_command, config)
 
-    if tool_command in SHELL_TOOLS:
-        installed_shell = write_shell_artifact(shell_path(tool_command, config), tool_command)
-        installed_completion = write_completion(completion_path(tool_command, config), tool_command)
+    if metadata.cmd in SHELL_TOOLS:
+        installed_shell = write_shell_artifact(shell_path(install_command, config), install_command)
+        installed_completion = write_completion(completion_path(install_command, config), install_command)
         lines = [
-            f"installed {tool_command} shell: {installed_shell}",
-            f"installed _{tool_command}: {installed_completion}",
+            f"installed {install_command} shell: {installed_shell}",
+            f"installed _{install_command}: {installed_completion}",
         ]
 
-        if tool_command not in config.get("enabled_tools", []):
-            lines.append(f"warn    {tool_command} installed but disabled for chiyo run")
+        if metadata.key not in enabled_tool_keys(config) and metadata.cmd not in config.get("enabled_tools", []):
+            lines.append(f"warn    {metadata.key} installed but disabled for chiyo run")
 
         return lines
 
-    installed_path = write_wrapper(wrapper_path(tool_command, config), tool_command)
-    installed_completion = write_completion(completion_path(tool_command, config), tool_command)
+    installed_path = write_wrapper(wrapper_path(install_command, config), install_command)
+    installed_completion = write_completion(completion_path(install_command, config), install_command)
     lines = [
-        f"installed {tool_command}: {installed_path}",
-        f"installed _{tool_command}: {installed_completion}",
+        f"installed {install_command}: {installed_path}",
+        f"installed _{install_command}: {installed_completion}",
     ]
 
-    if tool_command not in config.get("enabled_tools", []):
-        lines.append(f"warn    {tool_command} installed but disabled for chiyo run")
+    if metadata.key not in enabled_tool_keys(config) and metadata.cmd not in config.get("enabled_tools", []):
+        lines.append(f"warn    {metadata.key} installed but disabled for chiyo run")
 
     return lines
 
@@ -1134,28 +1294,22 @@ def uninstall_tool_lines(tool_command):
 
 
 def run_tool(tool_command, tool_args, execute_shell_actions=True):
-    from chiyo_cli.tool_config import load_chiyo_config, load_tool_config
+    from chiyo_cli.tool_config import load_tool_config, tool_config_defaults
     from chiyo_cli.tool_loader import load_tool_class
 
-    config = load_chiyo_config(config_path=CONFIG_PATH)
+    resolved = resolve_tool_command(tool_command, enabled_only=True)
 
-    if tool_command not in config.get("enabled_tools", []):
-        raise ToolCommandError(
-            f"{tool_command} is not enabled; run `chiyo tool enable {tool_command}` "
-            "if you want it to appear in chiyo run"
-        )
-
-    metadata = tool_metadata_by_command(tool_command)
-
-    if metadata is None:
+    if resolved is None:
         raise ToolCommandError(f"unknown tool: {tool_command}")
 
+    metadata, _config = resolved
     tool_class = load_tool_class(metadata.path)
     tool = tool_class()
     tool_config = load_tool_config(
-        tool.command,
-        tool.default_config,
+        metadata.key,
+        tool_config_defaults(metadata, tool.default_config),
         config_path=TOOLS_CONFIG_PATH,
+        legacy_key=metadata.cmd,
     )
     if execute_shell_actions:
         return tool.run(tool_args, config=tool_config)
@@ -1191,7 +1345,12 @@ def shell_tool_lines(tool_command, tool_args):
 
 
 def tool_doc_lines(tool_command):
-    tool = tool_metadata_by_command(tool_command)
+    try:
+        resolved = resolve_tool_command(tool_command, enabled_only=False)
+    except ToolCommandError as error:
+        return [str(error)]
+
+    tool = None if resolved is None else resolved[0]
 
     if tool is None:
         return None

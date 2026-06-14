@@ -91,7 +91,7 @@ class ShellAction:
 
 def tool_argument_flags(tool):
     parser = argparse.ArgumentParser(
-        prog=tool.command,
+        prog=tool_cmd(tool),
         add_help=False,
     )
     tool.add_arguments(parser)
@@ -109,8 +109,12 @@ def validate_tool_flags(tool):
     if conflicts:
         flags = ", ".join(conflicts)
         raise ToolFlagError(
-            f"{tool.command} defines framework-reserved flag(s): {flags}"
+            f"{tool_cmd(tool)} defines framework-reserved flag(s): {flags}"
         )
+
+
+def tool_cmd(tool):
+    return getattr(tool, "cmd", None) or getattr(tool, "command", None)
 
 
 class PickOpenTool:
@@ -122,8 +126,10 @@ class PickOpenTool:
     """
 
     name = None
+    cmd = None
     command = None
     author = None
+    author_id = None
     description = None
     prompt = None
     docs = ""
@@ -155,7 +161,7 @@ class PickOpenTool:
         raise NotImplementedError
 
     def fail(self, message, exit_code=1):
-        print(f"{self.command}: {message}", file=sys.stderr)
+        print(f"{tool_cmd(self)}: {message}", file=sys.stderr)
         raise SystemExit(exit_code)
 
     def warn(self, message):
@@ -221,7 +227,7 @@ class PickOpenTool:
         return ShellAction.none()
 
     def prompt_value(self, config):
-        return config.get("fzf_prompt") or self.prompt or f"{self.command}> "
+        return config.get("fzf_prompt") or self.prompt or f"{tool_cmd(self)}> "
 
     def query_from_args(self, args):
         return " ".join(args.query)
@@ -229,7 +235,7 @@ class PickOpenTool:
     def parser(self):
         validate_tool_flags(self)
         parser = argparse.ArgumentParser(
-            prog=self.command,
+            prog=tool_cmd(self),
             description=self.description,
         )
         parser.add_argument(
@@ -400,6 +406,7 @@ __all__ = [
     "open_with_app",
     "require_command",
     "run_command",
+    "tool_cmd",
     "tool_argument_flags",
     "validate_tool_flags",
 ]

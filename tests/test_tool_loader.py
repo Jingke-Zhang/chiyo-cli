@@ -26,8 +26,11 @@ class ToolLoaderTests(unittest.TestCase):
         metadata = load_tool_metadata(FIXTURE_DIR / "paper.py")
 
         self.assertEqual(metadata.name, "Paper Search")
+        self.assertEqual(metadata.key, "fixture/paper")
+        self.assertEqual(metadata.cmd, "paper")
         self.assertEqual(metadata.command, "paper")
         self.assertEqual(metadata.author, "Fixture Author")
+        self.assertEqual(metadata.author_id, "fixture")
         self.assertEqual(metadata.description, "Search fixture papers and open PDFs.")
         self.assertIn("Search fixture papers", metadata.docs)
         self.assertTrue(metadata.path.endswith("paper.py"))
@@ -36,7 +39,7 @@ class ToolLoaderTests(unittest.TestCase):
         tool_class = load_tool_class(FIXTURE_DIR / "paper.py")
 
         self.assertTrue(issubclass(tool_class, PickOpenTool))
-        self.assertEqual(tool_class.command, "paper")
+        self.assertEqual(tool_class.cmd, "paper")
 
     def test_load_tool_metadata_rejects_missing_required_metadata(self):
         with self.assertRaisesRegex(ToolLoadError, "missing author"):
@@ -49,8 +52,10 @@ class ToolLoaderTests(unittest.TestCase):
     def test_validate_tool_class_rejects_long_description(self):
         class Tool(PickOpenTool):
             name = "Long Description"
+            cmd = "long-description"
             command = "long-description"
             author = "Fixture Author"
+            author_id = "fixture"
             description = "x" * (DESCRIPTION_LIMIT + 1)
             docs = "Long description."
 
@@ -69,8 +74,10 @@ class ToolLoaderTests(unittest.TestCase):
     def test_validate_tool_class_rejects_shell_unsafe_command(self):
         class Tool(PickOpenTool):
             name = "Unsafe Command"
+            cmd = "bad command"
             command = "bad command"
             author = "Fixture Author"
+            author_id = "fixture"
             description = "Search fixture items."
             docs = "Unsafe command."
 
@@ -83,7 +90,7 @@ class ToolLoaderTests(unittest.TestCase):
             def open_item(self, item, args, config):
                 return None
 
-        with self.assertRaisesRegex(ToolLoadError, "tool command"):
+        with self.assertRaisesRegex(ToolLoadError, "tool cmd"):
             validate_tool_class(Tool)
 
     def test_command_pattern_accepts_generated_shell_safe_names(self):
@@ -124,8 +131,10 @@ class ToolLoaderTests(unittest.TestCase):
                         "",
                         "class Tool(PickOpenTool):",
                         '    name = "Course Search"',
+                        '    cmd = "course"',
                         '    command = "course"',
                         '    author = "Fixture Author"',
+                        '    author_id = "fixture"',
                         "    description = DESCRIPTION",
                         '    docs = "Search course notes."',
                         "",
@@ -145,6 +154,7 @@ class ToolLoaderTests(unittest.TestCase):
             metadata = load_tool_metadata(tool_dir / "tool.py")
 
         self.assertEqual(metadata.command, "course")
+        self.assertEqual(metadata.key, "fixture/course")
         self.assertEqual(metadata.description, "Search course notes.")
 
     def test_discover_tool_paths_finds_public_python_files(self):

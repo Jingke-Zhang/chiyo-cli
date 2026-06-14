@@ -3,7 +3,8 @@ from chiyo_cli.api import ChiyoTool
 
 class Tool(ChiyoTool):
     name = "Missing Author"
-    command = "missing-author"
+    cmd = "missing-author"
+    author_id = "fixture"
     description = "Fixture tool with incomplete metadata."
     docs = "Fixture tool with incomplete metadata."
 

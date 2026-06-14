@@ -100,9 +100,10 @@ def load_bookmarks(config, fail):
 
 
 class Tool(PickOpenTool):
-    name = "Bookmarks"
-    command = "bm"
+    name = "Browser Bookmarks"
+    cmd = "bm"
     author = "Chiyo CLI"
+    author_id = "chiyo"
     description = "Search browser bookmarks and open a URL."
     docs = """
     # bm

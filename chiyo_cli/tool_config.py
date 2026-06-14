@@ -15,7 +15,7 @@ TOOLS_CONFIG_PATH = "~/.config/chiyo-cli/tools.toml"
 CHIYO_CONFIG_MODULE = "chiyo"
 DEFAULT_CHIYO_CONFIG = {
     "tool_dirs": ["~/.config/chiyo-cli/tools"],
-    "enabled_tools": ["gop", "ws"],
+    "enabled_tools": ["chiyo/gop", "chiyo/ws"],
     "wrapper_dir": "~/.local/bin",
     "completion_dir": "~/.local/share/zsh/site-functions",
     "shell_dir": "~/.local/share/chiyo-cli/shell",
@@ -59,18 +59,45 @@ def load_tools_config(config_path=TOOLS_CONFIG_PATH):
     return load_config_file(config_path)
 
 
-def load_tool_config(tool_command, defaults, config_path=TOOLS_CONFIG_PATH, warn=None):
+def tool_config_defaults(metadata_or_command, defaults):
+    defaults = copy.deepcopy(defaults)
+
+    if hasattr(metadata_or_command, "cmd"):
+        defaults.setdefault("cmds", [metadata_or_command.cmd])
+
+    return defaults
+
+
+def load_tool_config(tool_key, defaults, config_path=TOOLS_CONFIG_PATH, warn=None, legacy_key=None):
+    data = load_tools_config(config_path)
+
+    if tool_key in data:
+        return load_module_config(
+            tool_key,
+            defaults,
+            config_path=config_path,
+            warn=warn,
+        )
+
+    if legacy_key and legacy_key in data:
+        return load_module_config(
+            legacy_key,
+            defaults,
+            config_path=config_path,
+            warn=warn,
+        )
+
     return load_module_config(
-        tool_command,
+        tool_key,
         defaults,
         config_path=config_path,
         warn=warn,
     )
 
 
-def init_tool_config(tool_command, defaults, config_path=TOOLS_CONFIG_PATH):
+def init_tool_config(tool_key, defaults, config_path=TOOLS_CONFIG_PATH):
     return init_module_config(
-        tool_command,
+        tool_key,
         defaults,
         config_path=config_path,
     )

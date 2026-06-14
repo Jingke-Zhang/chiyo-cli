@@ -19,7 +19,7 @@ class UserToolFixtureTests(unittest.TestCase):
         module = load_fixture("paper")
 
         self.assertTrue(issubclass(module.Tool, PickOpenTool))
-        self.assertEqual(module.Tool.command, "paper")
+        self.assertEqual(module.Tool.cmd, "paper")
         self.assertEqual(module.Tool.name, "Paper Search")
         self.assertEqual(module.Tool.author, "Fixture Author")
 
@@ -38,21 +38,21 @@ class UserToolFixtureTests(unittest.TestCase):
         module = load_fixture("missing_author")
 
         self.assertTrue(issubclass(module.Tool, PickOpenTool))
-        self.assertEqual(module.Tool.command, "missing-author")
+        self.assertEqual(module.Tool.cmd, "missing-author")
         self.assertIsNone(module.Tool.author)
 
     def test_disabled_fixture_is_valid_but_not_enabled_by_default(self):
         module = load_fixture("disabled_notes")
 
         self.assertTrue(issubclass(module.Tool, PickOpenTool))
-        self.assertEqual(module.Tool.command, "disabled-notes")
+        self.assertEqual(module.Tool.cmd, "disabled-notes")
         self.assertEqual(module.Tool.description, "Fixture tool used for disabled-tool tests.")
 
     def test_conflicting_flags_fixture_is_available_for_flag_validation_tests(self):
         module = load_fixture("conflicting_flags")
 
         self.assertTrue(issubclass(module.Tool, PickOpenTool))
-        self.assertEqual(module.Tool.command, "conflicting-flags")
+        self.assertEqual(module.Tool.cmd, "conflicting-flags")
 
 
 if __name__ == "__main__":

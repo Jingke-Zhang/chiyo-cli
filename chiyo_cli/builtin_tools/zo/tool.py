@@ -50,8 +50,9 @@ def open_location(location, fail):
 
 class Tool(PickOpenTool):
     name = "Zotero Search"
-    command = "zo"
+    cmd = "zo"
     author = "Chiyo CLI"
+    author_id = "chiyo"
     description = "Search Zotero items and open a selection."
     docs = """
     # zo

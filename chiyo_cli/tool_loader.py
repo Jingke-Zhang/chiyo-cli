@@ -12,7 +12,7 @@ from chiyo_cli.paths import expand_path
 from chiyo_cli.toolkit import PickOpenTool, ToolFlagError, validate_tool_flags
 
 
-REQUIRED_METADATA = ["name", "command", "author", "description", "docs"]
+REQUIRED_METADATA = ["name", "author", "author_id", "description", "docs"]
 DESCRIPTION_LIMIT = 80
 COMMAND_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 BUILTIN_TOOL_MODULES = {
@@ -32,8 +32,11 @@ class ToolLoadError(Exception):
 @dataclass(frozen=True)
 class ToolMetadata:
     name: str
-    command: str
     author: str
+    author_id: str
+    key: str
+    cmd: str
+    command: str
     description: str
     docs: str
     path: str
@@ -133,12 +136,12 @@ def validate_tool_class(tool_class, path=None):
             f"tool description must be {DESCRIPTION_LIMIT} characters or fewer{location}"
         )
 
-    command = getattr(tool_class, "command")
+    command = default_tool_cmd(tool_class)
 
     if not isinstance(command, str) or not COMMAND_PATTERN.fullmatch(command):
         location = f": {path}" if path is not None else ""
         raise ToolLoadError(
-            "tool command must match ^[a-z][a-z0-9-]*$"
+            "tool cmd must match ^[a-z][a-z0-9-]*$"
             f"{location}"
         )
 
@@ -151,14 +154,23 @@ def validate_tool_class(tool_class, path=None):
 
 def metadata_from_tool_class(tool_class, path):
     validate_tool_class(tool_class, path)
+    cmd = default_tool_cmd(tool_class)
+    author_id = tool_class.author_id
     return ToolMetadata(
         name=tool_class.name,
-        command=tool_class.command,
         author=tool_class.author,
+        author_id=author_id,
+        key=f"{author_id}/{cmd}",
+        cmd=cmd,
+        command=cmd,
         description=tool_class.description,
         docs=tool_class.docs,
         path=str(Path(path)),
     )
+
+
+def default_tool_cmd(tool_class):
+    return getattr(tool_class, "cmd", None) or getattr(tool_class, "command", None)
 
 
 def load_tool_metadata(path):
@@ -209,7 +221,7 @@ def discover_user_tools(tool_dirs):
             errors.append(ToolDiscoveryError(str(path), str(error)))
 
     return ToolDiscovery(
-        sorted(tools, key=lambda tool: tool.command.lower()),
+        sorted(tools, key=lambda tool: tool.key.lower()),
         errors,
     )
 
@@ -238,6 +250,6 @@ def discover_tools(tool_dirs, include_builtins=False):
     builtins = discover_builtin_tools()
 
     return ToolDiscovery(
-        sorted([*builtins.tools, *discovery.tools], key=lambda tool: tool.command.lower()),
+        sorted([*builtins.tools, *discovery.tools], key=lambda tool: tool.key.lower()),
         [*builtins.errors, *discovery.errors],
     )

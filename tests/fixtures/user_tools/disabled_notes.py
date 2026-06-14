@@ -3,8 +3,9 @@ from chiyo_cli.api import ChiyoTool
 
 class Tool(ChiyoTool):
     name = "Disabled Notes"
-    command = "disabled-notes"
+    cmd = "disabled-notes"
     author = "Fixture Author"
+    author_id = "fixture"
     description = "Fixture tool used for disabled-tool tests."
     docs = "Fixture tool used for disabled-tool tests."
 

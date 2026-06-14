@@ -3,8 +3,9 @@ from chiyo_cli.api import ChiyoTool
 
 class Tool(ChiyoTool):
     name = "Paper Search"
-    command = "paper"
+    cmd = "paper"
     author = "Fixture Author"
+    author_id = "fixture"
     description = "Search fixture papers and open PDFs."
     docs = """
     # Paper Search

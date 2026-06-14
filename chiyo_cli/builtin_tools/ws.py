@@ -31,8 +31,9 @@ def build_search_url(engine, query):
 
 class Tool(PickOpenTool):
     name = "Web Search"
-    command = "ws"
+    cmd = "ws"
     author = "Chiyo CLI"
+    author_id = "chiyo"
     description = "Open a configured web search engine."
     docs = """
     # ws

@@ -86,8 +86,9 @@ def open_app(app, fail):
 
 class Tool(PickOpenTool):
     name = "Application Launcher"
-    command = "app"
+    cmd = "app"
     author = "Chiyo CLI"
+    author_id = "chiyo"
     description = "Search installed macOS applications."
     docs = """
     # app

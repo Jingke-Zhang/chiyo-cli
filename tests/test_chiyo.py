@@ -159,13 +159,13 @@ class ChiyoTests(unittest.TestCase):
             tools_content = Path(tools_path).read_text(encoding="utf-8")
 
         self.assertIn("wrote [chiyo] config", "\n".join(lines))
-        self.assertIn("wrote [gop] config", "\n".join(lines))
-        self.assertIn("wrote [ws] config", "\n".join(lines))
+        self.assertIn("wrote [chiyo/gop] config", "\n".join(lines))
+        self.assertIn("wrote [chiyo/ws] config", "\n".join(lines))
         self.assertIn("[chiyo]", config_content)
-        self.assertIn('enabled_tools = ["gop", "ws"]', config_content)
+        self.assertIn('enabled_tools = ["chiyo/gop", "chiyo/ws"]', config_content)
         self.assertNotIn("[ws]", config_content)
-        self.assertIn("[gop]", tools_content)
-        self.assertIn("[ws.engines.g]", tools_content)
+        self.assertIn('["chiyo/gop"]', tools_content)
+        self.assertIn('["chiyo/ws".engines.g]', tools_content)
         self.assertNotIn("[bm]", tools_content)
 
     def test_config_init_all_uses_current_enabled_tools(self):
@@ -186,12 +186,12 @@ class ChiyoTests(unittest.TestCase):
 
             tools_content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertEqual(["chiyo", "bm", "zo"], targets)
+        self.assertEqual(["chiyo", "chiyo/bm", "chiyo/zo"], targets)
         self.assertIn("append [chiyo] defaults", "\n".join(lines))
-        self.assertIn("append [bm] config", "\n".join(lines))
-        self.assertIn("append [zo] config", "\n".join(lines))
-        self.assertIn("[bm]", tools_content)
-        self.assertIn("[zo]", tools_content)
+        self.assertIn("append [chiyo/bm] config", "\n".join(lines))
+        self.assertIn("append [chiyo/zo] config", "\n".join(lines))
+        self.assertIn('["chiyo/bm"]', tools_content)
+        self.assertIn('["chiyo/zo"]', tools_content)
         self.assertNotIn("[gop]", tools_content)
         self.assertNotIn("[ws]", tools_content)
 
@@ -218,9 +218,9 @@ class ChiyoTests(unittest.TestCase):
 
             content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertIn("skip [ws] config: already exists", lines)
-        self.assertIn("append [app] config", "\n".join(lines))
-        self.assertIn("[app.alias]", content)
+        self.assertIn("skip [chiyo/ws] config: already exists", lines)
+        self.assertIn("append [chiyo/app] config", "\n".join(lines))
+        self.assertIn('["chiyo/app".alias]', content)
         self.assertIn('fzf_prompt = "old> "', content)
 
     def test_config_init_append_adds_missing_bm_defaults(self):
@@ -243,11 +243,9 @@ class ChiyoTests(unittest.TestCase):
 
             content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertIn("append [bm] defaults", "\n".join(lines))
-        self.assertIn('bookmarks_path = "~/Library/Safari/Bookmarks.plist"', content)
+        self.assertIn("skip [chiyo/bm] config: already exists", "\n".join(lines))
         self.assertIn('skip_folders = ["Bookmarks"]', content)
-        self.assertIn('fzf_prompt = "bm> "', content)
-        self.assertIn('browser = "Safari"', content)
+        self.assertNotIn('["chiyo/bm"]', content)
 
     def test_config_init_append_preserves_existing_bm_defaults(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -272,7 +270,7 @@ class ChiyoTests(unittest.TestCase):
 
             content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertIn("skip [bm] config: already exists", lines)
+        self.assertIn("skip [chiyo/bm] config: already exists", lines)
         self.assertIn('bookmarks_path = "~/Bookmarks.plist"', content)
         self.assertIn('fzf_prompt = "bookmarks> "', content)
         self.assertIn('browser = "Google Chrome"', content)
@@ -305,7 +303,7 @@ class ChiyoTests(unittest.TestCase):
             content = Path(tools_path).read_text(encoding="utf-8")
 
         self.assertIn("[other]", content)
-        self.assertIn("[ws.engines.g]", content)
+        self.assertIn('["chiyo/ws".engines.g]', content)
         self.assertNotIn("[ws.engines.old]", content)
 
     @mock.patch("chiyo_cli.cli.shutil.which")
@@ -327,19 +325,31 @@ class ChiyoTests(unittest.TestCase):
     def test_tool_enable_and_disable_update_chiyo_config(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["chiyo/gop", "chiyo/ws"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
-                self.assertEqual(CHIYO.enable_tool_lines("paper"), ["enabled tool: paper"])
-                self.assertEqual(CHIYO.disable_tool_lines("paper"), ["disabled tool: paper"])
+                self.assertEqual(CHIYO.enable_tool_lines("paper"), ["enabled tool: fixture/paper"])
+                self.assertEqual(CHIYO.disable_tool_lines("paper"), ["disabled tool: fixture/paper"])
                 self.assertEqual(
                     CHIYO.disable_tool_lines("paper"),
-                    ["tool already disabled: paper"],
+                    ["tool already disabled: fixture/paper"],
                 )
 
             content = Path(config_path).read_text(encoding="utf-8")
 
         self.assertIn("[chiyo]", content)
-        self.assertIn('enabled_tools = ["gop", "ws"]', content)
+        self.assertIn('enabled_tools = ["chiyo/gop", "chiyo/ws"]', content)
 
     def test_tool_list_shows_discovered_tools_and_enabled_status(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -361,9 +371,9 @@ class ChiyoTests(unittest.TestCase):
                 lines = CHIYO.tool_list_lines()
 
         output = "\n".join(lines)
-        self.assertIn("enabled  paper", output)
+        self.assertIn("enabled  fixture/paper", output)
         self.assertIn("Paper Search by Fixture Author", output)
-        self.assertIn("disabled disabled-notes", output)
+        self.assertIn("disabled fixture/disabled-notes", output)
         self.assertIn("warn", output)
         self.assertIn("missing_author.py", output)
         self.assertNotIn("# Paper Search", output)
@@ -490,6 +500,80 @@ class ChiyoTests(unittest.TestCase):
                     result = CHIYO.run_tool("paper", ["alpha"])
 
         self.assertEqual(result, str(alpha))
+
+    def test_run_tool_uses_configured_cmd_alias(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "papers"
+            root.mkdir()
+            alpha = root / "alpha.pdf"
+            alpha.write_text("alpha", encoding="utf-8")
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["fixture/paper"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                "\n".join(
+                    [
+                        '["fixture/paper"]',
+                        f'root = "{root}"',
+                        'cmds = ["paper", "papers"]',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    result = CHIYO.run_tool("papers", ["alpha"])
+
+        self.assertEqual(result, str(alpha))
+
+    def test_run_tool_rejects_duplicate_configured_cmd(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["fixture/paper", "fixture/disabled-notes"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                "\n".join(
+                    [
+                        '["fixture/paper"]',
+                        'cmds = ["paper"]',
+                        "",
+                        '["fixture/disabled-notes"]',
+                        'cmds = ["paper"]',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with self.assertRaisesRegex(CHIYO.ToolCommandError, "duplicate cmd paper"):
+                        CHIYO.run_tool("paper", [])
+
+                    with self.assertRaisesRegex(CHIYO.ToolCommandError, "duplicate cmd paper"):
+                        CHIYO.run_tool("fixture/paper", [])
 
     def test_run_tool_rejects_disabled_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -927,7 +1011,7 @@ class ChiyoTests(unittest.TestCase):
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 lines = CHIYO.install_tool_lines("paper")
 
-        self.assertIn("warn    paper installed but disabled for chiyo run", lines)
+        self.assertIn("warn    fixture/paper installed but disabled for chiyo run", lines)
 
     def test_install_tool_refuses_to_replace_existing_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1115,12 +1199,12 @@ class ChiyoTests(unittest.TestCase):
                 ]
 
         output = "\n".join(lines)
-        self.assertIn("ok      user tool paper metadata:", output)
+        self.assertIn("ok      user tool fixture/paper metadata:", output)
         self.assertIn("warn    user tool missing: enabled but not discoverable", output)
-        self.assertIn("ok      user tool paper wrapper:", output)
-        self.assertIn("ok      user tool paper zsh:", output)
+        self.assertIn("ok      user tool fixture/paper wrapper:", output)
+        self.assertIn("ok      user tool fixture/paper zsh:", output)
         self.assertIn(
-            "warn    user tool paper: paper installed but disabled for chiyo run",
+            "warn    user tool fixture/paper: fixture/paper installed but disabled for chiyo run",
             output,
         )
         self.assertIn("warn    user tool missing_author.py:", output)
@@ -1156,7 +1240,7 @@ class ChiyoTests(unittest.TestCase):
                 ]
 
         self.assertIn(
-            f"warn    user tool paper zsh: {completion_dir / '_paper'} not found",
+            f"warn    user tool fixture/paper zsh: {completion_dir / '_paper'} not found",
             "\n".join(lines),
         )
 

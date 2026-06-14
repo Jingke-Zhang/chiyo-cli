@@ -85,7 +85,8 @@ def load_minimal_toml(path):
                 continue
 
             if line.startswith("[") and line.endswith("]"):
-                table_path = line[1:-1].strip().split(".")
+                table_name = parse_table_name(line[1:-1].strip())
+                table_path = table_name.split(".")
                 current_table = data
 
                 for table in table_path:
@@ -144,6 +145,17 @@ def toml_quote(value):
     return json.dumps(value)
 
 
+def toml_key_segment(value):
+    if re.fullmatch(r"[A-Za-z0-9_-]+", value):
+        return value
+
+    return toml_quote(value)
+
+
+def toml_table_header(table_name):
+    return ".".join(toml_key_segment(segment) for segment in table_name.split("."))
+
+
 def format_toml_value(value):
     if isinstance(value, list):
         return "[" + ", ".join(format_toml_value(item) for item in value) + "]"
@@ -152,7 +164,7 @@ def format_toml_value(value):
 
 
 def append_toml_table(lines, table_name, values):
-    lines.append(f"[{table_name}]")
+    lines.append(f"[{toml_table_header(table_name)}]")
     nested_tables = []
 
     for key, value in values.items():
@@ -179,8 +191,53 @@ def is_module_header(line, module_name):
     if not stripped.startswith("[") or not stripped.endswith("]"):
         return False
 
-    table_name = stripped.strip("[]").strip()
+    table_name = parse_table_name(stripped.strip("[]").strip())
     return table_name == module_name or table_name.startswith(f"{module_name}.")
+
+
+def parse_table_name(value):
+    parts = []
+    current = ""
+    in_quote = False
+    escaped = False
+
+    for char in value:
+        if escaped:
+            current += char
+            escaped = False
+            continue
+
+        if char == "\\" and in_quote:
+            current += char
+            escaped = True
+            continue
+
+        if char == '"':
+            current += char
+            in_quote = not in_quote
+            continue
+
+        if char == "." and not in_quote:
+            parts.append(parse_table_segment(current.strip()))
+            current = ""
+            continue
+
+        current += char
+
+    if current:
+        parts.append(parse_table_segment(current.strip()))
+
+    return ".".join(parts)
+
+
+def parse_table_segment(value):
+    if value.startswith('"') and value.endswith('"'):
+        try:
+            return ast.literal_eval(value)
+        except (SyntaxError, ValueError):
+            return value.strip('"')
+
+    return value
 
 
 def remove_module_config(content, module_name):

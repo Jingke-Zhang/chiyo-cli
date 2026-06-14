@@ -135,9 +135,10 @@ def project_fields(path, widths):
 
 
 class Tool(PickOpenTool):
-    name = "Project Switcher"
-    command = "proj"
+    name = "Project"
+    cmd = "proj"
     author = "Chiyo CLI"
+    author_id = "chiyo"
     description = "Select a project directory for cd."
     docs = """
     # proj

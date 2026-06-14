@@ -3,8 +3,9 @@ from chiyo_cli.api import ChiyoTool
 
 class Tool(ChiyoTool):
     name = "Conflicting Flags"
-    command = "conflicting-flags"
+    cmd = "conflicting-flags"
     author = "Fixture Author"
+    author_id = "fixture"
     description = "Fixture tool with a conflicting framework flag."
     docs = "Fixture tool with a conflicting framework flag."
 

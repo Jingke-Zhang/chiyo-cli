@@ -207,8 +207,9 @@ def choose_path_stream(query, roots, exclude, config, fail):
 
 class Tool(PickOpenTool):
     name = "Go Path"
-    command = "gop"
+    cmd = "gop"
     author = "Chiyo CLI"
+    author_id = "chiyo"
     description = "Select a path for cd or open."
     docs = """
     # gop
