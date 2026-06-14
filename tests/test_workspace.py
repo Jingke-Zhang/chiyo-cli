@@ -74,7 +74,7 @@ class WorkspaceTests(unittest.TestCase):
             ]
 
             with mock.patch.object(WS.Tool, "sessions", return_value=sessions):
-                with mock.patch.object(WS.proj, "all_projects", return_value=[str(project)]):
+                with mock.patch.object(WS.project, "all_projects", return_value=[str(project)]):
                     items = WS.Tool().items(config)
 
         self.assertEqual([item["session"] for item in items], ["cli-tools", "notes"])

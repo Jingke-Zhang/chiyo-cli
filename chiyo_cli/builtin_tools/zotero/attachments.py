@@ -4,8 +4,8 @@ from urllib.error import URLError
 from urllib.parse import unquote, urlparse
 from urllib.request import urlopen
 
-from chiyo_cli.builtin_tools.zo.item import normalize_config
-from chiyo_cli.builtin_tools.zo.local_api import local_api_get_json
+from chiyo_cli.builtin_tools.zotero.item import normalize_config
+from chiyo_cli.builtin_tools.zotero.local_api import local_api_get_json
 
 
 def local_api_file_url(config, item):

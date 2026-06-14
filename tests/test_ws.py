@@ -5,7 +5,7 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-from chiyo_cli.builtin_tools import ws as WS
+from chiyo_cli.builtin_tools import web_search as WS
 from chiyo_cli.config import format_module_config
 from chiyo_cli.tool_config import load_tool_config
 

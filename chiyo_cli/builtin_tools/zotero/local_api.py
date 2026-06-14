@@ -5,7 +5,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import urlopen
 
-from chiyo_cli.builtin_tools.zo.item import filter_items, format_creators
+from chiyo_cli.builtin_tools.zotero.item import filter_items, format_creators
 
 
 def local_api_get_json(config, path, params=None):

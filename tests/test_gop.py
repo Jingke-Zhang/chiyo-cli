@@ -6,7 +6,7 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-from chiyo_cli.builtin_tools import gop as GOP
+from chiyo_cli.builtin_tools import go_or_pick as GOP
 from chiyo_cli.tool_config import load_tool_config
 
 
@@ -39,7 +39,7 @@ class GopTests(unittest.TestCase):
             self.assertEqual(config["roots"], [str(root)])
             self.assertEqual(config["exclude"], ["Library"])
 
-    @mock.patch("chiyo_cli.builtin_tools.gop.warn")
+    @mock.patch("chiyo_cli.builtin_tools.go_or_pick.warn")
     def test_normalize_roots_skips_missing_directories_with_warning(self, warn):
         with tempfile.TemporaryDirectory() as temp_dir:
             missing_root = os.path.join(temp_dir, "missing")
@@ -49,7 +49,7 @@ class GopTests(unittest.TestCase):
                 f"skipping missing search root: {missing_root}"
             )
 
-    @mock.patch("chiyo_cli.builtin_tools.gop.warn")
+    @mock.patch("chiyo_cli.builtin_tools.go_or_pick.warn")
     def test_normalize_roots_fails_when_no_roots_exist(self, _warn):
         with tempfile.TemporaryDirectory() as temp_dir:
             missing_root = os.path.join(temp_dir, "missing")
@@ -139,7 +139,7 @@ class GopTests(unittest.TestCase):
             ["/a", "/b"],
         )
 
-    @mock.patch("chiyo_cli.builtin_tools.gop.run_fd")
+    @mock.patch("chiyo_cli.builtin_tools.go_or_pick.run_fd")
     def test_select_path_returns_single_match_directly_when_allowed(self, choose):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "project")
@@ -152,7 +152,7 @@ class GopTests(unittest.TestCase):
         self.assertEqual(selected, path)
         choose.assert_called_once()
 
-    @mock.patch("chiyo_cli.builtin_tools.gop.choose_path_stream", return_value="/Users/me/project")
+    @mock.patch("chiyo_cli.builtin_tools.go_or_pick.choose_path_stream", return_value="/Users/me/project")
     def test_select_path_uses_fzf_when_confirmation_is_required(self, choose):
         with tempfile.TemporaryDirectory() as temp_dir:
             selected = GOP.Tool().select_path(
@@ -163,7 +163,7 @@ class GopTests(unittest.TestCase):
         self.assertEqual(selected, "/Users/me/project")
         choose.assert_called_once()
 
-    @mock.patch("chiyo_cli.builtin_tools.gop.run_fd")
+    @mock.patch("chiyo_cli.builtin_tools.go_or_pick.run_fd")
     def test_list_completions_prints_compact_paths(self, run_fd):
         home = os.path.expanduser("~")
         run_fd.return_value = [
@@ -187,7 +187,7 @@ class GopTests(unittest.TestCase):
         )
 
     @mock.patch("chiyo_cli.toolkit.shutil.which", return_value="/usr/bin/tool")
-    @mock.patch("chiyo_cli.builtin_tools.gop.subprocess.Popen")
+    @mock.patch("chiyo_cli.builtin_tools.go_or_pick.subprocess.Popen")
     def test_choose_path_stream_formats_fd_output_for_fzf(self, popen, _which):
         fd_process = mock.Mock()
         fd_stdout = mock.MagicMock()
@@ -232,7 +232,7 @@ class GopTests(unittest.TestCase):
             "/Users/me/project",
         )
 
-    @mock.patch("chiyo_cli.builtin_tools.gop.run_fd", return_value=["/tmp/project"])
+    @mock.patch("chiyo_cli.builtin_tools.go_or_pick.run_fd", return_value=["/tmp/project"])
     def test_run_can_override_roots_from_command_line(self, run_fd):
         config = {
             "roots": ["/Users/me"],
@@ -249,7 +249,7 @@ class GopTests(unittest.TestCase):
         self.assertEqual(run_fd.call_args.args[1], ["/tmp"])
         self.assertEqual(result.value, "/tmp/project")
 
-    @mock.patch("chiyo_cli.builtin_tools.gop.run_fd", return_value=["/tmp/project"])
+    @mock.patch("chiyo_cli.builtin_tools.go_or_pick.run_fd", return_value=["/tmp/project"])
     def test_run_combines_config_and_command_line_excludes(
         self,
         run_fd,

@@ -17,13 +17,13 @@ DESCRIPTION_LIMIT = 80
 COMMAND_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 IDENTITY_PART_PATTERN = re.compile(r"[^a-z0-9]+")
 BUILTIN_TOOL_MODULES = {
-    "app": "chiyo_cli.builtin_tools.app",
-    "bm": "chiyo_cli.builtin_tools.bm",
-    "gop": "chiyo_cli.builtin_tools.gop",
-    "proj": "chiyo_cli.builtin_tools.proj",
-    "s": "chiyo_cli.builtin_tools.ws",
+    "app": "chiyo_cli.builtin_tools.application",
+    "bm": "chiyo_cli.builtin_tools.explorer_bookmark",
+    "gop": "chiyo_cli.builtin_tools.go_or_pick",
+    "proj": "chiyo_cli.builtin_tools.project",
+    "s": "chiyo_cli.builtin_tools.web_search",
     "ws": "chiyo_cli.builtin_tools.workspace",
-    "zo": "chiyo_cli.builtin_tools.zo",
+    "zo": "chiyo_cli.builtin_tools.zotero",
 }
 
 

@@ -1,11 +1,11 @@
 """Zotero built-in package."""
 
-from chiyo_cli.builtin_tools.zo.attachments import (
+from chiyo_cli.builtin_tools.zotero.attachments import (
     attachment_path,
     file_url_to_path,
     local_api_file_url,
 )
-from chiyo_cli.builtin_tools.zo.item import (
+from chiyo_cli.builtin_tools.zotero.item import (
     creator_name,
     doi_url,
     filter_items,
@@ -17,19 +17,19 @@ from chiyo_cli.builtin_tools.zo.item import (
     searchable_title,
     select_uri,
 )
-from chiyo_cli.builtin_tools.zo.local_api import (
+from chiyo_cli.builtin_tools.zotero.local_api import (
     local_api_get_json,
     load_items_from_local_api,
     parse_local_api_item,
 )
-from chiyo_cli.builtin_tools.zo.sqlite_source import (
+from chiyo_cli.builtin_tools.zotero.sqlite_source import (
     load_sqlite_items,
     normalize_sqlite_attachment_path,
     query_rows,
     sqlite_path,
     sqlite_snapshot,
 )
-from chiyo_cli.builtin_tools.zo.tool import (
+from chiyo_cli.builtin_tools.zotero.tool import (
     DEFAULT_CONFIG,
     Tool,
     load_items,

@@ -5,7 +5,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from chiyo_cli.builtin_tools import proj
+from chiyo_cli.builtin_tools import project
 from chiyo_cli.paths import compact_path, expand_path
 from chiyo_cli.toolkit import Field, PickOpenTool, STYLE_PRIMARY, STYLE_SECONDARY, ToolError, require_command
 
@@ -101,8 +101,8 @@ def alias_workspaces(alias_config, prefix=""):
 
 
 def project_workspaces(config, fail):
-    roots = proj.normalize_roots(config["roots"], fail)
-    paths = proj.all_projects(
+    roots = project.normalize_roots(config["roots"], fail)
+    paths = project.all_projects(
         roots,
         config["markers"],
         config["exclude"],
@@ -111,7 +111,7 @@ def project_workspaces(config, fail):
     return [
         {
             "kind": "project",
-            "name": proj.project_name(path),
+            "name": project.project_name(path),
             "session": session_name(path, config["session_prefix"]),
             "path": path,
             "exists": False,

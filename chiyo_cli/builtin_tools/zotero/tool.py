@@ -1,7 +1,7 @@
 """Framework-backed zo built-in."""
 
-from chiyo_cli.builtin_tools.zo.attachments import attachment_path
-from chiyo_cli.builtin_tools.zo.item import (
+from chiyo_cli.builtin_tools.zotero.attachments import attachment_path
+from chiyo_cli.builtin_tools.zotero.item import (
     filter_items,
     item_title,
     item_url,
@@ -9,8 +9,8 @@ from chiyo_cli.builtin_tools.zo.item import (
     normalize_config,
     select_uri,
 )
-from chiyo_cli.builtin_tools.zo.local_api import load_items_from_local_api
-from chiyo_cli.builtin_tools.zo.sqlite_source import load_sqlite_items
+from chiyo_cli.builtin_tools.zotero.local_api import load_items_from_local_api
+from chiyo_cli.builtin_tools.zotero.sqlite_source import load_sqlite_items
 from chiyo_cli.output import print_warning
 from chiyo_cli.toolkit import PickOpenTool, ToolError, open_location as toolkit_open_location
 

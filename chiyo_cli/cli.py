@@ -881,8 +881,7 @@ def tool_list_lines(include_docs=False):
         status = "enabled" if tool.key in enabled_tools else "disabled"
         cmds = ", ".join(configured_cmds(tool))
         lines.append(
-            f"{status:8} {tool.key:24} {cmds:16} {tool.name} "
-            f"by {tool.author} - {tool.description}"
+            f"{status:8} {tool.name:20} {cmds:16} {tool.author:12} {tool.description}"
         )
 
         if include_docs:

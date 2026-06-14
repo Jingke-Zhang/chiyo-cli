@@ -6,7 +6,7 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-from chiyo_cli.builtin_tools import bm as BM
+from chiyo_cli.builtin_tools import explorer_bookmark as BM
 from chiyo_cli.tool_config import load_tool_config
 
 

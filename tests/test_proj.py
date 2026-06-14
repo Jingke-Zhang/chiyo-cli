@@ -6,7 +6,7 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-from chiyo_cli.builtin_tools import proj as PROJ
+from chiyo_cli.builtin_tools import project as PROJ
 from chiyo_cli.tool_config import load_tool_config
 
 
@@ -41,7 +41,7 @@ class ProjTests(unittest.TestCase):
             "/Users/me/project",
         )
 
-    @mock.patch("chiyo_cli.builtin_tools.proj.warn")
+    @mock.patch("chiyo_cli.builtin_tools.project.warn")
     def test_normalize_roots_skips_missing_directories_with_warning(self, warn):
         with tempfile.TemporaryDirectory() as temp_dir:
             missing_root = os.path.join(temp_dir, "missing")
@@ -78,7 +78,7 @@ class ProjTests(unittest.TestCase):
             ],
         )
 
-    @mock.patch("chiyo_cli.builtin_tools.proj.run_fd")
+    @mock.patch("chiyo_cli.builtin_tools.project.run_fd")
     def test_all_projects_deduplicates_project_paths(self, run_fd):
         run_fd.return_value = [
             "/Users/me/project/.project",

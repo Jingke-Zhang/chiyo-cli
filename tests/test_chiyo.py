@@ -375,9 +375,12 @@ class ChiyoTests(unittest.TestCase):
                 lines = CHIYO.tool_list_lines()
 
         output = "\n".join(lines)
-        self.assertIn("enabled  fixture/paper-search", output)
-        self.assertIn("Paper Search by Fixture Author", output)
-        self.assertIn("disabled fixture/disabled-notes", output)
+        self.assertIn("enabled  Paper Search", output)
+        self.assertIn("paper", output)
+        self.assertIn("Fixture Author", output)
+        self.assertIn("Search fixture papers and open PDFs.", output)
+        self.assertIn("disabled Disabled Notes", output)
+        self.assertIn("disabled-notes", output)
         self.assertIn("warn", output)
         self.assertIn("missing_author.py", output)
         self.assertNotIn("# Paper Search", output)
@@ -695,7 +698,7 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.app.open_app") as open_app:
+                    with mock.patch("chiyo_cli.builtin_tools.application.open_app") as open_app:
                         result = CHIYO.run_tool("app", ["browser"])
 
         self.assertEqual(result, {"name": "Safari", "path": None})
@@ -721,7 +724,7 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.bm.load_bookmarks") as load_bookmarks:
+                    with mock.patch("chiyo_cli.builtin_tools.explorer_bookmark.load_bookmarks") as load_bookmarks:
                         load_bookmarks.return_value = [
                             ("Docs/Example", "https://example.test"),
                         ]
@@ -762,8 +765,8 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.zo.tool.load_items") as load_items:
-                        with mock.patch("chiyo_cli.builtin_tools.zo.tool.open_location") as open_location:
+                    with mock.patch("chiyo_cli.builtin_tools.zotero.tool.load_items") as load_items:
+                        with mock.patch("chiyo_cli.builtin_tools.zotero.tool.open_location") as open_location:
                             load_items.return_value = [item]
                             result = CHIYO.run_tool("zo", ["linear"])
 
@@ -795,8 +798,8 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.proj.all_projects") as all_projects:
-                        with mock.patch("chiyo_cli.builtin_tools.proj.normalize_roots") as normalize_roots:
+                    with mock.patch("chiyo_cli.builtin_tools.project.all_projects") as all_projects:
+                        with mock.patch("chiyo_cli.builtin_tools.project.normalize_roots") as normalize_roots:
                             normalize_roots.return_value = [temp_dir]
                             all_projects.return_value = [str(project)]
                             lines = CHIYO.shell_tool_lines("proj", ["Project"])
@@ -828,7 +831,7 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.gop.run_fd") as run_fd:
+                    with mock.patch("chiyo_cli.builtin_tools.go_or_pick.run_fd") as run_fd:
                         run_fd.return_value = [str(target)]
                         lines = CHIYO.shell_tool_lines("gop", ["Target"])
 
@@ -863,7 +866,7 @@ class ChiyoTests(unittest.TestCase):
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
                     with mock.patch.dict(os.environ, {"HOME": str(home)}):
-                        with mock.patch("chiyo_cli.builtin_tools.gop.run_fd") as run_fd:
+                        with mock.patch("chiyo_cli.builtin_tools.go_or_pick.run_fd") as run_fd:
                             run_fd.return_value = [str(target)]
                             lines = CHIYO.shell_tool_lines("gop", ["Target"])
 
@@ -895,7 +898,7 @@ class ChiyoTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
-                    with mock.patch("chiyo_cli.builtin_tools.gop.run_fd") as run_fd:
+                    with mock.patch("chiyo_cli.builtin_tools.go_or_pick.run_fd") as run_fd:
                         run_fd.return_value = [str(target)]
                         lines = CHIYO.shell_tool_lines("gop", ["paper"])
 

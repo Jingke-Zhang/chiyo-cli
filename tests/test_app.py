@@ -3,7 +3,7 @@ import unittest
 from io import StringIO
 from unittest import mock
 
-from chiyo_cli.builtin_tools import app as APP
+from chiyo_cli.builtin_tools import application as APP
 
 
 class AppTests(unittest.TestCase):
@@ -187,7 +187,7 @@ class AppTests(unittest.TestCase):
 
         self.assertEqual(stdout.getvalue(), "Safari\nCalendar\n")
 
-    @mock.patch("chiyo_cli.builtin_tools.app.open_app")
+    @mock.patch("chiyo_cli.builtin_tools.application.open_app")
     def test_run_lists_completions_without_opening_app(self, open_app):
         tool = APP.Tool()
 
@@ -257,8 +257,8 @@ class AppTests(unittest.TestCase):
 
         self.assertEqual(run.call_args.args[0], ["open", "-a", "Safari"])
 
-    @mock.patch("chiyo_cli.builtin_tools.app.open_app")
-    @mock.patch("chiyo_cli.builtin_tools.app.discover_apps")
+    @mock.patch("chiyo_cli.builtin_tools.application.open_app")
+    @mock.patch("chiyo_cli.builtin_tools.application.discover_apps")
     def test_run_opens_alias_without_discovery(self, discover, open_app):
         config = {
             "fzf_prompt": "app> ",
@@ -270,7 +270,7 @@ class AppTests(unittest.TestCase):
         discover.assert_not_called()
         open_app.assert_called_once()
 
-    @mock.patch("chiyo_cli.builtin_tools.app.open_app")
+    @mock.patch("chiyo_cli.builtin_tools.application.open_app")
     @mock.patch("chiyo_cli.toolkit.choose_item_from")
     def test_run_confirms_alias_when_requested(
         self,
