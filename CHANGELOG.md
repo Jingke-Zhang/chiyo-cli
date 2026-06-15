@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.2.0
+
 - Added a standard `make test` entrypoint for local development.
 - Added GitHub Actions CI on macOS.
 - Added project metadata in `pyproject.toml`.
