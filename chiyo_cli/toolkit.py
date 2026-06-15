@@ -38,7 +38,7 @@ class ToolFlagError(ToolError):
 @dataclass(frozen=True)
 class ShellAction:
     kind: str
-    value: str = ""
+    value: Any = ""
 
     @classmethod
     def cd(cls, path):
@@ -51,6 +51,10 @@ class ShellAction:
     @classmethod
     def print(cls, value):
         return cls("print", str(value))
+
+    @classmethod
+    def command(cls, command):
+        return cls("command", tuple(str(part) for part in command))
 
     @classmethod
     def none(cls):
@@ -69,6 +73,9 @@ class ShellAction:
         if self.kind == "print":
             return f"printf '%s\\n' {shlex.quote(self.value)}"
 
+        if self.kind == "command":
+            return " ".join(shlex.quote(part) for part in self.value)
+
         raise ToolError(f"unknown shell action: {self.kind}")
 
     def execute(self):
@@ -85,6 +92,15 @@ class ShellAction:
         if self.kind == "print":
             print(self.value)
             return self.value
+
+        if self.kind == "command":
+            result = subprocess.run(list(self.value), check=False)
+
+            if result.returncode != 0:
+                command = " ".join(shlex.quote(part) for part in self.value)
+                raise ToolError(f"{command} failed with exit code {result.returncode}.")
+
+            return list(self.value)
 
         raise ToolError(f"unknown shell action: {self.kind}")
 
@@ -223,6 +239,9 @@ class PickOpenTool:
 
     def print(self, value):
         return ShellAction.print(value)
+
+    def shell_command(self, command):
+        return ShellAction.command(command)
 
     def no_action(self):
         return ShellAction.none()

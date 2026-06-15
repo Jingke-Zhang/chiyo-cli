@@ -156,6 +156,10 @@ class ToolkitTests(unittest.TestCase):
             ShellAction.print("hello world").render_shell(),
             "printf '%s\\n' 'hello world'",
         )
+        self.assertEqual(
+            ShellAction.command(["emacsclient", "-nw", "+4:2", "/tmp/a b.org"]).render_shell(),
+            "emacsclient -nw +4:2 '/tmp/a b.org'",
+        )
         self.assertEqual(ShellAction.none().render_shell(), "")
 
     @mock.patch("chiyo_cli.toolkit.open_location")
@@ -228,6 +232,7 @@ class ToolkitTests(unittest.TestCase):
         self.assertEqual(tool.cd("/tmp/project"), ShellAction.cd("/tmp/project"))
         self.assertEqual(tool.open("/tmp/file"), ShellAction.open("/tmp/file"))
         self.assertEqual(tool.print("value"), ShellAction.print("value"))
+        self.assertEqual(tool.shell_command(["echo", "value"]), ShellAction.command(["echo", "value"]))
         self.assertEqual(tool.no_action(), ShellAction.none())
 
 

@@ -218,6 +218,52 @@ class RunDispatchTests(unittest.TestCase):
 
         self.assertEqual(lines, ["printf '%s\\n' 'plain value'"])
 
+    def test_shell_tool_lines_runs_builtin_gtd_terminal_open(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            tools_config_path = os.path.join(temp_dir, "tools.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        'enabled_tools = ["jingke-zhang/gtd"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            Path(tools_config_path).write_text(
+                "\n".join(
+                    [
+                        '["jingke-zhang/gtd"]',
+                        'emacsclient_open_args = ["-nw"]',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            item = {
+                "todo": "TODO",
+                "title": "Write release notes",
+                "agenda": "todo: TODO Write release notes",
+                "category": "chiyo",
+                "file": "/tmp/chiyo/tasks.org",
+                "line": 42,
+                "column": 3,
+            }
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
+                    with mock.patch(
+                        "chiyo_cli.builtin_tools.gtd.agenda_items",
+                        return_value=[item],
+                    ):
+                        with mock.patch("chiyo_cli.builtin_tools.gtd.require_command"):
+                            lines = CHIYO.shell_tool_lines("gtd", ["release"])
+
+        self.assertEqual(lines, ["emacsclient -nw +42:3 /tmp/chiyo/tasks.org"])
+
     def test_run_tool_runs_builtin_s(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")

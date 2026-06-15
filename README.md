@@ -141,6 +141,7 @@ Path-like tools follow a small file palette:
 - [`chiyo`](docs/chiyo.md): dashboard, shell integration, and setup diagnostics
 - [`bm`](docs/bm.md): search Safari bookmarks and open URLs
 - [`app`](docs/app.md): search installed macOS applications and launch one
+- [`gtd`](docs/gtd.md): search Org agenda items and open their source locations
 - [`s`](docs/s.md): build web search URLs and open them
 - [`ws`](docs/workspace.md): enter or manage tmux workspaces
 - [`zo`](docs/zo.md): search Zotero items and open entries or PDFs
@@ -206,8 +207,8 @@ selected sections.
 Fresh config enables `jingke-zhang/go-or-pick`,
 `jingke-zhang/web-search`, and `jingke-zhang/workspace` by default. A tool
 section can set `cmds = ["bm", "bookmarks"]`; any configured command in that
-list can be used with `chiyo run` or installed as a wrapper, as long as no
-enabled tool claims the same command.
+list can be used with `chiyo run` or installed as a wrapper or shell function,
+as long as no enabled tool claims the same command.
 Configured commands must match `^[a-z][a-z0-9-]*$`; invalid entries are reported
 by `chiyo tool list` and `chiyo doctor`.
 

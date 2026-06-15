@@ -186,6 +186,19 @@ def write_completion(path, tool_command):
     return expanded
 
 
+def remove_generated_wrapper(path, tool_command):
+    expanded = os.path.expanduser(path)
+
+    if not os.path.exists(expanded):
+        return None
+
+    if not is_generated_wrapper(expanded, tool_command):
+        raise ToolCommandError(f"refusing to remove non-chiyo wrapper: {expanded}")
+
+    os.unlink(expanded)
+    return expanded
+
+
 def assert_install_targets_are_safe(tool_command, config, shell_tool=False):
     wrapper = os.path.expanduser(wrapper_path(tool_command, config))
     completion = os.path.expanduser(completion_path(tool_command, config))
@@ -221,12 +234,16 @@ def resolve_install_target(tool_command):
 
 def install_resolved_tool_lines(metadata, install_command, config):
     if metadata.shell:
+        removed_wrapper = remove_generated_wrapper(wrapper_path(install_command, config), install_command)
         installed_shell = write_shell_artifact(shell_path(install_command, config), install_command)
         installed_completion = write_completion(completion_path(install_command, config), install_command)
         lines = [
             f"installed {install_command} shell: {installed_shell}",
             f"installed _{install_command}: {installed_completion}",
         ]
+
+        if removed_wrapper is not None:
+            lines.append(f"removed old {install_command} wrapper: {removed_wrapper}")
 
         if metadata.key not in enabled_tool_keys(config):
             lines.append(f"warn    {metadata.key} installed but disabled for chiyo run")

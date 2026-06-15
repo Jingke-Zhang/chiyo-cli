@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added `gtd`, an Emacs Org agenda item picker backed by `emacsclient`.
+
 ## v0.2.0
 
 - Added a standard `make test` entrypoint for local development.

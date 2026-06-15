@@ -45,9 +45,9 @@ chiyo install s ws gop proj
 ```
 
 For ordinary tools, `chiyo install TOOLS...` creates direct wrappers and
-generated completions. For shell-sensitive tools such as `gop` and `proj`, it
-installs shell functions and generated completions; each function calls
-`chiyo shell TOOL` so `cd` actions can affect the parent shell.
+generated completions. For shell-sensitive tools such as `gop`, `proj`, and
+`gtd`, it installs shell functions and generated completions; each function
+calls `chiyo shell TOOL` so actions can run from the current shell.
 
 ## Shell Setup
 

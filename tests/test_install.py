@@ -84,6 +84,49 @@ class InstallTests(unittest.TestCase):
             self.assertFalse((wrapper_dir / "gop-select").exists())
             self.assertFalse(wrapper.exists())
 
+    def test_install_gtd_writes_shell_function_and_completion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            wrapper_dir.mkdir()
+            completion_dir = Path(temp_dir) / "zsh"
+            shell_dir = Path(temp_dir) / "shell"
+            old_wrapper = wrapper_dir / "gtd"
+            old_wrapper.write_text(CHIYO.wrapper_script("gtd"), encoding="utf-8")
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        'enabled_tools = ["jingke-zhang/gtd"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                        f'shell_dir = "{shell_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                lines = CHIYO.install_tool_lines("gtd")
+
+            shell_file = shell_dir / "gtd.zsh"
+            completion = completion_dir / "_gtd"
+            wrapper = wrapper_dir / "gtd"
+
+            self.assertIn(f"installed gtd shell: {shell_file}", lines)
+            self.assertIn(f"installed _gtd: {completion}", lines)
+            self.assertIn(f"removed old gtd wrapper: {old_wrapper}", lines)
+            self.assertEqual(
+                shell_file.read_text(encoding="utf-8"),
+                CHIYO.shell_function_script("gtd"),
+            )
+            self.assertEqual(
+                completion.read_text(encoding="utf-8"),
+                CHIYO.completion_script("gtd"),
+            )
+            self.assertFalse(wrapper.exists())
+
     def test_install_shell_tool_alias_writes_function_and_completion(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             wrapper_dir = Path(temp_dir) / "bin"

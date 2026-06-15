@@ -295,7 +295,61 @@ def user_tool_doctor_checks():
     for tool in discovery.tools:
         wrapper = os.path.expanduser(wrapper_path(tool.cmd, config))
         completion = os.path.expanduser(completion_path(tool.cmd, config))
+        shell = os.path.expanduser(shell_path(tool.cmd, config))
         wrapper_installed = os.path.exists(wrapper)
+        shell_installed = os.path.exists(shell)
+
+        if tool.shell:
+            if shell_installed and is_generated_shell_artifact(shell, tool.cmd):
+                checks.append(("ok", shell, f"user tool {tool.key} shell"))
+
+                if tool.key not in enabled_tool_keys(config):
+                    checks.append(
+                        (
+                            "warn",
+                            f"{tool.key} installed but disabled for chiyo run",
+                            f"user tool {tool.key}",
+                        )
+                    )
+            elif shell_installed:
+                checks.append(
+                    (
+                        "warn",
+                        f"{shell} is not a generated chiyo shell artifact",
+                        f"user tool {tool.key} shell",
+                    )
+                )
+
+            if wrapper_installed and is_generated_wrapper(wrapper, tool.cmd):
+                checks.append(
+                    (
+                        "warn",
+                        f"{wrapper} is an old generated wrapper; run chiyo install {tool.cmd}",
+                        f"user tool {tool.key} wrapper",
+                    )
+                )
+            elif wrapper_installed:
+                checks.append(
+                    (
+                        "warn",
+                        f"{wrapper} is not a generated chiyo wrapper",
+                        f"user tool {tool.key} wrapper",
+                    )
+                )
+
+            if shell_installed:
+                if os.path.exists(completion) and is_generated_completion(completion, tool.cmd):
+                    checks.append(("ok", completion, f"user tool {tool.key} zsh"))
+                elif os.path.exists(completion):
+                    checks.append(
+                        (
+                            "warn",
+                            f"{completion} is not a generated chiyo completion",
+                            f"user tool {tool.key} zsh",
+                        )
+                    )
+
+            continue
 
         if wrapper_installed and is_generated_wrapper(wrapper, tool.cmd):
             checks.append(("ok", wrapper, f"user tool {tool.key} wrapper"))

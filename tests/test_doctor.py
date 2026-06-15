@@ -198,6 +198,56 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("warn    user tool missing_author.py:", output)
         self.assertIn("warn    user tool conflicting_flags.py:", output)
 
+    def test_user_tool_doctor_checks_report_shell_tool_install_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wrapper_dir = Path(temp_dir) / "bin"
+            wrapper_dir.mkdir()
+            completion_dir = Path(temp_dir) / "zsh"
+            completion_dir.mkdir()
+            shell_dir = Path(temp_dir) / "shell"
+            shell_dir.mkdir()
+            (wrapper_dir / "gtd").write_text(
+                INSTALL.wrapper_script("gtd"),
+                encoding="utf-8",
+            )
+            (shell_dir / "gtd.zsh").write_text(
+                INSTALL.shell_function_script("gtd"),
+                encoding="utf-8",
+            )
+            (completion_dir / "_gtd").write_text(
+                INSTALL.completion_script("gtd"),
+                encoding="utf-8",
+            )
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        "tool_dirs = []",
+                        'enabled_tools = ["jingke-zhang/gtd"]',
+                        f'wrapper_dir = "{wrapper_dir}"',
+                        f'completion_dir = "{completion_dir}"',
+                        f'shell_dir = "{shell_dir}"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(DOCTOR, "CONFIG_PATH", config_path):
+                lines = [
+                    f"{status:7} {label}: {detail}"
+                    for status, detail, label in DOCTOR.user_tool_doctor_checks()
+                ]
+
+        output = "\n".join(lines)
+        self.assertIn("ok      user tool jingke-zhang/gtd shell:", output)
+        self.assertIn("ok      user tool jingke-zhang/gtd zsh:", output)
+        self.assertIn(
+            "warn    user tool jingke-zhang/gtd wrapper:",
+            output,
+        )
+        self.assertIn("old generated wrapper", output)
+
     def test_user_tool_doctor_checks_warn_when_installed_completion_is_missing(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             wrapper_dir = Path(temp_dir) / "bin"
