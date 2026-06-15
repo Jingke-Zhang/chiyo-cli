@@ -27,6 +27,7 @@ chiyo run bm github
 chiyo run zo convex optimization
 chiyo shell proj cli-tools
 chiyo shell gop docs
+chiyo
 ```
 
 ## Why
@@ -137,7 +138,7 @@ Path-like tools follow a small file palette:
 
 ## Tools
 
-- [`chiyo`](docs/chiyo.md): shell integration and setup diagnostics
+- [`chiyo`](docs/chiyo.md): dashboard, shell integration, and setup diagnostics
 - [`bm`](docs/bm.md): search Safari bookmarks and open URLs
 - [`app`](docs/app.md): search installed macOS applications and launch one
 - [`s`](docs/s.md): build web search URLs and open them
@@ -202,10 +203,11 @@ existing sections without replacing user values. Use `--force` to replace
 selected sections.
 
 `chiyo config init --all` initializes Chiyo plus the currently enabled tools.
-Fresh config enables `jingke-zhang/go-or-pick` and `jingke-zhang/web-search` by default. A tool section can
-set `cmds = ["bm", "bookmarks"]`; any configured command in that list can be
-used with `chiyo run` or installed as a wrapper, as long as no enabled tool
-claims the same command.
+Fresh config enables `jingke-zhang/go-or-pick`,
+`jingke-zhang/web-search`, and `jingke-zhang/workspace` by default. A tool
+section can set `cmds = ["bm", "bookmarks"]`; any configured command in that
+list can be used with `chiyo run` or installed as a wrapper, as long as no
+enabled tool claims the same command.
 Configured commands must match `^[a-z][a-z0-9-]*$`; invalid entries are reported
 by `chiyo tool list` and `chiyo doctor`.
 

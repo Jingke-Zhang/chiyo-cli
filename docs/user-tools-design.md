@@ -321,17 +321,16 @@ chiyo run zo linear algebra
 chiyo run app browser
 ```
 
-If `chiyo` is called with no arguments, a future version may open an `fzf`
-picker for enabled tools:
+If `chiyo` is called with no arguments, it shows a compact dashboard for local
+status and common management commands:
 
 ```sh
 chiyo
 ```
 
-This should behave like `chiyo run` with no tool name: show enabled tools in
-`fzf`, let the user select one, then prompt for or pass through query text.
-After selection, Chiyo should execute the selected tool directly. Most Chiyo
-tools are small and local, so an extra confirmation step is unnecessary.
+A later version may make this dashboard interactive, for example by opening an
+`fzf` picker for enabled tools and management actions. That should remain a
+macro-level dashboard, not dynamic `chiyo TOOL ...` dispatch.
 
 This keeps tool execution under one namespace and avoids conflicts between tool
 names and Chiyo management commands.
@@ -483,8 +482,8 @@ def docs_markdown(self, config):
 This keeps a community-shared tool as a single file containing code, metadata,
 docs, defaults, and behavior.
 
-Built-in tools may continue to keep separate docs during migration, but the
-framework should allow built-ins to expose docs through the same interface.
+Built-in tools expose docs through the same framework interface. Separate files
+in `docs/` remain the user-facing manuals for longer examples and setup notes.
 
 ## Config Files
 
@@ -532,11 +531,11 @@ browser = "Safari"
 editor = "Emacs"
 ```
 
-Built-in tool config lives in `tools.toml` as part of the framework migration.
-Since this project is still early and has no broad external user base, the
-implementation switches directly to the new layout instead of adding a
-migration command. `config.toml` contains Chiyo infrastructure settings and
-`tools.toml` contains built-in and user tool settings.
+Built-in tool config lives in `tools.toml`. Since this project is still early
+and has no broad external user base, the implementation switched directly to
+the new layout instead of adding a migration command. `config.toml` contains
+Chiyo infrastructure settings and `tools.toml` contains built-in and user tool
+settings.
 
 ## Tool Discovery And Enablement
 
@@ -962,37 +961,33 @@ modules and tests are shaped the way they are.
     - wrapper points to `chiyo run TOOL "$@"`
     - generated completion exists when installed
     - installed but disabled tools are reported as warnings
-14. Migrate one simple built-in tool, likely `s` or `bm`, as the first
-    framework-backed built-in.
-15. Migrate `app` and `zo` after the first built-in proves the interface.
-16. Add `ShellAction` and `chiyo shell TOOL ...`.
-17. Migrate `proj` after shell action support exists.
-18. Migrate `gop` after `proj` proves the shell bridge, because `gop` mixes
+14. Moved simple built-ins such as `s` and `bm` onto the framework first.
+15. Moved richer built-ins such as `app` and `zo` after the interface was
+    proven.
+16. Added `ShellAction` and `chiyo shell TOOL ...`.
+17. Moved `proj` after shell action support existed.
+18. Moved `gop` after `proj` proved the shell bridge, because `gop` mixes
     directory `cd` and file `open` behavior.
 
-## Built-In Migration Completion Criteria
+## Built-In Regression Criteria
 
-Each built-in migration should satisfy the same completion criteria:
+Each framework-backed built-in should continue to satisfy the same criteria:
 
-- The legacy command still works.
 - `chiyo run TOOL ...` works.
 - Tool config is read from `tools.toml`.
 - Tool docs can be viewed through `chiyo doc TOOL`.
-- Existing shell completion still works.
 - Generated wrapper completion works when installed.
-- Tests cover both legacy command behavior and framework command behavior.
+- Shell-action tools work through `chiyo shell TOOL ...`.
+- Tests cover framework command behavior and any tool-specific behavior.
 
 ## Risk Controls
 
-The framework migration should avoid breaking the existing small tools while the
-new interface is being built.
+The framework should avoid breaking the existing small tools while new
+interfaces are being built.
 
 Risk controls:
 
 - Keep existing commands working at every step.
 - Run the full test suite after each implementation step.
-- Start with a simple built-in tool before migrating richer tools.
-- Do not migrate `gop` or `proj` until shell action support is designed and
-  tested.
 - Keep user-tool loading tests separate from built-in migration tests.
 - Treat user tools as trusted Python and document that security model clearly.

@@ -44,10 +44,10 @@ Tool installation is delegated to Chiyo:
 chiyo install s ws gop proj
 ```
 
-For ordinary tools, `chiyo install TOOL` creates a direct wrapper and generated
-completion. For shell-sensitive tools such as `gop` and `proj`, it installs a
-shell function and generated completion; the function calls `chiyo shell TOOL`
-so `cd` actions can affect the parent shell.
+For ordinary tools, `chiyo install TOOLS...` creates direct wrappers and
+generated completions. For shell-sensitive tools such as `gop` and `proj`, it
+installs shell functions and generated completions; each function calls
+`chiyo shell TOOL` so `cd` actions can affect the parent shell.
 
 ## Shell Setup
 

@@ -3,6 +3,7 @@
 `chiyo` manages shell integration and local diagnostics.
 
 ```sh
+chiyo
 chiyo init zsh
 chiyo config init --all --write
 chiyo config init s --force
@@ -19,6 +20,7 @@ chiyo doctor
 
 ## Commands
 
+- `chiyo`: show a compact local dashboard with enabled tools and management commands
 - `init zsh`: print zsh integration code for completions and shell functions
 - `config init`: write explicit default config for Chiyo or selected tools
 - `tool list|enable|disable`: inspect and control tools available through

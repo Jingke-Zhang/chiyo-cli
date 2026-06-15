@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from chiyo_cli import cli as CHIYO
+from chiyo_cli.commands import install as CHIYO
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

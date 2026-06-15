@@ -21,6 +21,11 @@
 - Renamed the Web Search command from `ws` to `s`.
 - Added `ws`, a tmux workspace manager with project discovery, aliases,
   session creation, kill, rename, and completion support.
+- Added a default `chiyo` dashboard for local tool status and common management
+  commands.
+- Split CLI implementation and integration tests into focused command and
+  dispatch modules.
+- Added lightweight documentation consistency tests.
 
 ## v0.1.2
 
