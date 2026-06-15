@@ -38,6 +38,37 @@ class GtdTests(unittest.TestCase):
         self.assertIn("(org-agenda-span 'day)", expression)
         self.assertIn("(org-agenda-start-day nil)", expression)
 
+    def test_view_expression_can_use_agenda_dispatch_key(self):
+        expression = GTD.view_expression(GTD.DEFAULT_CONFIG, "todo")
+
+        self.assertIn('(org-agenda nil "t")', expression)
+        self.assertIn("org-marker", expression)
+
+    def test_view_expression_can_use_emacs_function(self):
+        config = dict(GTD.DEFAULT_CONFIG)
+        config["views"] = {
+            "next": {
+                "name": "Next Actions",
+                "function": "my/gtd-next-actions",
+            }
+        }
+
+        expression = GTD.view_expression(config, "next")
+
+        self.assertIn("(funcall 'my/gtd-next-actions)", expression)
+
+    def test_view_expression_rejects_invalid_emacs_function_name(self):
+        config = dict(GTD.DEFAULT_CONFIG)
+        config["views"] = {
+            "bad": {
+                "name": "Bad",
+                "function": "(delete-file \"x\")",
+            }
+        }
+
+        with self.assertRaises(GTD.ToolError):
+            GTD.view_expression(config, "bad")
+
     def test_capture_expression_appends_todo_to_inbox(self):
         expression = GTD.capture_expression(GTD.DEFAULT_CONFIG, 'Read "paper"')
 
@@ -103,6 +134,16 @@ class GtdTests(unittest.TestCase):
 
         self.assertIn("find-file-noselect", result)
         self.assertIn('"read paper"', result)
+        self.assertEqual(stdout.getvalue(), result + "\n")
+
+    def test_run_view_prints_elisp_without_emacsclient(self):
+        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+            result = GTD.Tool().run(
+                ["--print-elisp", "view", "todo"],
+                config=GTD.DEFAULT_CONFIG,
+            )
+
+        self.assertIn('(org-agenda nil "t")', result)
         self.assertEqual(stdout.getvalue(), result + "\n")
 
     def test_run_capture_requires_text(self):
@@ -203,6 +244,31 @@ class GtdTests(unittest.TestCase):
     def test_run_open_unknown_file_alias_fails(self):
         with self.assertRaises(SystemExit):
             GTD.Tool().run(["open", "missing"], config=GTD.DEFAULT_CONFIG)
+
+    def test_run_view_uses_configured_view_items(self):
+        with (
+            mock.patch("chiyo_cli.builtin_tools.gtd.agenda_view_items", return_value=[AGENDA_ITEM]) as items,
+            mock.patch("chiyo_cli.builtin_tools.gtd.require_command"),
+        ):
+            result = GTD.Tool().run(
+                ["view", "todo", "release"],
+                config=GTD.DEFAULT_CONFIG,
+                execute_shell_actions=False,
+            )
+
+        items.assert_called_once_with(GTD.DEFAULT_CONFIG, "todo")
+        self.assertEqual(
+            result,
+            ShellAction.command(["emacsclient", "-n", "+42:3", "/tmp/chiyo/tasks.org"]),
+        )
+
+    def test_run_view_requires_name(self):
+        with self.assertRaises(SystemExit):
+            GTD.Tool().run(["view"], config=GTD.DEFAULT_CONFIG)
+
+    def test_run_view_unknown_name_fails(self):
+        with self.assertRaises(SystemExit):
+            GTD.Tool().run(["view", "missing"], config=GTD.DEFAULT_CONFIG)
 
     def test_run_opens_selected_agenda_item(self):
         with (

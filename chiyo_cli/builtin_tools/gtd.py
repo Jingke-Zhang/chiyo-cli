@@ -1,10 +1,11 @@
 """Framework-backed GTD built-in for Org agenda items."""
 
 import json
+import re
 import subprocess
 
 from chiyo_cli.paths import compact_path, expand_path
-from chiyo_cli.toolkit import PickOpenTool, ToolError, require_command
+from chiyo_cli.toolkit import PickOpenTool, ShellAction, ToolError, require_command
 
 
 DEFAULT_CONFIG = {
@@ -13,6 +14,17 @@ DEFAULT_CONFIG = {
     "emacsclient_open_args": ["-n"],
     "agenda_span": "day",
     "agenda_start_day": "",
+    "default_view": "agenda",
+    "views": {
+        "agenda": {
+            "name": "Agenda",
+            "key": "a",
+        },
+        "todo": {
+            "name": "Todo List",
+            "key": "t",
+        },
+    },
     "files": {
         "inbox": {
             "name": "Inbox",
@@ -21,6 +33,7 @@ DEFAULT_CONFIG = {
         },
     },
 }
+EMACS_SYMBOL_PATTERN = re.compile(r"^[A-Za-z0-9_:+*/<>=!?$%&~^.-]+$")
 
 
 AGENDA_ITEMS_EXPRESSION = r"""
@@ -35,8 +48,8 @@ AGENDA_ITEMS_EXPRESSION = r"""
         (org-agenda-span __AGENDA_SPAN__)
         (org-agenda-start-day __AGENDA_START_DAY__))
     (save-window-excursion
-      (org-agenda-list)
-      (with-current-buffer org-agenda-buffer-name
+      __AGENDA_BODY__
+      (with-current-buffer (current-buffer)
         (let (items)
           (goto-char (point-min))
           (while (not (eobp))
@@ -109,11 +122,46 @@ def emacs_lisp_agenda_span(value):
 
 
 def agenda_items_expression(config):
+    return agenda_items_expression_for_body(config, "(org-agenda-list)")
+
+
+def agenda_items_expression_for_body(config, body):
     return (
         AGENDA_ITEMS_EXPRESSION
+        .replace("__AGENDA_BODY__", body)
         .replace("__AGENDA_SPAN__", emacs_lisp_agenda_span(config.get("agenda_span", "day")))
         .replace("__AGENDA_START_DAY__", emacs_lisp_string(config.get("agenda_start_day")))
     )
+
+
+def emacs_function_call(function_name):
+    if not EMACS_SYMBOL_PATTERN.fullmatch(function_name):
+        raise ToolError(f"invalid Emacs function name: {function_name}")
+
+    return f"(funcall '{function_name})"
+
+
+def view_config(config, alias):
+    view = config.get("views", {}).get(alias)
+
+    if view is None:
+        raise ToolError(f"unknown gtd view: {alias}")
+
+    return view
+
+
+def view_body(view):
+    if "function" in view:
+        return emacs_function_call(view["function"])
+
+    if "key" in view:
+        return f"(org-agenda nil {emacs_lisp_string(view['key'])})"
+
+    raise ToolError("gtd view requires key or function config.")
+
+
+def view_expression(config, alias):
+    return agenda_items_expression_for_body(config, view_body(view_config(config, alias)))
 
 
 def inbox_file(config):
@@ -218,6 +266,15 @@ def agenda_items(config):
     )
 
 
+def agenda_view_items(config, alias):
+    return parse_emacs_json(
+        run_emacsclient_eval(
+            config["emacsclient"],
+            view_expression(config, alias),
+        )
+    )
+
+
 class Tool(PickOpenTool):
     name = "GTD"
     cmd = "gtd"
@@ -270,6 +327,27 @@ class Tool(PickOpenTool):
     def completion_items(self, config):
         return []
 
+    def pick_and_open(self, items, query, args, config, execute_shell_actions=True):
+        items = self.sorted_items(
+            self.filtered_items(items, query, config),
+            config,
+        )
+
+        if not items:
+            self.fail("no items found.")
+
+        selected = self.select_item(items, query, args, config)
+
+        if selected is None:
+            return None
+
+        result = self.open_item(selected, args, config)
+
+        if execute_shell_actions and isinstance(result, ShellAction):
+            return result.execute()
+
+        return result
+
     def run(self, argv=None, config=None, execute_shell_actions=True):
         config = dict(self.default_config if config is None else config)
         args = self.parser().parse_args(argv)
@@ -292,6 +370,29 @@ class Tool(PickOpenTool):
                 self.fail(str(error))
 
             return None
+
+        if args.query and args.query[0] == "view":
+            if len(args.query) < 2:
+                self.fail("view requires a view name.")
+
+            view = args.query[1]
+            query = " ".join(args.query[2:])
+
+            try:
+                expression = view_expression(config, view)
+            except ToolError as error:
+                self.fail(str(error))
+
+            if args.print_elisp:
+                print(expression)
+                return expression
+
+            try:
+                items = agenda_view_items(config, view)
+            except ToolError as error:
+                self.fail(str(error))
+
+            return self.pick_and_open(items, query, args, config, execute_shell_actions)
 
         if args.query and args.query[0] == "open":
             if len(args.query) != 2:

@@ -8,6 +8,7 @@ chiyo run gtd
 chiyo run gtd inbox
 chiyo run gtd capture "read paper"
 chiyo run gtd open inbox
+chiyo run gtd view todo
 chiyo run gtd --print-elisp
 chiyo config init gtd --append
 chiyo install gtd
@@ -47,6 +48,36 @@ Each file can opt into bare alias handling with `bare = true`. The default
 with `bare = false` remain available through `gtd open ALIAS` without taking
 over default agenda searches.
 
+## Views
+
+`gtd view NAME [QUERY...]` asks Emacs to build a configured agenda-like view,
+then shows that view's Org marker rows in `fzf`:
+
+```sh
+chiyo run gtd view todo
+chiyo run gtd view next email
+```
+
+Views can call an Org agenda dispatcher key:
+
+```toml
+["jingke-zhang/gtd".views.todo]
+name = "Todo List"
+key = "t"
+```
+
+They can also call a named Emacs function:
+
+```toml
+["jingke-zhang/gtd".views.next]
+name = "Next Actions"
+function = "my/gtd-next-actions"
+```
+
+The function should create or switch to an agenda-like buffer whose rows carry
+`org-marker` or `org-hd-marker` text properties. Chiyo reads those markers and
+opens the selected source location.
+
 ## Config
 
 Default generated config:
@@ -59,6 +90,15 @@ emacsclient = "emacsclient"
 emacsclient_open_args = ["-n"]
 agenda_span = "day"
 agenda_start_day = ""
+default_view = "agenda"
+
+["jingke-zhang/gtd".views.agenda]
+name = "Agenda"
+key = "a"
+
+["jingke-zhang/gtd".views.todo]
+name = "Todo List"
+key = "t"
 
 ["jingke-zhang/gtd".files.inbox]
 name = "Inbox"

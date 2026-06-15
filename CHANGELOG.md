@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added `gtd view` for reading configured Emacs Org agenda-like views.
 - Added `gtd open` and per-file bare aliases for opening configured Org files.
 - Added `gtd capture` for appending TODO entries to the configured inbox.
 - Added `gtd`, an Emacs Org agenda item picker backed by `emacsclient`.
