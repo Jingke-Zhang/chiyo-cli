@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added `gtd capture` for appending TODO entries to the configured inbox.
 - Added `gtd`, an Emacs Org agenda item picker backed by `emacsclient`.
 
 ## v0.2.0

@@ -13,6 +13,13 @@ DEFAULT_CONFIG = {
     "emacsclient_open_args": ["-n"],
     "agenda_span": "day",
     "agenda_start_day": "",
+    "files": {
+        "inbox": {
+            "name": "Inbox",
+            "path": "~/org/inbox.org",
+            "bare": True,
+        },
+    },
 }
 
 
@@ -65,6 +72,25 @@ AGENDA_ITEMS_EXPRESSION = r"""
 """
 
 
+CAPTURE_EXPRESSION = r"""
+(progn
+  (require 'org)
+  (let ((file (expand-file-name __INBOX_FILE__))
+        (title __CAPTURE_TITLE__))
+    (make-directory (file-name-directory file) t)
+    (with-current-buffer (find-file-noselect file)
+      (goto-char (point-max))
+      (unless (bolp)
+        (insert "\n"))
+      (insert "* TODO " title "\n")
+      (insert "  :PROPERTIES:\n")
+      (insert "  :CREATED: " (format-time-string "[%Y-%m-%d %a %H:%M]") "\n")
+      (insert "  :END:\n")
+      (save-buffer)))
+  nil)
+"""
+
+
 def emacs_lisp_string(value):
     if value in (None, ""):
         return "nil"
@@ -87,6 +113,21 @@ def agenda_items_expression(config):
         AGENDA_ITEMS_EXPRESSION
         .replace("__AGENDA_SPAN__", emacs_lisp_agenda_span(config.get("agenda_span", "day")))
         .replace("__AGENDA_START_DAY__", emacs_lisp_string(config.get("agenda_start_day")))
+    )
+
+
+def inbox_file(config):
+    try:
+        return config["files"]["inbox"]["path"]
+    except KeyError as error:
+        raise ToolError("missing gtd files.inbox.path config.") from error
+
+
+def capture_expression(config, title):
+    return (
+        CAPTURE_EXPRESSION
+        .replace("__INBOX_FILE__", emacs_lisp_string(inbox_file(config)))
+        .replace("__CAPTURE_TITLE__", emacs_lisp_string(title))
     )
 
 
@@ -202,6 +243,25 @@ class Tool(PickOpenTool):
     def run(self, argv=None, config=None, execute_shell_actions=True):
         config = dict(self.default_config if config is None else config)
         args = self.parser().parse_args(argv)
+
+        if args.query and args.query[0] == "capture":
+            title = " ".join(args.query[1:]).strip()
+
+            if not title:
+                self.fail("capture requires text.")
+
+            expression = capture_expression(config, title)
+
+            if args.print_elisp:
+                print(expression)
+                return expression
+
+            try:
+                run_emacsclient_eval(config["emacsclient"], expression)
+            except ToolError as error:
+                self.fail(str(error))
+
+            return None
 
         if args.print_elisp:
             expression = agenda_items_expression(config)

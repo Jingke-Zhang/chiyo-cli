@@ -6,6 +6,7 @@ selected item's source location through `emacsclient`.
 ```sh
 chiyo run gtd
 chiyo run gtd inbox
+chiyo run gtd capture "read paper"
 chiyo run gtd --print-elisp
 chiyo config init gtd --append
 chiyo install gtd
@@ -19,6 +20,19 @@ chiyo doc gtd
 - `--confirm`: always confirm the selected agenda item in `fzf`
 - `--list-completions`: print completion candidates
 
+## Capture
+
+`gtd capture TEXT...` appends a `TODO` heading to the configured inbox file
+through Emacs:
+
+```sh
+chiyo run gtd capture "read paper"
+```
+
+The default inbox is `~/org/inbox.org`. Chiyo asks Emacs to create missing
+parent directories, append the heading, add a `CREATED` property, and save the
+file.
+
 ## Config
 
 Default generated config:
@@ -31,6 +45,11 @@ emacsclient = "emacsclient"
 emacsclient_open_args = ["-n"]
 agenda_span = "day"
 agenda_start_day = ""
+
+["jingke-zhang/gtd".files.inbox]
+name = "Inbox"
+path = "~/org/inbox.org"
+bare = true
 ```
 
 `agenda_span` is passed to `org-agenda-span`. Use values such as `day`, `week`,

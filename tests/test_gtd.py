@@ -36,6 +36,14 @@ class GtdTests(unittest.TestCase):
         self.assertIn("(org-agenda-span 'day)", expression)
         self.assertIn("(org-agenda-start-day nil)", expression)
 
+    def test_capture_expression_appends_todo_to_inbox(self):
+        expression = GTD.capture_expression(GTD.DEFAULT_CONFIG, 'Read "paper"')
+
+        self.assertIn('(expand-file-name "~/org/inbox.org")', expression)
+        self.assertIn('"Read \\"paper\\""', expression)
+        self.assertIn('(insert "* TODO " title "\\n")', expression)
+        self.assertIn(":CREATED:", expression)
+
     def test_parse_emacs_json_accepts_emacs_printed_string(self):
         payload = json.dumps([AGENDA_ITEM])
         stdout = json.dumps(payload) + "\n"
@@ -83,6 +91,33 @@ class GtdTests(unittest.TestCase):
         self.assertIn("org-agenda-list", result)
         self.assertIn("org-marker", result)
         self.assertEqual(stdout.getvalue(), result + "\n")
+
+    def test_run_capture_prints_elisp_without_emacsclient(self):
+        with mock.patch("sys.stdout", new_callable=StringIO) as stdout:
+            result = GTD.Tool().run(
+                ["--print-elisp", "capture", "read", "paper"],
+                config=GTD.DEFAULT_CONFIG,
+            )
+
+        self.assertIn("find-file-noselect", result)
+        self.assertIn('"read paper"', result)
+        self.assertEqual(stdout.getvalue(), result + "\n")
+
+    def test_run_capture_requires_text(self):
+        with self.assertRaises(SystemExit):
+            GTD.Tool().run(["capture"], config=GTD.DEFAULT_CONFIG)
+
+    def test_run_capture_calls_emacsclient(self):
+        with mock.patch("chiyo_cli.builtin_tools.gtd.run_emacsclient_eval") as run:
+            result = GTD.Tool().run(
+                ["capture", "read", "paper"],
+                config=GTD.DEFAULT_CONFIG,
+            )
+
+        self.assertIsNone(result)
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0], "emacsclient")
+        self.assertIn('"read paper"', run.call_args.args[1])
 
     def test_run_opens_selected_agenda_item(self):
         with (
