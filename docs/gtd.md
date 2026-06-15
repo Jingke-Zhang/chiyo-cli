@@ -7,6 +7,7 @@ selected item's source location through `emacsclient`.
 chiyo run gtd
 chiyo run gtd inbox
 chiyo run gtd capture "read paper"
+chiyo run gtd open inbox
 chiyo run gtd --print-elisp
 chiyo config init gtd --append
 chiyo install gtd
@@ -32,6 +33,19 @@ chiyo run gtd capture "read paper"
 The default inbox is `~/org/inbox.org`. Chiyo asks Emacs to create missing
 parent directories, append the heading, add a `CREATED` property, and save the
 file.
+
+## Files
+
+Configured files can be opened by alias:
+
+```sh
+chiyo run gtd open inbox
+```
+
+Each file can opt into bare alias handling with `bare = true`. The default
+`inbox` file enables this, so `chiyo run gtd inbox` opens the inbox file. Files
+with `bare = false` remain available through `gtd open ALIAS` without taking
+over default agenda searches.
 
 ## Config
 

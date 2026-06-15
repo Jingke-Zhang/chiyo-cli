@@ -3,7 +3,7 @@
 import json
 import subprocess
 
-from chiyo_cli.paths import compact_path
+from chiyo_cli.paths import compact_path, expand_path
 from chiyo_cli.toolkit import PickOpenTool, ToolError, require_command
 
 
@@ -121,6 +121,36 @@ def inbox_file(config):
         return config["files"]["inbox"]["path"]
     except KeyError as error:
         raise ToolError("missing gtd files.inbox.path config.") from error
+
+
+def file_config(config, alias):
+    file = config.get("files", {}).get(alias)
+
+    if file is None:
+        raise ToolError(f"unknown gtd file alias: {alias}")
+
+    if "path" not in file:
+        raise ToolError(f"missing gtd files.{alias}.path config.")
+
+    return file
+
+
+def file_item(config, alias):
+    file = file_config(config, alias)
+    return {
+        "file": expand_path(file["path"]),
+        "line": 1,
+        "column": 1,
+    }
+
+
+def bare_file_alias(config, value):
+    file = config.get("files", {}).get(value)
+
+    if file is None or not file.get("bare", False):
+        return None
+
+    return value
 
 
 def capture_expression(config, title):
@@ -262,6 +292,38 @@ class Tool(PickOpenTool):
                 self.fail(str(error))
 
             return None
+
+        if args.query and args.query[0] == "open":
+            if len(args.query) != 2:
+                self.fail("open requires one file alias.")
+
+            try:
+                item = file_item(config, args.query[1])
+                return self.shell_command(
+                    emacsclient_open_action(
+                        config["emacsclient"],
+                        item,
+                        config.get("emacsclient_open_args", ["-n"]),
+                    )
+                )
+            except ToolError as error:
+                self.fail(str(error))
+
+        if len(args.query) == 1:
+            alias = bare_file_alias(config, args.query[0])
+
+            if alias is not None:
+                try:
+                    item = file_item(config, alias)
+                    return self.shell_command(
+                        emacsclient_open_action(
+                            config["emacsclient"],
+                            item,
+                            config.get("emacsclient_open_args", ["-n"]),
+                        )
+                    )
+                except ToolError as error:
+                    self.fail(str(error))
 
         if args.print_elisp:
             expression = agenda_items_expression(config)

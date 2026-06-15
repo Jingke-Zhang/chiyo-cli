@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 from io import StringIO
 from unittest import mock
@@ -16,6 +17,7 @@ AGENDA_ITEM = {
     "line": 42,
     "column": 3,
 }
+INBOX_PATH = os.path.expanduser("~/org/inbox.org")
 
 
 class GtdTests(unittest.TestCase):
@@ -118,6 +120,89 @@ class GtdTests(unittest.TestCase):
         run.assert_called_once()
         self.assertEqual(run.call_args.args[0], "emacsclient")
         self.assertIn('"read paper"', run.call_args.args[1])
+
+    def test_file_item_reads_configured_alias(self):
+        self.assertEqual(
+            GTD.file_item(GTD.DEFAULT_CONFIG, "inbox"),
+            {
+                "file": INBOX_PATH,
+                "line": 1,
+                "column": 1,
+            },
+        )
+
+    def test_run_open_file_alias(self):
+        with mock.patch("chiyo_cli.builtin_tools.gtd.require_command"):
+            result = GTD.Tool().run(
+                ["open", "inbox"],
+                config=GTD.DEFAULT_CONFIG,
+                execute_shell_actions=False,
+            )
+
+        self.assertEqual(
+            result,
+            ShellAction.command(["emacsclient", "-n", "+1:1", INBOX_PATH]),
+        )
+
+    def test_run_open_file_alias_uses_configured_terminal_args(self):
+        config = dict(GTD.DEFAULT_CONFIG)
+        config["emacsclient_open_args"] = ["-nw"]
+
+        with mock.patch("chiyo_cli.builtin_tools.gtd.require_command"):
+            result = GTD.Tool().run(
+                ["open", "inbox"],
+                config=config,
+                execute_shell_actions=False,
+            )
+
+        self.assertEqual(
+            result,
+            ShellAction.command(["emacsclient", "-nw", "+1:1", INBOX_PATH]),
+        )
+
+    def test_run_bare_file_alias_only_when_enabled(self):
+        with mock.patch("chiyo_cli.builtin_tools.gtd.require_command"):
+            result = GTD.Tool().run(
+                ["inbox"],
+                config=GTD.DEFAULT_CONFIG,
+                execute_shell_actions=False,
+            )
+
+        self.assertEqual(
+            result,
+            ShellAction.command(["emacsclient", "-n", "+1:1", INBOX_PATH]),
+        )
+
+    def test_run_bare_file_alias_does_not_claim_disabled_alias(self):
+        config = dict(GTD.DEFAULT_CONFIG)
+        config["files"] = {
+            "research": {
+                "name": "Research",
+                "path": "~/org/research.org",
+                "bare": False,
+            }
+        }
+        item = dict(AGENDA_ITEM)
+        item["title"] = "Research notes"
+
+        with (
+            mock.patch("chiyo_cli.builtin_tools.gtd.agenda_items", return_value=[item]),
+            mock.patch("chiyo_cli.builtin_tools.gtd.require_command"),
+        ):
+            result = GTD.Tool().run(
+                ["research"],
+                config=config,
+                execute_shell_actions=False,
+            )
+
+        self.assertEqual(
+            result,
+            ShellAction.command(["emacsclient", "-n", "+42:3", "/tmp/chiyo/tasks.org"]),
+        )
+
+    def test_run_open_unknown_file_alias_fails(self):
+        with self.assertRaises(SystemExit):
+            GTD.Tool().run(["open", "missing"], config=GTD.DEFAULT_CONFIG)
 
     def test_run_opens_selected_agenda_item(self):
         with (
