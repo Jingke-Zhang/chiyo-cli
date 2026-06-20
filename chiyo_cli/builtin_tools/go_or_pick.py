@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from chiyo_cli.fzf import Field, choose_item, field_widths, format_row
+from chiyo_cli.fzf import Field, choose_item, style_text
 from chiyo_cli.output import print_warning
 from chiyo_cli.paths import compact_path, existing_dirs
 from chiyo_cli.toolkit import PickOpenTool, ToolError, require_command, run_command
@@ -102,8 +102,8 @@ def path_filter_fields(path):
 
 
 def format_path_choice(path):
-    fields = path_fields(path)
-    return format_row(0, fields, field_widths([fields]), path_filter_fields(path))
+    visible = Field(compact_path(path), style_for_kind(path_kind(path)))
+    return f"{style_text(visible.value, visible.style)}\t{path}\t#0"
 
 
 def parse_choice(choice):

@@ -177,6 +177,29 @@ class RunDispatchTests(unittest.TestCase):
                 with self.assertRaises(CHIYO.ToolCommandError):
                     CHIYO.run_tool("paper", [])
 
+    def test_run_tool_allows_disabled_tool_help(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = []',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch("sys.stdout", new_callable=StringIO):
+                    with self.assertRaises(SystemExit) as context:
+                        CHIYO.run_tool("paper", ["--help"])
+
+        self.assertEqual(context.exception.code, 0)
+
     def test_run_tool_rejects_unknown_enabled_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
@@ -218,7 +241,7 @@ class RunDispatchTests(unittest.TestCase):
 
         self.assertEqual(lines, ["printf '%s\\n' 'plain value'"])
 
-    def test_shell_tool_lines_runs_builtin_gtd_terminal_open(self):
+    def test_shell_tool_lines_runs_builtin_agd_terminal_open(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.toml")
             tools_config_path = os.path.join(temp_dir, "tools.toml")
@@ -227,7 +250,7 @@ class RunDispatchTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/gtd"]',
+                        'enabled_tools = ["jingke-zhang/agenda"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -237,7 +260,7 @@ class RunDispatchTests(unittest.TestCase):
             Path(tools_config_path).write_text(
                 "\n".join(
                     [
-                        '["jingke-zhang/gtd"]',
+                        '["jingke-zhang/agenda"]',
                         'emacsclient_open_args = ["-nw"]',
                     ]
                 ),
@@ -256,11 +279,11 @@ class RunDispatchTests(unittest.TestCase):
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with mock.patch.object(CHIYO, "TOOLS_CONFIG_PATH", tools_config_path):
                     with mock.patch(
-                        "chiyo_cli.builtin_tools.gtd.agenda_items",
+                        "chiyo_cli.builtin_tools.agenda.agenda_items",
                         return_value=[item],
                     ):
-                        with mock.patch("chiyo_cli.builtin_tools.gtd.require_command"):
-                            lines = CHIYO.shell_tool_lines("gtd", ["release"])
+                        with mock.patch("chiyo_cli.builtin_tools.agenda.require_command"):
+                            lines = CHIYO.shell_tool_lines("agd", ["release"])
 
         self.assertEqual(lines, ["emacsclient -nw +42:3 /tmp/chiyo/tasks.org"])
 

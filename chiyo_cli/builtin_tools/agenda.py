@@ -1,4 +1,4 @@
-"""Framework-backed GTD built-in for Org agenda items."""
+"""Framework-backed Agenda built-in for Org agenda items."""
 
 import json
 import re
@@ -9,8 +9,9 @@ from chiyo_cli.toolkit import PickOpenTool, ShellAction, ToolError, require_comm
 
 
 DEFAULT_CONFIG = {
-    "fzf_prompt": "gtd> ",
+    "fzf_prompt": "agd> ",
     "emacsclient": "emacsclient",
+    "emacsclient_timeout": 30,
     "emacsclient_open_args": ["-n"],
     "agenda_span": "day",
     "agenda_start_day": "",
@@ -42,7 +43,7 @@ AGENDA_ITEMS_EXPRESSION = r"""
   (require 'org-agenda)
   (require 'json)
   (require 'subr-x)
-  (let ((org-agenda-buffer-name " *chiyo-gtd-agenda*")
+  (let ((org-agenda-buffer-name " *chiyo-agd-agenda*")
         (org-agenda-sticky nil)
         (org-agenda-window-setup 'current-window)
         (org-agenda-span __AGENDA_SPAN__)
@@ -145,7 +146,7 @@ def view_config(config, alias):
     view = config.get("views", {}).get(alias)
 
     if view is None:
-        raise ToolError(f"unknown gtd view: {alias}")
+        raise ToolError(f"unknown agd view: {alias}")
 
     return view
 
@@ -157,7 +158,7 @@ def view_body(view):
     if "key" in view:
         return f"(org-agenda nil {emacs_lisp_string(view['key'])})"
 
-    raise ToolError("gtd view requires key or function config.")
+    raise ToolError("agd view requires key or function config.")
 
 
 def view_expression(config, alias):
@@ -168,17 +169,17 @@ def inbox_file(config):
     try:
         return config["files"]["inbox"]["path"]
     except KeyError as error:
-        raise ToolError("missing gtd files.inbox.path config.") from error
+        raise ToolError("missing agd files.inbox.path config.") from error
 
 
 def file_config(config, alias):
     file = config.get("files", {}).get(alias)
 
     if file is None:
-        raise ToolError(f"unknown gtd file alias: {alias}")
+        raise ToolError(f"unknown agd file alias: {alias}")
 
     if "path" not in file:
-        raise ToolError(f"missing gtd files.{alias}.path config.")
+        raise ToolError(f"missing agd files.{alias}.path config.")
 
     return file
 
@@ -226,14 +227,41 @@ def parse_emacs_json(stdout):
     return decoded
 
 
-def run_emacsclient_eval(command, expression):
+def emacsclient_timeout(config):
+    timeout = config.get("emacsclient_timeout", 30)
+
+    if timeout in (None, ""):
+        return None
+
+    try:
+        timeout = float(timeout)
+    except (TypeError, ValueError) as error:
+        raise ToolError("emacsclient_timeout must be a positive number.") from error
+
+    if timeout <= 0:
+        raise ToolError("emacsclient_timeout must be a positive number.")
+
+    return timeout
+
+
+def run_emacsclient_eval(command, expression, timeout=None):
     require_command(command)
-    result = subprocess.run(
-        [command, "-e", expression],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+
+    try:
+        result = subprocess.run(
+            [command, "-e", expression],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as error:
+        if timeout is None:
+            raise
+
+        raise ToolError(
+            f"{command} timed out after {timeout:g}s while evaluating agd elisp."
+        ) from error
 
     if result.returncode != 0:
         detail = result.stderr.strip() or "unknown error"
@@ -262,6 +290,7 @@ def agenda_items(config):
         run_emacsclient_eval(
             config["emacsclient"],
             agenda_items_expression(config),
+            timeout=emacsclient_timeout(config),
         )
     )
 
@@ -271,24 +300,25 @@ def agenda_view_items(config, alias):
         run_emacsclient_eval(
             config["emacsclient"],
             view_expression(config, alias),
+            timeout=emacsclient_timeout(config),
         )
     )
 
 
 class Tool(PickOpenTool):
-    name = "GTD"
-    cmd = "gtd"
+    name = "Agenda"
+    cmd = "agd"
     author = "Chiyo CLI"
     author_id = "Jingke-Zhang"
     description = "Search Org agenda items and open the source location."
     shell = True
     docs = """
-    # gtd
+    # agd
 
     Search Org agenda items with fzf and open the selected source location
     through emacsclient.
     """
-    prompt = "gtd> "
+    prompt = "agd> "
     default_config = DEFAULT_CONFIG
     search_display_fields = [1, 2, 3, 4]
 
@@ -365,7 +395,11 @@ class Tool(PickOpenTool):
                 return expression
 
             try:
-                run_emacsclient_eval(config["emacsclient"], expression)
+                run_emacsclient_eval(
+                    config["emacsclient"],
+                    expression,
+                    timeout=emacsclient_timeout(config),
+                )
             except ToolError as error:
                 self.fail(str(error))
 

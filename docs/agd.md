@@ -1,18 +1,18 @@
-# gtd
+# agd
 
-`gtd` loads Org agenda items from Emacs, shows them in `fzf`, and opens the
+`agd` loads Org agenda items from Emacs, shows them in `fzf`, and opens the
 selected item's source location through `emacsclient`.
 
 ```sh
-chiyo run gtd
-chiyo run gtd inbox
-chiyo run gtd capture "read paper"
-chiyo run gtd open inbox
-chiyo run gtd view todo
-chiyo run gtd --print-elisp
-chiyo config init gtd --append
-chiyo install gtd
-chiyo doc gtd
+chiyo run agd
+chiyo run agd inbox
+chiyo run agd capture "read paper"
+chiyo run agd open inbox
+chiyo run agd view todo
+chiyo run agd --print-elisp
+chiyo config init agd --append
+chiyo install agd
+chiyo doc agd
 ```
 
 ## Options
@@ -24,11 +24,11 @@ chiyo doc gtd
 
 ## Capture
 
-`gtd capture TEXT...` appends a `TODO` heading to the configured inbox file
+`agd capture TEXT...` appends a `TODO` heading to the configured inbox file
 through Emacs:
 
 ```sh
-chiyo run gtd capture "read paper"
+chiyo run agd capture "read paper"
 ```
 
 The default inbox is `~/org/inbox.org`. Chiyo asks Emacs to create missing
@@ -40,28 +40,28 @@ file.
 Configured files can be opened by alias:
 
 ```sh
-chiyo run gtd open inbox
+chiyo run agd open inbox
 ```
 
 Each file can opt into bare alias handling with `bare = true`. The default
-`inbox` file enables this, so `chiyo run gtd inbox` opens the inbox file. Files
-with `bare = false` remain available through `gtd open ALIAS` without taking
+`inbox` file enables this, so `chiyo run agd inbox` opens the inbox file. Files
+with `bare = false` remain available through `agd open ALIAS` without taking
 over default agenda searches.
 
 ## Views
 
-`gtd view NAME [QUERY...]` asks Emacs to build a configured agenda-like view,
+`agd view NAME [QUERY...]` asks Emacs to build a configured agenda-like view,
 then shows that view's Org marker rows in `fzf`:
 
 ```sh
-chiyo run gtd view todo
-chiyo run gtd view next email
+chiyo run agd view todo
+chiyo run agd view next email
 ```
 
 Views can call an Org agenda dispatcher key:
 
 ```toml
-["jingke-zhang/gtd".views.todo]
+["jingke-zhang/agenda".views.todo]
 name = "Todo List"
 key = "t"
 ```
@@ -69,9 +69,9 @@ key = "t"
 They can also call a named Emacs function:
 
 ```toml
-["jingke-zhang/gtd".views.next]
+["jingke-zhang/agenda".views.next]
 name = "Next Actions"
-function = "my/gtd-next-actions"
+function = "my/agd-next-actions"
 ```
 
 The function should create or switch to an agenda-like buffer whose rows carry
@@ -83,24 +83,25 @@ opens the selected source location.
 Default generated config:
 
 ```toml
-["jingke-zhang/gtd"]
-cmds = ["gtd"]
-fzf_prompt = "gtd> "
+["jingke-zhang/agenda"]
+cmds = ["agd"]
+fzf_prompt = "agd> "
 emacsclient = "emacsclient"
+emacsclient_timeout = 30
 emacsclient_open_args = ["-n"]
 agenda_span = "day"
 agenda_start_day = ""
 default_view = "agenda"
 
-["jingke-zhang/gtd".views.agenda]
+["jingke-zhang/agenda".views.agenda]
 name = "Agenda"
 key = "a"
 
-["jingke-zhang/gtd".views.todo]
+["jingke-zhang/agenda".views.todo]
 name = "Todo List"
 key = "t"
 
-["jingke-zhang/gtd".files.inbox]
+["jingke-zhang/agenda".files.inbox]
 name = "Inbox"
 path = "~/org/inbox.org"
 bare = true
@@ -109,13 +110,18 @@ bare = true
 `agenda_span` is passed to `org-agenda-span`. Use values such as `day`, `week`,
 `month`, or a number of days accepted by Org. `agenda_start_day` is passed to
 `org-agenda-start-day`; leave it empty to use Org's default start day.
+`emacsclient_timeout` limits how long Chiyo waits for Emacs to generate agenda
+JSON before reporting a timeout.
 
 Use `emacsclient_open_args = ["-nw"]` to open the selected item in the current
-terminal instead of asking an existing GUI frame to visit it.
+terminal instead of asking an existing GUI frame to visit it. This mode works
+best through the installed shell function (`chiyo install agd`); if a direct
+`chiyo run agd` call appears to hang, use `["-n"]` or run the `agd` shell
+function from an interactive terminal.
 
 ## Behavior
 
-`gtd` asks Emacs to build a normal Org agenda list with `org-agenda-list`.
+`agd` asks Emacs to build a normal Org agenda list with `org-agenda-list`.
 Chiyo then reads the agenda lines and their Org markers as JSON, presents the
 items with `fzf`, and opens the selected source file with the configured
 `emacsclient_open_args`. By default this is:
@@ -124,10 +130,10 @@ items with `fzf`, and opens the selected source file with the configured
 emacsclient -n +LINE:COLUMN FILE
 ```
 
-`gtd` installs as a shell function so terminal Emacs clients can run from the
+`agd` installs as a shell function so terminal Emacs clients can run from the
 current shell instead of from a captured Python subprocess. After changing from
-an older wrapper install, run `chiyo install gtd` again and reload your shell
-init so the generated `gtd.zsh` function is sourced.
+an older wrapper install, run `chiyo install agd` again and reload your shell
+init so the generated `agd.zsh` function is sourced.
 
 Chiyo does not parse Org files directly. Emacs owns agenda generation, agenda
 files, todo keywords, tags, custom agenda behavior, and marker resolution.

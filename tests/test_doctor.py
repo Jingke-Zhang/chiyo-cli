@@ -206,16 +206,16 @@ class DoctorTests(unittest.TestCase):
             completion_dir.mkdir()
             shell_dir = Path(temp_dir) / "shell"
             shell_dir.mkdir()
-            (wrapper_dir / "gtd").write_text(
-                INSTALL.wrapper_script("gtd"),
+            (wrapper_dir / "agd").write_text(
+                INSTALL.wrapper_script("agd"),
                 encoding="utf-8",
             )
-            (shell_dir / "gtd.zsh").write_text(
-                INSTALL.shell_function_script("gtd"),
+            (shell_dir / "agd.zsh").write_text(
+                INSTALL.shell_function_script("agd"),
                 encoding="utf-8",
             )
-            (completion_dir / "_gtd").write_text(
-                INSTALL.completion_script("gtd"),
+            (completion_dir / "_agd").write_text(
+                INSTALL.completion_script("agd"),
                 encoding="utf-8",
             )
             config_path = os.path.join(temp_dir, "config.toml")
@@ -224,7 +224,7 @@ class DoctorTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/gtd"]',
+                        'enabled_tools = ["jingke-zhang/agenda"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                         f'shell_dir = "{shell_dir}"',
@@ -240,10 +240,10 @@ class DoctorTests(unittest.TestCase):
                 ]
 
         output = "\n".join(lines)
-        self.assertIn("ok      user tool jingke-zhang/gtd shell:", output)
-        self.assertIn("ok      user tool jingke-zhang/gtd zsh:", output)
+        self.assertIn("ok      user tool jingke-zhang/agenda shell:", output)
+        self.assertIn("ok      user tool jingke-zhang/agenda zsh:", output)
         self.assertIn(
-            "warn    user tool jingke-zhang/gtd wrapper:",
+            "warn    user tool jingke-zhang/agenda wrapper:",
             output,
         )
         self.assertIn("old generated wrapper", output)

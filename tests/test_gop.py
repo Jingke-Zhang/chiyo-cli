@@ -191,12 +191,14 @@ class GopTests(unittest.TestCase):
     def test_choose_path_stream_formats_fd_output_for_fzf(self, popen, _which):
         fd_process = mock.Mock()
         fd_stdout = mock.MagicMock()
-        fd_stdout.__iter__.return_value = iter(["/Users/me/project\n"])
+        fd_stdout.__iter__.return_value = iter(["/Users/me/OneDrive - Work/project\n"])
         fd_process.stdout = fd_stdout
         fd_process.wait.return_value = 0
         fzf_process = mock.Mock()
         fzf_process.stdin = mock.Mock()
-        fzf_process.stdout.read.return_value = "project\t/Users/me/project\n"
+        fzf_process.stdout.read.return_value = (
+            "~/OneDrive - Work/project\t/Users/me/OneDrive - Work/project\t#0\n"
+        )
         fzf_process.stderr.read.return_value = ""
         fzf_process.wait.return_value = 0
         popen.side_effect = [fd_process, fzf_process]
@@ -209,27 +211,25 @@ class GopTests(unittest.TestCase):
             lambda message: self.fail(message),
         )
 
-        self.assertEqual(selected, "/Users/me/project")
+        self.assertEqual(selected, "/Users/me/OneDrive - Work/project")
         self.assertEqual(
             popen.call_args_list[0].args[0],
             ["fd", "--absolute-path", "project", "/Users/me"],
         )
         self.assertIn("--with-nth=1", popen.call_args_list[1].args[0])
         self.assertIn("--nth=1", popen.call_args_list[1].args[0])
-        self.assertIn("/Users/me/project", fzf_process.stdin.write.call_args.args[0])
-        self.assertIn(
-            "\t\033[8m/Users/me/project\033[0m",
-            fzf_process.stdin.write.call_args.args[0],
-        )
+        written = fzf_process.stdin.write.call_args.args[0]
+        self.assertIn("OneDrive - Work", written)
+        self.assertIn("/Users/me/OneDrive - Work/project", written)
+        self.assertNotIn("\033[8m", written)
 
-    def test_parse_choice_strips_concealed_filter_style(self):
+    def test_parse_choice_reads_raw_path_column(self):
         self.assertEqual(
             GOP.parse_choice(
-                "/Users/me/project\t"
-                "\033[8m~/project\033[0m\t"
-                "\033[8m/Users/me/project\033[0m\t#0"
+                "\033[1;34m~/OneDrive - Work/project\033[0m\t"
+                "/Users/me/OneDrive - Work/project\t#0"
             ),
-            "/Users/me/project",
+            "/Users/me/OneDrive - Work/project",
         )
 
     @mock.patch("chiyo_cli.builtin_tools.go_or_pick.run_fd", return_value=["/tmp/project"])

@@ -20,7 +20,7 @@ BUILTIN_TOOL_MODULES = {
     "app": "chiyo_cli.builtin_tools.application",
     "bm": "chiyo_cli.builtin_tools.explorer_bookmark",
     "gop": "chiyo_cli.builtin_tools.go_or_pick",
-    "gtd": "chiyo_cli.builtin_tools.gtd",
+    "agd": "chiyo_cli.builtin_tools.agenda",
     "proj": "chiyo_cli.builtin_tools.project",
     "s": "chiyo_cli.builtin_tools.web_search",
     "ws": "chiyo_cli.builtin_tools.workspace",

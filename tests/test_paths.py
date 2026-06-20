@@ -20,6 +20,14 @@ class PathHelperTests(unittest.TestCase):
                 self.assertEqual(expand_path("~/Docs"), os.path.join(temp_dir, "Docs"))
                 self.assertEqual(expand_paths(["~/Docs"]), [os.path.join(temp_dir, "Docs")])
 
+    def test_expand_path_accepts_shell_escaped_spaces(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch.dict(os.environ, {"HOME": temp_dir}):
+                self.assertEqual(
+                    expand_path("~/OneDrive\\ -\\ The\\ University\\ of\\ Tokyo"),
+                    os.path.join(temp_dir, "OneDrive - The University of Tokyo"),
+                )
+
     def test_absolute_path_expands_home_and_normalizes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             with mock.patch.dict(os.environ, {"HOME": temp_dir}):

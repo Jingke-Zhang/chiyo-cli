@@ -742,7 +742,8 @@ def run_tool(tool_command, tool_args, execute_shell_actions=True):
     from chiyo_cli.tool_config import load_tool_config, tool_config_defaults
     from chiyo_cli.tool_loader import load_tool_class
 
-    resolved = resolve_tool_command(tool_command, enabled_only=True)
+    help_requested = any(arg in ("-h", "--help") for arg in tool_args)
+    resolved = resolve_tool_command(tool_command, enabled_only=not help_requested)
 
     if resolved is None:
         raise ToolCommandError(f"unknown tool: {tool_command}")

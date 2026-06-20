@@ -203,7 +203,7 @@ class ToolLoaderTests(unittest.TestCase):
         commands = [tool.command for tool in discovery.tools]
         self.assertIn("app", commands)
         self.assertIn("bm", commands)
-        self.assertIn("gtd", commands)
+        self.assertIn("agd", commands)
         self.assertIn("gop", commands)
         self.assertIn("proj", commands)
         self.assertIn("s", commands)
@@ -213,7 +213,7 @@ class ToolLoaderTests(unittest.TestCase):
         shell_by_command = {tool.command: tool.shell for tool in discovery.tools}
         self.assertTrue(shell_by_command["gop"])
         self.assertTrue(shell_by_command["proj"])
-        self.assertTrue(shell_by_command["gtd"])
+        self.assertTrue(shell_by_command["agd"])
         self.assertFalse(shell_by_command["s"])
 
     def test_discover_tools_can_include_builtins(self):

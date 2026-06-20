@@ -4,7 +4,7 @@ import os
 
 
 def expand_path(path):
-    return os.path.expanduser(str(path))
+    return os.path.expanduser(str(path).replace("\\ ", " "))
 
 
 def absolute_path(path):

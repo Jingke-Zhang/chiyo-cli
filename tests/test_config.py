@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from chiyo_cli.config import init_module_config, load_module_config
+from chiyo_cli.config import init_module_config, load_minimal_toml, load_module_config
 
 
 class ConfigTests(unittest.TestCase):
@@ -128,6 +128,28 @@ class ConfigTests(unittest.TestCase):
                     ]
                 ),
             )
+
+    def test_load_minimal_toml_accepts_shell_escaped_spaces(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "config.toml"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "[gop]",
+                        'roots = ["~/OneDrive\\ -\\ The\\ University\\ of\\ Tokyo"]',
+                        "bare = true",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_minimal_toml(str(config_path))
+
+        self.assertEqual(
+            config["gop"]["roots"],
+            ["~/OneDrive - The University of Tokyo"],
+        )
+        self.assertTrue(config["gop"]["bare"])
 
 
 if __name__ == "__main__":

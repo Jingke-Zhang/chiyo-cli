@@ -59,11 +59,89 @@ def parse_inline_table(value):
     return pairs
 
 
+def parse_quoted_string(value):
+    text = value[1:-1]
+    result = []
+    index = 0
+    escapes = {
+        '"': '"',
+        "\\": "\\",
+        "n": "\n",
+        "r": "\r",
+        "t": "\t",
+    }
+
+    while index < len(text):
+        char = text[index]
+
+        if char != "\\" or index == len(text) - 1:
+            result.append(char)
+            index += 1
+            continue
+
+        index += 1
+        escaped = text[index]
+        result.append(escapes.get(escaped, escaped))
+        index += 1
+
+    return "".join(result)
+
+
+def parse_array(value):
+    inner = value[1:-1].strip()
+
+    if not inner:
+        return []
+
+    items = []
+    current = []
+    in_quote = False
+    escaped = False
+
+    for char in inner:
+        if escaped:
+            current.append(char)
+            escaped = False
+            continue
+
+        if char == "\\" and in_quote:
+            current.append(char)
+            escaped = True
+            continue
+
+        if char == '"':
+            current.append(char)
+            in_quote = not in_quote
+            continue
+
+        if char == "," and not in_quote:
+            items.append(parse_toml_value("".join(current).strip()))
+            current = []
+            continue
+
+        current.append(char)
+
+    items.append(parse_toml_value("".join(current).strip()))
+    return items
+
+
 def parse_toml_value(value):
     value = value.strip()
 
     if value.startswith("{") and value.endswith("}"):
         return parse_inline_table(value)
+
+    if value.startswith("[") and value.endswith("]"):
+        return parse_array(value)
+
+    if value.startswith('"') and value.endswith('"'):
+        return parse_quoted_string(value)
+
+    if value == "true":
+        return True
+
+    if value == "false":
+        return False
 
     try:
         return ast.literal_eval(value)
