@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added `def`, a dictionary and translation lookup tool with personal entries,
+  SQLite cache, online providers, and configurable pager output.
+- Added Japanese lookup support for `def`, including Jisho definitions and
+  `ja`/`zh`/`en` translation directions.
 - Added `agd view` for reading configured Emacs Org agenda-like views.
 - Added `agd open` and per-file bare aliases for opening configured Org files.
 - Added `agd capture` for appending TODO entries to the configured inbox.

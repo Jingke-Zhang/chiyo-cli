@@ -18,6 +18,7 @@ class DocsConsistencyTests(unittest.TestCase):
         expected_docs = {
             "app": "docs/app.md",
             "bm": "docs/bm.md",
+            "def": "docs/def.md",
             "agd": "docs/agd.md",
             "gop": "docs/gop.md",
             "proj": "docs/proj.md",

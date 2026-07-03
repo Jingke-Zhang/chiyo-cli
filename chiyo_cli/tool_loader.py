@@ -19,6 +19,7 @@ IDENTITY_PART_PATTERN = re.compile(r"[^a-z0-9]+")
 BUILTIN_TOOL_MODULES = {
     "app": "chiyo_cli.builtin_tools.application",
     "bm": "chiyo_cli.builtin_tools.explorer_bookmark",
+    "def": "chiyo_cli.builtin_tools.dictionary",
     "gop": "chiyo_cli.builtin_tools.go_or_pick",
     "agd": "chiyo_cli.builtin_tools.agenda",
     "proj": "chiyo_cli.builtin_tools.project",

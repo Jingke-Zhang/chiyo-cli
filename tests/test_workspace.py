@@ -88,8 +88,9 @@ class WorkspaceTests(unittest.TestCase):
             return subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            with mock.patch.object(WS, "run_tmux", side_effect=fake_run_tmux):
-                result = WS.Tool().run(["--new", "My Project", temp_dir])
+            with mock.patch.dict("os.environ", {"TMUX": ""}, clear=False):
+                with mock.patch.object(WS, "run_tmux", side_effect=fake_run_tmux):
+                    result = WS.Tool().run(["--new", "My Project", temp_dir])
 
         self.assertEqual(result, "My-Project")
         self.assertEqual(calls[0], ["new-session", "-d", "-s", "My-Project", "-c", temp_dir])

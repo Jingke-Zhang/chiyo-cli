@@ -142,6 +142,7 @@ Path-like tools follow a small file palette:
 - [`bm`](docs/bm.md): search Safari bookmarks and open URLs
 - [`app`](docs/app.md): search installed macOS applications and launch one
 - [`agd`](docs/agd.md): search Org agenda items and open their source locations
+- [`def`](docs/def.md): look up definitions or translations in a pager
 - [`s`](docs/s.md): build web search URLs and open them
 - [`ws`](docs/workspace.md): enter or manage tmux workspaces
 - [`zo`](docs/zo.md): search Zotero items and open entries or PDFs
