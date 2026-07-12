@@ -12,6 +12,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_TOOL_DIR = REPO_ROOT / "tests" / "fixtures" / "user_tools"
 
 
+class TtyStream:
+    def isatty(self):
+        return True
+
+
 class ToolCliTests(unittest.TestCase):
     def test_tool_enable_and_disable_update_chiyo_config(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -71,6 +76,35 @@ class ToolCliTests(unittest.TestCase):
         self.assertIn("warn", output)
         self.assertIn("missing_author.py", output)
         self.assertNotIn("# Paper Search", output)
+
+    def test_tool_list_styles_status_cmd_and_description_on_tty(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, "config.toml")
+            Path(config_path).write_text(
+                "\n".join(
+                    [
+                        "[chiyo]",
+                        f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
+                        'enabled_tools = ["fixture/paper-search"]',
+                        'wrapper_dir = "~/.local/bin"',
+                        'completion_dir = "~/.local/share/zsh/site-functions"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
+                with mock.patch.dict("os.environ", {}, clear=True):
+                    lines = CHIYO.tool_list_lines(stream=TtyStream())
+
+        output = "\n".join(lines)
+        self.assertIn("\033[32menabled \033[0m", output)
+        self.assertIn("\033[31mdisabled\033[0m", output)
+        self.assertIn("\033[1mpaper           \033[0m", output)
+        self.assertIn(
+            "\033[3mSearch fixture papers and open PDFs.\033[0m",
+            output,
+        )
 
     def test_tool_list_can_include_docs(self):
         with tempfile.TemporaryDirectory() as temp_dir:

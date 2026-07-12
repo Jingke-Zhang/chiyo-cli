@@ -4,6 +4,14 @@ import argparse
 import os
 import sys
 
+from chiyo_cli.output import (
+    STYLE_BOLD,
+    STYLE_GREEN,
+    STYLE_ITALIC,
+    STYLE_RED,
+    style_text,
+)
+
 from chiyo_cli.commands.dashboard import dashboard
 from chiyo_cli.commands.doctor import (
     check_command,
@@ -629,10 +637,26 @@ def print_tool_lines(lines):
         print(line)
 
 
-def tool_list_lines(include_docs=False):
+def styled_tool_status(status, stream):
+    style = STYLE_GREEN if status == "enabled" else STYLE_RED
+    return style_text(f"{status:8}", style, stream)
+
+
+def tool_list_row(tool, status, cmds, stream):
+    return (
+        f"{styled_tool_status(status, stream)} "
+        f"{tool.name:20} "
+        f"{style_text(f'{cmds:16}', STYLE_BOLD, stream)} "
+        f"{tool.author:12} "
+        f"{style_text(tool.description, STYLE_ITALIC, stream)}"
+    )
+
+
+def tool_list_lines(include_docs=False, stream=None):
     from chiyo_cli.tool_config import load_chiyo_config
     from chiyo_cli.tool_loader import discover_tools
 
+    stream = stream or sys.stdout
     config = load_chiyo_config(config_path=CONFIG_PATH)
     enabled_tools = enabled_tool_keys(config)
     discovery = discover_tools(config.get("tool_dirs", []), include_builtins=True)
@@ -647,9 +671,7 @@ def tool_list_lines(include_docs=False):
     for tool in discovery.tools:
         status = "enabled" if tool.key in enabled_tools else "disabled"
         cmds = ", ".join(configured_cmds(tool))
-        lines.append(
-            f"{status:8} {tool.name:20} {cmds:16} {tool.author:12} {tool.description}"
-        )
+        lines.append(tool_list_row(tool, status, cmds, stream))
 
         if include_docs:
             docs = tool.docs.strip()

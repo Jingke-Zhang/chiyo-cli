@@ -5,6 +5,10 @@ import sys
 
 
 STYLE_YELLOW = "\033[33m"
+STYLE_GREEN = "\033[32m"
+STYLE_RED = "\033[31m"
+STYLE_BOLD = "\033[1m"
+STYLE_ITALIC = "\033[3m"
 STYLE_RESET = "\033[0m"
 
 
