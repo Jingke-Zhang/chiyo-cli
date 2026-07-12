@@ -77,6 +77,18 @@ class DictionaryTests(unittest.TestCase):
         self.assertIn("## 言葉 [ことば]", content)
         self.assertIn("- (Noun) word; language", content)
 
+    def test_detect_language_identifies_kana_as_japanese(self):
+        self.assertEqual(DICT.detect_language("ことば"), "ja")
+        self.assertEqual(DICT.detect_language("カタカナ"), "ja")
+        self.assertEqual(DICT.detect_language("食べる"), "ja")
+
+    def test_detect_language_uses_configured_cjk_default(self):
+        self.assertEqual(DICT.detect_language("知识"), "zh")
+        self.assertEqual(DICT.detect_language("言葉", auto_cjk_language="ja"), "ja")
+
+    def test_detect_language_defaults_latin_to_english(self):
+        self.assertEqual(DICT.detect_language("epistemic"), "en")
+
     @mock.patch("chiyo_cli.builtin_tools.dictionary.http_json")
     def test_lookup_online_uses_dictionary_for_same_language(self, http_json):
         http_json.return_value = [
@@ -188,6 +200,35 @@ class DictionaryTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "# empirical\n\n经验的\n")
         lookup.assert_called_once()
         self.assertEqual(lookup.call_args.args[:3], ("empirical", "en", "zh"))
+
+    @mock.patch("chiyo_cli.builtin_tools.dictionary.lookup")
+    def test_run_can_auto_detect_input_language(self, lookup):
+        lookup.return_value = "# 言葉\n\nword\n"
+
+        with mock.patch("sys.stdout", new_callable=StringIO):
+            DICT.Tool().run(
+                ["-i", "auto", "-o", "en", "ことば"],
+                config=DICT.DEFAULT_CONFIG,
+                execute_shell_actions=False,
+            )
+
+        self.assertEqual(lookup.call_args.args[:3], ("ことば", "ja", "en"))
+
+    @mock.patch("chiyo_cli.builtin_tools.dictionary.lookup")
+    def test_run_auto_detect_uses_configured_cjk_default(self, lookup):
+        lookup.return_value = "# 言葉\n\nword\n"
+        config = dict(DICT.DEFAULT_CONFIG)
+        config["input_language"] = "auto"
+        config["auto_cjk_language"] = "ja"
+
+        with mock.patch("sys.stdout", new_callable=StringIO):
+            DICT.Tool().run(
+                ["-o", "en", "言葉"],
+                config=config,
+                execute_shell_actions=False,
+            )
+
+        self.assertEqual(lookup.call_args.args[:3], ("言葉", "ja", "en"))
 
     @mock.patch("chiyo_cli.builtin_tools.dictionary.subprocess.run")
     def test_render_content_uses_configured_viewer(self, run):

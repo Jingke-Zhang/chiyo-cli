@@ -32,6 +32,7 @@ LANGUAGE_ALIASES = {
 DEFAULT_CONFIG = {
     "input_language": "en",
     "output_language": "en",
+    "auto_cjk_language": "zh",
     "viewer": [],
     "cache": True,
     "cache_path": "~/.cache/chiyo-cli/dictionary.sqlite3",
@@ -48,6 +49,42 @@ def normalize_word(word):
 def normalize_language(language):
     normalized = str(language).strip().lower()
     return LANGUAGE_ALIASES.get(normalized, normalized)
+
+
+def is_hiragana(char):
+    return "\u3040" <= char <= "\u309f"
+
+
+def is_katakana(char):
+    return "\u30a0" <= char <= "\u30ff"
+
+
+def is_cjk(char):
+    return (
+        "\u3400" <= char <= "\u4dbf"
+        or "\u4e00" <= char <= "\u9fff"
+        or "\uf900" <= char <= "\ufaff"
+    )
+
+
+def detect_language(text, auto_cjk_language="zh"):
+    for char in text:
+        if is_hiragana(char) or is_katakana(char):
+            return "ja"
+
+    if any(is_cjk(char) for char in text):
+        return normalize_language(auto_cjk_language or "zh")
+
+    return "en"
+
+
+def resolve_input_language(language, word, config):
+    language = normalize_language(language)
+
+    if language != "auto":
+        return language
+
+    return detect_language(word, config.get("auto_cjk_language", "zh"))
 
 
 def cache_key(word, input_language, output_language):
@@ -417,8 +454,10 @@ class Tool(PickOpenTool):
         if not word:
             self.fail("word is required.")
 
-        input_language = normalize_language(
-            args.input_language or config.get("input_language", "en")
+        input_language = resolve_input_language(
+            args.input_language or config.get("input_language", "en"),
+            word,
+            config,
         )
         output_language = normalize_language(
             args.output_language or config.get("output_language", "en")

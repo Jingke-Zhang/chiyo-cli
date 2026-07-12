@@ -7,6 +7,7 @@ chiyo run def epistemic
 chiyo run def -i en -o zh epistemic
 chiyo run def -i ja -o zh 言葉
 chiyo run def -i zh -o ja 知识
+chiyo run def -i auto -o en ことば
 chiyo install def
 def empirical
 ```
@@ -20,7 +21,13 @@ def -i en -o zh "bounded rationality"
 def -i ja -o en 言葉
 def -i en -o ja knowledge
 def -i zh -o ja 知识
+def -i auto -o zh epistemic
 ```
+
+Use `-i auto` to infer the input language. Kana is treated as Japanese, CJK
+characters without kana use `auto_cjk_language`, and Latin text defaults to
+English. Pure CJK words can be ambiguous between Chinese and Japanese, so the
+default is configurable.
 
 ## Sources
 
@@ -44,12 +51,17 @@ Default generated config:
 cmds = ["def"]
 input_language = "en"
 output_language = "en"
+auto_cjk_language = "zh"
 viewer = []
 cache = true
 cache_path = "~/.cache/chiyo-cli/dictionary.sqlite3"
 timeout = 10
 sources = ["personal", "cache", "online"]
 ```
+
+Set `input_language = "auto"` to make automatic input language detection the
+default, and set `auto_cjk_language = "ja"` if pure CJK words should be treated
+as Japanese by default.
 
 `viewer = []` means Chiyo chooses `$PAGER`, then `less -R`, then `cat`. Set it
 explicitly to use another viewer:
