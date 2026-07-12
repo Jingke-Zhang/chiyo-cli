@@ -209,7 +209,7 @@ class Tool(PickOpenTool):
     name = "Go Or Pick"
     cmd = "gop"
     author = "Chiyo CLI"
-    author_id = "Jingke-Zhang"
+    author_id = "shiori-route"
     description = "Select a path for cd or open."
     shell = True
     docs = """

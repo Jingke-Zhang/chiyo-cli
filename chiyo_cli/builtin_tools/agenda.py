@@ -309,7 +309,7 @@ class Tool(PickOpenTool):
     name = "Agenda"
     cmd = "agd"
     author = "Chiyo CLI"
-    author_id = "Jingke-Zhang"
+    author_id = "shiori-route"
     description = "Search Org agenda items and open the source location."
     shell = True
     docs = """

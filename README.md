@@ -186,7 +186,7 @@ Chiyo uses two config files:
 
 `config.toml` stores Chiyo infrastructure settings, such as enabled tools.
 `tools.toml` stores tool-specific settings. Tool sections use the stable
-`author_id/tool_name` identity, for example `["jingke-zhang/explorer-bookmark"]`.
+`author_id/tool_name` identity, for example `["shiori-route/explorer-bookmark"]`.
 Identity parts are normalized to lowercase, with spaces and punctuation
 converted to `-`.
 
@@ -205,8 +205,8 @@ existing sections without replacing user values. Use `--force` to replace
 selected sections.
 
 `chiyo config init --all` initializes Chiyo plus the currently enabled tools.
-Fresh config enables `jingke-zhang/go-or-pick`,
-`jingke-zhang/web-search`, and `jingke-zhang/workspace` by default. A tool
+Fresh config enables `shiori-route/go-or-pick`,
+`shiori-route/web-search`, and `shiori-route/workspace` by default. A tool
 section can set `cmds = ["bm", "bookmarks"]`; any configured command in that
 list can be used with `chiyo run` or installed as a wrapper or shell function,
 as long as no enabled tool claims the same command.

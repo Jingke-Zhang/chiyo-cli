@@ -21,7 +21,7 @@ class ToolCliTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         f'tool_dirs = ["{FIXTURE_TOOL_DIR}"]',
-                        'enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search", "jingke-zhang/workspace"]',
+                        'enabled_tools = ["shiori-route/go-or-pick", "shiori-route/web-search", "shiori-route/workspace"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -40,7 +40,7 @@ class ToolCliTests(unittest.TestCase):
             content = Path(config_path).read_text(encoding="utf-8")
 
         self.assertIn("[chiyo]", content)
-        self.assertIn('enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search", "jingke-zhang/workspace"]', content)
+        self.assertIn('enabled_tools = ["shiori-route/go-or-pick", "shiori-route/web-search", "shiori-route/workspace"]', content)
 
     def test_tool_list_shows_discovered_tools_and_enabled_status(self):
         with tempfile.TemporaryDirectory() as temp_dir:

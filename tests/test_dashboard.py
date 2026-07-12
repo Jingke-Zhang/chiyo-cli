@@ -19,7 +19,7 @@ class DashboardTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/web-search"]',
+                        'enabled_tools = ["shiori-route/web-search"]',
                         f'wrapper_dir = "{temp_dir}/bin"',
                         f'completion_dir = "{temp_dir}/zsh"',
                     ]
@@ -29,7 +29,7 @@ class DashboardTests(unittest.TestCase):
             Path(tools_config_path).write_text(
                 "\n".join(
                     [
-                        '["jingke-zhang/web-search"]',
+                        '["shiori-route/web-search"]',
                         'cmds = ["s", "search"]',
                     ]
                 ),

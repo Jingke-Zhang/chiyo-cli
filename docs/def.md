@@ -47,7 +47,7 @@ used in any direction; internally `zh` is sent to MyMemory as `zh-CN`.
 Default generated config:
 
 ```toml
-["jingke-zhang/dictionary"]
+["shiori-route/dictionary"]
 cmds = ["def"]
 input_language = "en"
 output_language = "en"
@@ -67,14 +67,14 @@ as Japanese by default.
 explicitly to use another viewer:
 
 ```toml
-["jingke-zhang/dictionary"]
+["shiori-route/dictionary"]
 viewer = ["bat", "--language", "markdown", "--paging", "always"]
 ```
 
 String commands are also split like shell words:
 
 ```toml
-["jingke-zhang/dictionary"]
+["shiori-route/dictionary"]
 viewer = "glow -s light"
 ```
 
@@ -87,7 +87,7 @@ Personal entries live under `entries`. A generic `meaning` works for every
 language pair, while `en-zh` or `zh` can override a specific output:
 
 ```toml
-["jingke-zhang/dictionary".entries.epistemic]
+["shiori-route/dictionary".entries.epistemic]
 meaning = "relating to knowledge or knowing"
 en-zh = "认识论的；知识相关的"
 note = "Common in epistemic uncertainty."
@@ -96,6 +96,6 @@ note = "Common in epistemic uncertainty."
 Disable online lookup by removing `online` from `sources`:
 
 ```toml
-["jingke-zhang/dictionary"]
+["shiori-route/dictionary"]
 sources = ["personal", "cache"]
 ```

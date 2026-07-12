@@ -32,17 +32,17 @@ chiyo doc app
 Default generated config:
 
 ```toml
-["jingke-zhang/application"]
+["shiori-route/application"]
 cmds = ["app"]
 fzf_prompt = "app> "
 
-["jingke-zhang/application".alias]
+["shiori-route/application".alias]
 ```
 
 Optional aliases can be added manually:
 
 ```toml
-["jingke-zhang/application".alias]
+["shiori-route/application".alias]
 browser = "Safari"
 editor = "Emacs"
 terminal = "Ghostty"
@@ -59,6 +59,6 @@ are picked up without editing completion scripts.
 
 ## Framework Entry
 
-`app` is a framework-backed built-in tool. `chiyo run app ...` reads `["jingke-zhang/application"]`
+`app` is a framework-backed built-in tool. `chiyo run app ...` reads `["shiori-route/application"]`
 from `tools.toml`; `chiyo install app` creates an optional direct wrapper and
 completion.

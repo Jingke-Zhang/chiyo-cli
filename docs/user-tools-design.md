@@ -503,7 +503,7 @@ Example:
 ```toml
 [chiyo]
 tool_dirs = ["~/.config/chiyo-cli/tools"]
-enabled_tools = ["jingke-zhang/application", "jingke-zhang/explorer-bookmark", "jingke/paper-search", "jingke-zhang/zotero"]
+enabled_tools = ["shiori-route/application", "shiori-route/explorer-bookmark", "jingke/paper-search", "shiori-route/zotero"]
 wrapper_dir = "~/.local/bin"
 completion_dir = "~/.local/share/zsh/site-functions"
 ```
@@ -521,12 +521,12 @@ cmds = ["paper"]
 root = "~/Papers"
 fzf_prompt = "paper> "
 
-["jingke-zhang/zotero"]
+["shiori-route/zotero"]
 cmds = ["zo"]
 source = "sqlite"
 zotero_data_dir = "~/Zotero"
 
-["jingke-zhang/application".alias]
+["shiori-route/application".alias]
 browser = "Safari"
 editor = "Emacs"
 ```

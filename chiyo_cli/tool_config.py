@@ -16,9 +16,9 @@ CHIYO_CONFIG_MODULE = "chiyo"
 DEFAULT_CHIYO_CONFIG = {
     "tool_dirs": ["~/.config/chiyo-cli/tools"],
     "enabled_tools": [
-        "jingke-zhang/go-or-pick",
-        "jingke-zhang/web-search",
-        "jingke-zhang/workspace",
+        "shiori-route/go-or-pick",
+        "shiori-route/web-search",
+        "shiori-route/workspace",
     ],
     "wrapper_dir": "~/.local/bin",
     "completion_dir": "~/.local/share/zsh/site-functions",

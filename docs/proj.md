@@ -29,7 +29,7 @@ chiyo doc proj
 Default generated config:
 
 ```toml
-["jingke-zhang/project"]
+["shiori-route/project"]
 cmds = ["proj"]
 roots = ["~/Documents", "~/Projects", "~/Developer"]
 markers = [".project", ".git"]
@@ -54,5 +54,5 @@ prints one project name per line.
 
 ## Framework Entry
 
-`proj` is a framework-backed built-in. `chiyo shell proj ...` reads `["jingke-zhang/project"]`
+`proj` is a framework-backed built-in. `chiyo shell proj ...` reads `["shiori-route/project"]`
 from `tools.toml` and prints shell-safe `cd ...` code for shell integration.

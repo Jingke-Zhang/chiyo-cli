@@ -88,7 +88,7 @@ class Tool(PickOpenTool):
     name = "Application"
     cmd = "app"
     author = "Chiyo CLI"
-    author_id = "Jingke-Zhang"
+    author_id = "shiori-route"
     description = "Search installed macOS applications."
     docs = """
     # app

@@ -250,7 +250,7 @@ class RunDispatchTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/agenda"]',
+                        'enabled_tools = ["shiori-route/agenda"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -260,7 +260,7 @@ class RunDispatchTests(unittest.TestCase):
             Path(tools_config_path).write_text(
                 "\n".join(
                     [
-                        '["jingke-zhang/agenda"]',
+                        '["shiori-route/agenda"]',
                         'emacsclient_open_args = ["-nw"]',
                     ]
                 ),
@@ -296,7 +296,7 @@ class RunDispatchTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["jingke-zhang/web-search"]',
+                        'enabled_tools = ["shiori-route/web-search"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -323,7 +323,7 @@ class RunDispatchTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["jingke-zhang/application"]',
+                        'enabled_tools = ["shiori-route/application"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -333,7 +333,7 @@ class RunDispatchTests(unittest.TestCase):
             Path(tools_config_path).write_text(
                 "\n".join(
                     [
-                        '["jingke-zhang/application".alias]',
+                        '["shiori-route/application".alias]',
                         'browser = "Safari"',
                     ]
                 ),
@@ -358,7 +358,7 @@ class RunDispatchTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["jingke-zhang/explorer-bookmark"]',
+                        'enabled_tools = ["shiori-route/explorer-bookmark"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -399,7 +399,7 @@ class RunDispatchTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["jingke-zhang/zotero"]',
+                        'enabled_tools = ["shiori-route/zotero"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -432,7 +432,7 @@ class RunDispatchTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["jingke-zhang/project"]',
+                        'enabled_tools = ["shiori-route/project"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -461,7 +461,7 @@ class RunDispatchTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
+                        'enabled_tools = ["shiori-route/go-or-pick"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -469,7 +469,7 @@ class RunDispatchTests(unittest.TestCase):
                 encoding="utf-8",
             )
             Path(tools_config_path).write_text(
-                f'["jingke-zhang/go-or-pick"]\nroots = ["{temp_dir}"]\nexclude = []\nfzf_prompt = "gop> "\n',
+                f'["shiori-route/go-or-pick"]\nroots = ["{temp_dir}"]\nexclude = []\nfzf_prompt = "gop> "\n',
                 encoding="utf-8",
             )
 
@@ -495,7 +495,7 @@ class RunDispatchTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
+                        'enabled_tools = ["shiori-route/go-or-pick"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -503,7 +503,7 @@ class RunDispatchTests(unittest.TestCase):
                 encoding="utf-8",
             )
             Path(tools_config_path).write_text(
-                '["jingke-zhang/go-or-pick"]\nroots = ["~/Documents"]\nexclude = []\nfzf_prompt = "gop> "\n',
+                '["shiori-route/go-or-pick"]\nroots = ["~/Documents"]\nexclude = []\nfzf_prompt = "gop> "\n',
                 encoding="utf-8",
             )
 
@@ -528,7 +528,7 @@ class RunDispatchTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         'tool_dirs = []',
-                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
+                        'enabled_tools = ["shiori-route/go-or-pick"]',
                         'wrapper_dir = "~/.local/bin"',
                         'completion_dir = "~/.local/share/zsh/site-functions"',
                     ]
@@ -536,7 +536,7 @@ class RunDispatchTests(unittest.TestCase):
                 encoding="utf-8",
             )
             Path(tools_config_path).write_text(
-                f'["jingke-zhang/go-or-pick"]\nroots = ["{temp_dir}"]\nexclude = []\nfzf_prompt = "gop> "\n',
+                f'["shiori-route/go-or-pick"]\nroots = ["{temp_dir}"]\nexclude = []\nfzf_prompt = "gop> "\n',
                 encoding="utf-8",
             )
 

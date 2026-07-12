@@ -36,8 +36,8 @@ chiyo doctor
 writes infrastructure defaults to `~/.config/chiyo-cli/config.toml`; tool names
 write tool defaults to `~/.config/chiyo-cli/tools.toml`. `--all` initializes
 Chiyo plus the currently enabled tools. Fresh config enables
-`jingke-zhang/go-or-pick`, `jingke-zhang/web-search`, and
-`jingke-zhang/workspace` by default.
+`shiori-route/go-or-pick`, `shiori-route/web-search`, and
+`shiori-route/workspace` by default.
 
 Its write modes are:
 

@@ -224,7 +224,7 @@ class DoctorTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/agenda"]',
+                        'enabled_tools = ["shiori-route/agenda"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                         f'shell_dir = "{shell_dir}"',
@@ -240,10 +240,10 @@ class DoctorTests(unittest.TestCase):
                 ]
 
         output = "\n".join(lines)
-        self.assertIn("ok      user tool jingke-zhang/agenda shell:", output)
-        self.assertIn("ok      user tool jingke-zhang/agenda zsh:", output)
+        self.assertIn("ok      user tool shiori-route/agenda shell:", output)
+        self.assertIn("ok      user tool shiori-route/agenda zsh:", output)
         self.assertIn(
-            "warn    user tool jingke-zhang/agenda wrapper:",
+            "warn    user tool shiori-route/agenda wrapper:",
             output,
         )
         self.assertIn("old generated wrapper", output)

@@ -416,7 +416,7 @@ class Tool(PickOpenTool):
     name = "Dictionary"
     cmd = "def"
     author = "Chiyo CLI"
-    author_id = "Jingke-Zhang"
+    author_id = "shiori-route"
     description = "Look up definitions or translations."
     docs = """
     # def

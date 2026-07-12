@@ -113,10 +113,10 @@ class WsTests(unittest.TestCase):
             config_path.write_text(
                 "\n".join(
                     [
-                        '["jingke-zhang/web-search"]',
+                        '["shiori-route/web-search"]',
                         'fzf_prompt = "s> "',
                         "",
-                        '["jingke-zhang/web-search".engines.g]',
+                        '["shiori-route/web-search".engines.g]',
                         'name = "Google"',
                         'url = "https://google.test/search?q={query}"',
                     ]
@@ -125,7 +125,7 @@ class WsTests(unittest.TestCase):
             )
 
             config = load_tool_config(
-                "jingke-zhang/web-search",
+                "shiori-route/web-search",
                 WS.Tool.default_config,
                 config_path=str(config_path),
             )
@@ -138,10 +138,10 @@ class WsTests(unittest.TestCase):
             path.write_text(
                 "\n".join(
                     [
-                        '["jingke-zhang/web-search"]',
+                        '["shiori-route/web-search"]',
                         'fzf_prompt = "s> "',
                         "",
-                        '["jingke-zhang/web-search".engines.custom]',
+                        '["shiori-route/web-search".engines.custom]',
                         'name = "Custom"',
                         'url = "https://custom.test/search?q={query}"',
                     ]
@@ -149,31 +149,31 @@ class WsTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            config = load_tool_config("jingke-zhang/web-search", WS.Tool.default_config, config_path=str(path))
+            config = load_tool_config("shiori-route/web-search", WS.Tool.default_config, config_path=str(path))
 
             self.assertEqual(list(config["engines"]), ["custom"])
 
     def test_load_config_warns_when_ws_uses_default_engines_fallback(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "config.toml"
-            path.write_text('["jingke-zhang/web-search"]\nfzf_prompt = "s> "\n', encoding="utf-8")
+            path.write_text('["shiori-route/web-search"]\nfzf_prompt = "s> "\n', encoding="utf-8")
 
             warn = mock.Mock()
             config = load_tool_config(
-                "jingke-zhang/web-search",
+                "shiori-route/web-search",
                 WS.Tool.default_config,
                 config_path=str(path),
                 warn=warn,
             )
 
             self.assertIn("g", config["engines"])
-            warn.assert_called_once_with("config [jingke-zhang/web-search] missing engines; using default.")
+            warn.assert_called_once_with("config [shiori-route/web-search] missing engines; using default.")
 
     def test_format_default_config_includes_default_engines(self):
-        content = format_module_config("jingke-zhang/web-search", WS.Tool.default_config)
+        content = format_module_config("shiori-route/web-search", WS.Tool.default_config)
 
-        self.assertIn('["jingke-zhang/web-search"]', content)
-        self.assertIn('["jingke-zhang/web-search".engines.g]', content)
+        self.assertIn('["shiori-route/web-search"]', content)
+        self.assertIn('["shiori-route/web-search".engines.g]', content)
 
 
 if __name__ == "__main__":

@@ -55,7 +55,7 @@ class InstallTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
+                        'enabled_tools = ["shiori-route/go-or-pick"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                         f'shell_dir = "{shell_dir}"',
@@ -98,7 +98,7 @@ class InstallTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/agenda"]',
+                        'enabled_tools = ["shiori-route/agenda"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                         f'shell_dir = "{shell_dir}"',
@@ -143,7 +143,7 @@ class InstallTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
+                        'enabled_tools = ["shiori-route/go-or-pick"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                         f'shell_dir = "{shell_dir}"',
@@ -154,7 +154,7 @@ class InstallTests(unittest.TestCase):
             Path(tools_config_path).write_text(
                 "\n".join(
                     [
-                        '["jingke-zhang/go-or-pick"]',
+                        '["shiori-route/go-or-pick"]',
                         'cmds = ["go"]',
                     ]
                 ),
@@ -192,10 +192,10 @@ class InstallTests(unittest.TestCase):
                         "[chiyo]",
                         "tool_dirs = []",
                         "enabled_tools = ["
-                        '"jingke-zhang/application", '
-                        '"jingke-zhang/zotero", '
-                        '"jingke-zhang/web-search", '
-                        '"jingke-zhang/workspace"'
+                        '"shiori-route/application", '
+                        '"shiori-route/zotero", '
+                        '"shiori-route/web-search", '
+                        '"shiori-route/workspace"'
                         "]",
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
@@ -229,7 +229,7 @@ class InstallTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/application"]',
+                        'enabled_tools = ["shiori-route/application"]',
                         f'wrapper_dir = "{temp_dir}/bin"',
                         f'completion_dir = "{temp_dir}/zsh"',
                     ]
@@ -239,7 +239,7 @@ class InstallTests(unittest.TestCase):
 
             with mock.patch.object(CHIYO, "CONFIG_PATH", config_path):
                 with self.assertRaisesRegex(CHIYO.ToolCommandError, "duplicate install target: app"):
-                    CHIYO.install_tools_lines(["app", "jingke-zhang/application"])
+                    CHIYO.install_tools_lines(["app", "shiori-route/application"])
 
     def test_install_tool_rejects_invalid_configured_cmd(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -391,7 +391,7 @@ class InstallTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/application", "jingke-zhang/zotero"]',
+                        'enabled_tools = ["shiori-route/application", "shiori-route/zotero"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                     ]
@@ -423,7 +423,7 @@ class InstallTests(unittest.TestCase):
 
     def test_uninstall_tools_lines_rejects_duplicate_targets(self):
         with self.assertRaisesRegex(CHIYO.ToolCommandError, "duplicate uninstall target: app"):
-            CHIYO.uninstall_tools_lines(["app", "jingke-zhang/application"])
+            CHIYO.uninstall_tools_lines(["app", "shiori-route/application"])
 
     def test_uninstall_shell_tool_removes_generated_artifacts(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -445,7 +445,7 @@ class InstallTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
+                        'enabled_tools = ["shiori-route/go-or-pick"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                         f'shell_dir = "{shell_dir}"',
@@ -488,7 +488,7 @@ class InstallTests(unittest.TestCase):
                     [
                         "[chiyo]",
                         "tool_dirs = []",
-                        'enabled_tools = ["jingke-zhang/go-or-pick"]',
+                        'enabled_tools = ["shiori-route/go-or-pick"]',
                         f'wrapper_dir = "{wrapper_dir}"',
                         f'completion_dir = "{completion_dir}"',
                         f'shell_dir = "{shell_dir}"',
@@ -499,7 +499,7 @@ class InstallTests(unittest.TestCase):
             Path(tools_config_path).write_text(
                 "\n".join(
                     [
-                        '["jingke-zhang/go-or-pick"]',
+                        '["shiori-route/go-or-pick"]',
                         'cmds = ["go"]',
                     ]
                 ),

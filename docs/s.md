@@ -25,23 +25,23 @@ chiyo install s
 Default generated config:
 
 ```toml
-["jingke-zhang/web-search"]
+["shiori-route/web-search"]
 cmds = ["s"]
 fzf_prompt = "s> "
 
-["jingke-zhang/web-search".engines.g]
+["shiori-route/web-search".engines.g]
 name = "Google"
 url = "https://www.google.com/search?q={query}"
 
-["jingke-zhang/web-search".engines.gh]
+["shiori-route/web-search".engines.gh]
 name = "GitHub"
 url = "https://github.com/search?q={query}"
 
-["jingke-zhang/web-search".engines.ytb]
+["shiori-route/web-search".engines.ytb]
 name = "YouTube"
 url = "https://www.youtube.com/results?search_query={query}"
 
-["jingke-zhang/web-search".engines.scholar]
+["shiori-route/web-search".engines.scholar]
 name = "Google Scholar"
 url = "https://scholar.google.com/scholar?q={query}"
 ```
@@ -50,16 +50,16 @@ When the first argument is a configured engine key, `s` uses that engine
 directly. Otherwise it opens `fzf` to choose an engine. Use `--` when the query
 itself starts with an engine key.
 
-When `["jingke-zhang/web-search"]` is present in the config file, configured engines are
+When `["shiori-route/web-search"]` is present in the config file, configured engines are
 treated as the complete engine set. Delete an engine table to disable that key.
 
 ## Completion Data
 
 `chiyo run s --list-completions` prints one configured engine key per line.
-User-added engines under `["jingke-zhang/web-search".engines.*]` appear automatically.
+User-added engines under `["shiori-route/web-search".engines.*]` appear automatically.
 
 ## Framework Entry
 
-`s` is a framework-backed built-in tool. `chiyo run s ...` reads `["jingke-zhang/web-search"]` from
+`s` is a framework-backed built-in tool. `chiyo run s ...` reads `["shiori-route/web-search"]` from
 `tools.toml`; `chiyo install s` creates an optional direct wrapper and
 completion.

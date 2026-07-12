@@ -19,7 +19,7 @@ class GopTests(unittest.TestCase):
             config_path.write_text(
                 "\n".join(
                     [
-                        '["jingke-zhang/go-or-pick"]',
+                        '["shiori-route/go-or-pick"]',
                         f'roots = ["{root}"]',
                         'exclude = ["Library"]',
                         'fzf_prompt = "gop> "',
@@ -29,7 +29,7 @@ class GopTests(unittest.TestCase):
             )
 
             config = load_tool_config(
-                "jingke-zhang/go-or-pick",
+                "shiori-route/go-or-pick",
                 GOP.DEFAULT_CONFIG,
                 config_path=str(config_path),
             )

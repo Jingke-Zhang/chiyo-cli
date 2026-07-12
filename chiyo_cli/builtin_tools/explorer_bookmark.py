@@ -103,7 +103,7 @@ class Tool(PickOpenTool):
     name = "Explorer Bookmark"
     cmd = "bm"
     author = "Chiyo CLI"
-    author_id = "Jingke-Zhang"
+    author_id = "shiori-route"
     description = "Search browser bookmarks and open a URL."
     docs = """
     # bm

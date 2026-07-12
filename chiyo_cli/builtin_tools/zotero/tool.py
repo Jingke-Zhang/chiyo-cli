@@ -52,7 +52,7 @@ class Tool(PickOpenTool):
     name = "Zotero"
     cmd = "zo"
     author = "Chiyo CLI"
-    author_id = "Jingke-Zhang"
+    author_id = "shiori-route"
     description = "Search Zotero items and open a selection."
     docs = """
     # zo

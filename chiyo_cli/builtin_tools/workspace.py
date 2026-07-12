@@ -167,7 +167,7 @@ class Tool(PickOpenTool):
     name = "Workspace"
     cmd = "ws"
     author = "Chiyo CLI"
-    author_id = "Jingke-Zhang"
+    author_id = "shiori-route"
     description = "Manage tmux workspaces."
     docs = """
     # ws

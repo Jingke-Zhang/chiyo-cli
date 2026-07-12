@@ -138,7 +138,7 @@ class Tool(PickOpenTool):
     name = "Project"
     cmd = "proj"
     author = "Chiyo CLI"
-    author_id = "Jingke-Zhang"
+    author_id = "shiori-route"
     description = "Select a project directory for cd."
     shell = True
     docs = """

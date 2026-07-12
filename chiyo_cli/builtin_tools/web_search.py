@@ -33,7 +33,7 @@ class Tool(PickOpenTool):
     name = "Web Search"
     cmd = "s"
     author = "Chiyo CLI"
-    author_id = "Jingke-Zhang"
+    author_id = "shiori-route"
     description = "Open a configured web search engine."
     docs = """
     # s

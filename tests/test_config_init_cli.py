@@ -34,15 +34,15 @@ class ConfigInitCliTests(unittest.TestCase):
             tools_content = Path(tools_path).read_text(encoding="utf-8")
 
         self.assertIn("wrote [chiyo] config", "\n".join(lines))
-        self.assertIn("wrote [jingke-zhang/go-or-pick] config", "\n".join(lines))
-        self.assertIn("wrote [jingke-zhang/web-search] config", "\n".join(lines))
-        self.assertIn("wrote [jingke-zhang/workspace] config", "\n".join(lines))
+        self.assertIn("wrote [shiori-route/go-or-pick] config", "\n".join(lines))
+        self.assertIn("wrote [shiori-route/web-search] config", "\n".join(lines))
+        self.assertIn("wrote [shiori-route/workspace] config", "\n".join(lines))
         self.assertIn("[chiyo]", config_content)
-        self.assertIn('enabled_tools = ["jingke-zhang/go-or-pick", "jingke-zhang/web-search", "jingke-zhang/workspace"]', config_content)
+        self.assertIn('enabled_tools = ["shiori-route/go-or-pick", "shiori-route/web-search", "shiori-route/workspace"]', config_content)
         self.assertNotIn("[ws]", config_content)
-        self.assertIn('["jingke-zhang/go-or-pick"]', tools_content)
-        self.assertIn('["jingke-zhang/web-search".engines.g]', tools_content)
-        self.assertIn('["jingke-zhang/workspace"]', tools_content)
+        self.assertIn('["shiori-route/go-or-pick"]', tools_content)
+        self.assertIn('["shiori-route/web-search".engines.g]', tools_content)
+        self.assertIn('["shiori-route/workspace"]', tools_content)
         self.assertNotIn("[bm]", tools_content)
 
     def test_config_init_all_uses_current_enabled_tools(self):
@@ -50,7 +50,7 @@ class ConfigInitCliTests(unittest.TestCase):
             config_path = os.path.join(temp_dir, "config.toml")
             tools_path = os.path.join(temp_dir, "tools.toml")
             Path(config_path).write_text(
-                '[chiyo]\nenabled_tools = ["jingke-zhang/explorer-bookmark", "jingke-zhang/zotero"]\n',
+                '[chiyo]\nenabled_tools = ["shiori-route/explorer-bookmark", "shiori-route/zotero"]\n',
                 encoding="utf-8",
             )
 
@@ -63,12 +63,12 @@ class ConfigInitCliTests(unittest.TestCase):
 
             tools_content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertEqual(["chiyo", "jingke-zhang/explorer-bookmark", "jingke-zhang/zotero"], targets)
+        self.assertEqual(["chiyo", "shiori-route/explorer-bookmark", "shiori-route/zotero"], targets)
         self.assertIn("append [chiyo] defaults", "\n".join(lines))
-        self.assertIn("append [jingke-zhang/explorer-bookmark] config", "\n".join(lines))
-        self.assertIn("append [jingke-zhang/zotero] config", "\n".join(lines))
-        self.assertIn('["jingke-zhang/explorer-bookmark"]', tools_content)
-        self.assertIn('["jingke-zhang/zotero"]', tools_content)
+        self.assertIn("append [shiori-route/explorer-bookmark] config", "\n".join(lines))
+        self.assertIn("append [shiori-route/zotero] config", "\n".join(lines))
+        self.assertIn('["shiori-route/explorer-bookmark"]', tools_content)
+        self.assertIn('["shiori-route/zotero"]', tools_content)
         self.assertNotIn("[gop]", tools_content)
         self.assertNotIn("[ws]", tools_content)
 
@@ -95,10 +95,10 @@ class ConfigInitCliTests(unittest.TestCase):
 
             content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertIn("append [jingke-zhang/web-search] config", "\n".join(lines))
-        self.assertIn("append [jingke-zhang/application] config", "\n".join(lines))
-        self.assertIn('["jingke-zhang/application".alias]', content)
-        self.assertIn('["jingke-zhang/web-search".engines.g]', content)
+        self.assertIn("append [shiori-route/web-search] config", "\n".join(lines))
+        self.assertIn("append [shiori-route/application] config", "\n".join(lines))
+        self.assertIn('["shiori-route/application".alias]', content)
+        self.assertIn('["shiori-route/web-search".engines.g]', content)
         self.assertIn('fzf_prompt = "old> "', content)
 
     def test_config_init_append_adds_missing_bm_defaults(self):
@@ -121,9 +121,9 @@ class ConfigInitCliTests(unittest.TestCase):
 
             content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertIn("append [jingke-zhang/explorer-bookmark] config", "\n".join(lines))
+        self.assertIn("append [shiori-route/explorer-bookmark] config", "\n".join(lines))
         self.assertIn('skip_folders = ["Bookmarks"]', content)
-        self.assertIn('["jingke-zhang/explorer-bookmark"]', content)
+        self.assertIn('["shiori-route/explorer-bookmark"]', content)
 
     def test_config_init_append_preserves_existing_bm_defaults(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -148,11 +148,11 @@ class ConfigInitCliTests(unittest.TestCase):
 
             content = Path(tools_path).read_text(encoding="utf-8")
 
-        self.assertIn("append [jingke-zhang/explorer-bookmark] config", "\n".join(lines))
+        self.assertIn("append [shiori-route/explorer-bookmark] config", "\n".join(lines))
         self.assertIn('bookmarks_path = "~/Bookmarks.plist"', content)
         self.assertIn('fzf_prompt = "bookmarks> "', content)
         self.assertIn('browser = "Google Chrome"', content)
-        self.assertIn('["jingke-zhang/explorer-bookmark"]', content)
+        self.assertIn('["shiori-route/explorer-bookmark"]', content)
 
     def test_config_init_force_replaces_selected_tool(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -182,7 +182,7 @@ class ConfigInitCliTests(unittest.TestCase):
             content = Path(tools_path).read_text(encoding="utf-8")
 
         self.assertIn("[other]", content)
-        self.assertIn('["jingke-zhang/web-search".engines.g]', content)
+        self.assertIn('["shiori-route/web-search".engines.g]', content)
         self.assertIn("[ws.engines.old]", content)
 
 if __name__ == "__main__":

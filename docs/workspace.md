@@ -30,7 +30,7 @@ chiyo install ws
 Default generated config:
 
 ```toml
-["jingke-zhang/workspace"]
+["shiori-route/workspace"]
 cmds = ["ws"]
 roots = ["~/Documents", "~/Projects", "~/Developer"]
 markers = [".project", ".git"]
@@ -38,13 +38,13 @@ exclude = ["node_modules", "Library", ".cache"]
 session_prefix = ""
 fzf_prompt = "ws> "
 
-["jingke-zhang/workspace".alias]
+["shiori-route/workspace".alias]
 ```
 
 Aliases map short names to directories:
 
 ```toml
-["jingke-zhang/workspace".alias]
+["shiori-route/workspace".alias]
 cli = "~/Documents/01-projects/cli-tools"
 notes = "~/Documents/notes"
 ```

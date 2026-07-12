@@ -61,7 +61,7 @@ chiyo run agd view next email
 Views can call an Org agenda dispatcher key:
 
 ```toml
-["jingke-zhang/agenda".views.todo]
+["shiori-route/agenda".views.todo]
 name = "Todo List"
 key = "t"
 ```
@@ -69,7 +69,7 @@ key = "t"
 They can also call a named Emacs function:
 
 ```toml
-["jingke-zhang/agenda".views.next]
+["shiori-route/agenda".views.next]
 name = "Next Actions"
 function = "my/agd-next-actions"
 ```
@@ -83,7 +83,7 @@ opens the selected source location.
 Default generated config:
 
 ```toml
-["jingke-zhang/agenda"]
+["shiori-route/agenda"]
 cmds = ["agd"]
 fzf_prompt = "agd> "
 emacsclient = "emacsclient"
@@ -93,15 +93,15 @@ agenda_span = "day"
 agenda_start_day = ""
 default_view = "agenda"
 
-["jingke-zhang/agenda".views.agenda]
+["shiori-route/agenda".views.agenda]
 name = "Agenda"
 key = "a"
 
-["jingke-zhang/agenda".views.todo]
+["shiori-route/agenda".views.todo]
 name = "Todo List"
 key = "t"
 
-["jingke-zhang/agenda".files.inbox]
+["shiori-route/agenda".files.inbox]
 name = "Inbox"
 path = "~/org/inbox.org"
 bare = true
