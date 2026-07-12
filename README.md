@@ -24,7 +24,7 @@ chiyo run s gh chiyo-cli
 chiyo run ws cli-tools
 chiyo run app safari
 chiyo run bm github
-chiyo run zo convex optimization
+chiyo run def epistemic
 chiyo shell proj cli-tools
 chiyo shell gop docs
 chiyo
@@ -136,18 +136,29 @@ Path-like tools follow a small file palette:
 - regular files: plain
 - executables: bold green
 
-## Tools
+## Core Tools
+
+Core tools are the main Chiyo experience. They are small terminal utilities that
+work with common local or web workflows and do not require adopting a specific
+knowledge-management app.
 
 - [`chiyo`](docs/chiyo.md): dashboard, shell integration, and setup diagnostics
-- [`bm`](docs/bm.md): search Safari bookmarks and open URLs
-- [`app`](docs/app.md): search installed macOS applications and launch one
-- [`agd`](docs/agd.md): search Org agenda items and open their source locations
-- [`def`](docs/def.md): look up definitions or translations in a pager
-- [`s`](docs/s.md): build web search URLs and open them
-- [`ws`](docs/workspace.md): enter or manage tmux workspaces
-- [`zo`](docs/zo.md): search Zotero items and open entries or PDFs
-- [`gop`](docs/gop.md): search files/directories, then `cd` or `open`
-- [`proj`](docs/proj.md): search git projects, then `cd` into one
+- [`gop`](docs/core/gop.md): search files/directories, then `cd` or `open`
+- [`proj`](docs/core/proj.md): search git projects, then `cd` into one
+- [`s`](docs/core/s.md): build web search URLs and open them
+- [`ws`](docs/core/workspace.md): enter or manage tmux workspaces
+- [`def`](docs/core/def.md): look up definitions or translations in a pager
+- [`app`](docs/core/app.md): search installed macOS applications and launch one
+- [`bm`](docs/core/bm.md): search Safari bookmarks and open URLs
+
+## Integrations
+
+Integrations connect Chiyo to external apps or personal knowledge systems. They
+are useful when that ecosystem is already part of your workflow, but they are
+not part of the default path for new users.
+
+- [`agd`](docs/integrations/agd.md): search Org agenda items and open their source locations
+- [`zo`](docs/integrations/zo.md): search Zotero items and open entries or PDFs
 - [Installation details](docs/install.md): development install and shell setup
 - [Troubleshooting](docs/install.md#troubleshooting): common setup and
   permission issues

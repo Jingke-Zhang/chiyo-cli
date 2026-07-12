@@ -16,15 +16,15 @@ class DocsConsistencyTests(unittest.TestCase):
     def test_readme_lists_every_builtin_tool_doc(self):
         readme = read_doc("README.md")
         expected_docs = {
-            "app": "docs/app.md",
-            "bm": "docs/bm.md",
-            "def": "docs/def.md",
-            "agd": "docs/agd.md",
-            "gop": "docs/gop.md",
-            "proj": "docs/proj.md",
-            "s": "docs/s.md",
-            "ws": "docs/workspace.md",
-            "zo": "docs/zo.md",
+            "app": "docs/core/app.md",
+            "bm": "docs/core/bm.md",
+            "def": "docs/core/def.md",
+            "agd": "docs/integrations/agd.md",
+            "gop": "docs/core/gop.md",
+            "proj": "docs/core/proj.md",
+            "s": "docs/core/s.md",
+            "ws": "docs/core/workspace.md",
+            "zo": "docs/integrations/zo.md",
         }
 
         for tool in discover_builtin_tools().tools:
@@ -39,6 +39,12 @@ class DocsConsistencyTests(unittest.TestCase):
             with self.subTest(tool=tool_key):
                 self.assertIn(tool_key, readme)
                 self.assertIn(tool_key, chiyo_doc)
+
+    def test_integrations_are_not_default_enabled(self):
+        enabled = set(DEFAULT_CHIYO_CONFIG["enabled_tools"])
+
+        self.assertNotIn("shiori-route/agenda", enabled)
+        self.assertNotIn("shiori-route/zotero", enabled)
 
     def test_dashboard_is_documented(self):
         readme = read_doc("README.md")
