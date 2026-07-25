@@ -8,6 +8,7 @@ chiyo run def -i en -o zh epistemic
 chiyo run def -i ja -o zh 言葉
 chiyo run def -i zh -o ja 知识
 chiyo run def -i auto -o en ことば
+chiyo run def empircal
 chiyo install def
 def empirical
 ```
@@ -29,6 +30,10 @@ characters without kana use `auto_cjk_language`, and Latin text defaults to
 English. Pure CJK words can be ambiguous between Chinese and Japanese, so the
 default is configurable.
 
+When an English definition lookup misses, `def` can ask for fuzzy suggestions,
+show the candidates in `fzf`, and then look up the selected word. Use
+`--no-fuzzy` to keep strict exact-match behavior for a single lookup.
+
 ## Sources
 
 `def` checks sources in this order by default:
@@ -38,9 +43,23 @@ default is configurable.
 3. `online`: dictionary or translation provider
 
 For same-language lookup, the online provider uses dictionaryapi.dev for
-English and Jisho for Japanese. For different input/output languages, it uses
-MyMemory translation. The CLI-facing language codes `ja`, `zh`, and `en` can be
-used in any direction; internally `zh` is sent to MyMemory as `zh-CN`.
+English and Jisho for Japanese. English definitions also include any available
+etymology, synonyms, antonyms, word-form metadata, frequent followers and
+predecessors, associated words, and simple preposition patterns. The extra
+English metadata and fuzzy candidates come from Datamuse.
+
+For different input/output languages, `def` uses MyMemory translation. The
+CLI-facing language codes `ja`, `zh`, and `en` can be used in any direction;
+internally `zh` is sent to MyMemory as `zh-CN`.
+
+When the output language is Chinese, `def` also shows alternative translations
+from MyMemory. For English-to-Chinese lookups, it enriches the result with a
+small number of English dictionary definitions translated into Chinese, while
+keeping the original English source lines below them.
+
+Japanese and Chinese text include pronunciation when possible. Japanese
+readings come from Jisho. Chinese pinyin uses the optional `pypinyin` package
+when it is installed, with a small built-in common-character map as a fallback.
 
 ## Config
 
@@ -57,6 +76,13 @@ cache = true
 cache_path = "~/.cache/chiyo-cli/dictionary.sqlite3"
 timeout = 10
 sources = ["personal", "cache", "online"]
+fuzzy = true
+fuzzy_max = 8
+english_enrichment = true
+english_usage_max = 6
+zh_enrichment = true
+zh_definition_max = 4
+pronunciation = true
 ```
 
 Set `input_language = "auto"` to make automatic input language detection the
@@ -98,4 +124,20 @@ Disable online lookup by removing `online` from `sources`:
 ```toml
 ["shiori-route/dictionary"]
 sources = ["personal", "cache"]
+```
+
+Disable fuzzy lookup or English enrichment separately:
+
+```toml
+["shiori-route/dictionary"]
+fuzzy = false
+english_enrichment = false
+zh_enrichment = false
+```
+
+Disable Japanese and Chinese pronunciation lines:
+
+```toml
+["shiori-route/dictionary"]
+pronunciation = false
 ```

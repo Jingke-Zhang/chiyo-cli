@@ -7,6 +7,11 @@
 - Added Japanese lookup support for `def`, including Jisho definitions and
   `ja`/`zh`/`en` translation directions.
 - Added `-i auto` input language detection for `def`.
+- Added English fuzzy suggestions and richer `def` output with etymology,
+  synonyms, antonyms, word-form metadata, and usage hints.
+- Added Japanese readings and Chinese pinyin pronunciation hints for `def`.
+- Expanded Chinese `def` output with alternative translations and translated
+  English definition hints for English-to-Chinese lookups.
 - Added `agd view` for reading configured Emacs Org agenda-like views.
 - Added `agd open` and per-file bare aliases for opening configured Org files.
 - Added `agd capture` for appending TODO entries to the configured inbox.
